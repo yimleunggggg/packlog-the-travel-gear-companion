@@ -8,13 +8,15 @@ const verdictMeta = {
   drop: { color: "var(--destructive)", label: "DROP", glyph: "✕" },
 };
 
-export function PostTripReview() {
+export function PostTripReview({ onSeal }: { onSeal?: () => void }) {
   const { t } = useI18n();
   const counts = {
     keep: reviewTrip.verdicts.filter((v) => v.verdict === "keep").length,
     upgrade: reviewTrip.verdicts.filter((v) => v.verdict === "upgrade").length,
     drop: reviewTrip.verdicts.filter((v) => v.verdict === "drop").length,
   };
+  const avgUtility =
+    reviewTrip.verdicts.reduce((s, v) => s + v.utility, 0) / reviewTrip.verdicts.length;
 
   return (
     <section className="module corner-tick corner-tick-br relative overflow-hidden p-6">
@@ -27,15 +29,14 @@ export function PostTripReview() {
             {t("review.last")} · {reviewTrip.title}
           </h3>
           <p className="mt-1 font-mono text-[10px] text-muted-foreground">
-            {reviewTrip.date} · {t("review.sealed")} {reviewTrip.verdicts.length} {t("review.verdicts")}
+            {reviewTrip.date} · {t("review.sealed")} {reviewTrip.verdicts.length} {t("review.verdicts")} · ★ {avgUtility.toFixed(1)} avg
           </p>
         </div>
-        <button className="border border-border-strong px-3 py-1.5 font-mono text-[10px] tracking-[0.18em] hover:bg-surface-2">
+        <button className="border border-border-strong bg-surface px-3 py-1.5 font-mono text-[10px] tracking-[0.18em] hover:bg-surface-2">
           {t("review.openLog")}
         </button>
       </div>
 
-      {/* Verdict distribution bar */}
       <div className="mt-4 flex h-2 overflow-hidden border border-border">
         <motion.div
           initial={{ width: 0 }}
@@ -79,11 +80,22 @@ export function PostTripReview() {
               >
                 {m.glyph}
               </div>
-              <div className="col-span-4 text-sm">{v.name}</div>
+              <div className="col-span-3 text-sm">{v.name}</div>
               <div className="col-span-2 font-mono text-[10px]" style={{ color: m.color }}>
                 {m.label}
               </div>
-              <div className="col-span-5 font-mono text-[11px] text-muted-foreground">
+              <div className="col-span-2 flex">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <span
+                    key={n}
+                    className="font-mono text-[10px]"
+                    style={{ color: n <= v.utility ? "var(--signal)" : "var(--border-strong)" }}
+                  >
+                    ★
+                  </span>
+                ))}
+              </div>
+              <div className="col-span-4 font-mono text-[11px] text-muted-foreground">
                 &ldquo;{v.note}&rdquo;
               </div>
             </motion.li>
@@ -91,12 +103,21 @@ export function PostTripReview() {
         })}
       </ul>
 
-      <div className="mt-5 border border-signal/40 bg-signal/5 p-4">
-        <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
-          {t("review.dna")}
-        </div>
+      <div className="mt-5 border border-signal/40 bg-signal-soft/30 p-4">
+        <div className="font-mono text-[10px] tracking-[0.22em] text-signal">{t("review.dna")}</div>
         <p className="mt-2 text-sm leading-relaxed">{t("review.dna.text")}</p>
       </div>
+
+      {onSeal && (
+        <div className="mt-4 flex justify-end">
+          <button
+            onClick={onSeal}
+            className="border border-signal bg-signal px-4 py-2 font-mono text-[10px] tracking-[0.2em] text-signal-foreground hover:opacity-90"
+          >
+            {t("review.seal")}
+          </button>
+        </div>
+      )}
     </section>
   );
 }

@@ -31,19 +31,24 @@ export function ContainerModule({
   phase,
   onToggle,
   onVerdict,
+  onUtility,
   onAdd,
+  onRemove,
   variant = "tall",
 }: {
   container: Container;
   phase: LifecyclePhase;
   onToggle: (containerId: string, itemId: string) => void;
   onVerdict: (containerId: string, itemId: string, v: Item["verdict"]) => void;
+  onUtility?: (containerId: string, itemId: string, u: number) => void;
   onAdd?: (containerId: string, item: Omit<Item, "id">) => void;
+  onRemove?: (containerId: string, itemId: string) => void;
   variant?: "tall" | "wide";
 }) {
   const { t } = useI18n();
   const [expanded, setExpanded] = useState(true);
   const [adding, setAdding] = useState(false);
+
   const totalKg =
     container.items.reduce((s, i) => s + i.weightG * i.qty, 0) / 1000;
   const loadPct = Math.min(100, (totalKg / container.maxKg) * 100);
@@ -54,12 +59,7 @@ export function ContainerModule({
     : 0;
 
   return (
-    <article
-      className={`module corner-tick relative ${
-        variant === "wide" ? "row-span-1" : ""
-      }`}
-    >
-      {/* Header */}
+    <article className={`module corner-tick relative ${variant === "wide" ? "row-span-1" : ""}`}>
       <header className="flex items-start justify-between border-b border-border p-4">
         <div className="flex items-start gap-3">
           <div className="grid h-10 w-10 place-items-center border border-border-strong bg-surface-2 font-mono text-base text-signal">
@@ -74,9 +74,7 @@ export function ContainerModule({
                 {t(typeKey[container.type])}
               </span>
             </div>
-            <h3 className="mt-1 font-display text-xl leading-tight">
-              {container.name}
-            </h3>
+            <h3 className="mt-1 font-display text-xl leading-tight">{container.name}</h3>
           </div>
         </div>
         <button
@@ -87,7 +85,6 @@ export function ContainerModule({
         </button>
       </header>
 
-      {/* Capacity gauges */}
       <div className="grid grid-cols-2 gap-px bg-border">
         <Gauge
           label={t("container.gauge.mass")}
@@ -104,7 +101,6 @@ export function ContainerModule({
         />
       </div>
 
-      {/* Items */}
       <AnimatePresence initial={false}>
         {expanded && (
           <motion.div
@@ -114,6 +110,12 @@ export function ContainerModule({
             transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
             className="overflow-hidden"
           >
+            {container.items.length === 0 && (
+              <div className="px-4 py-6 text-center font-mono text-[11px] text-muted-foreground">
+                — empty container —
+              </div>
+            )}
+
             <ul className="divide-y divide-border">
               {container.items.map((it, idx) => (
                 <motion.li
@@ -153,10 +155,7 @@ export function ContainerModule({
                   </div>
 
                   <div className="col-span-5 flex items-center gap-2">
-                    <span
-                      className="h-1.5 w-1.5"
-                      style={{ background: catColor[it.category] }}
-                    />
+                    <span className="h-1.5 w-1.5" style={{ background: catColor[it.category] }} />
                     <span
                       className={`text-sm ${
                         it.status === "packed" && phase !== "REVIEW"
@@ -165,6 +164,9 @@ export function ContainerModule({
                       }`}
                     >
                       {it.name}
+                      {it.gearId && (
+                        <span className="ml-1.5 font-mono text-[9px] text-signal" title="from gear library">⌬</span>
+                      )}
                     </span>
                   </div>
 
@@ -176,19 +178,30 @@ export function ContainerModule({
                   </div>
                   <div className="col-span-3 flex justify-end">
                     {phase === "REVIEW" ? (
-                      <VerdictPicker
-                        v={it.verdict}
-                        onChange={(v) => onVerdict(container.id, it.id, v)}
+                      <ReviewControls
+                        item={it}
+                        onVerdict={(v) => onVerdict(container.id, it.id, v)}
+                        onUtility={(u) => onUtility?.(container.id, it.id, u)}
                       />
                     ) : (
-                      <span className="tag-chip">{t(`cat.${it.category}`)}</span>
+                      <div className="flex items-center gap-1">
+                        <span className="tag-chip">{t(`cat.${it.category}`)}</span>
+                        {onRemove && (
+                          <button
+                            onClick={() => onRemove(container.id, it.id)}
+                            className="opacity-0 transition group-hover:opacity-100 font-mono text-[10px] text-muted-foreground hover:text-destructive"
+                            aria-label="remove"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </motion.li>
               ))}
             </ul>
 
-            {/* Add gear row */}
             {phase !== "REVIEW" && onAdd && (
               <div className="border-t border-dashed border-border bg-surface-2/50 p-3">
                 {adding ? (
@@ -230,7 +243,6 @@ function AddGearForm({
   const [category, setCategory] = useState<Item["category"]>("misc");
   const [autoFilled, setAutoFilled] = useState(false);
 
-  // Live suggest from name
   useEffect(() => {
     const hit = suggestFromName(name);
     if (hit) {
@@ -246,12 +258,14 @@ function AddGearForm({
     e.preventDefault();
     if (!name.trim() || weight === "" || +weight <= 0) return;
     onCommit({
+      gearId: null,
       name: name.trim(),
       qty: Math.max(1, qty),
       weightG: +weight,
       category,
       status: "todo",
       verdict: null,
+      utility: null,
     });
   };
 
@@ -351,17 +365,13 @@ function Gauge({
           {label}
         </span>
         <span className="font-mono text-xs tabular-nums">
-          <span className={warn ? "text-destructive" : "text-foreground"}>
-            {current}
-          </span>
+          <span className={warn ? "text-destructive" : "text-foreground"}>{current}</span>
           <span className="text-muted-foreground">{max}</span>
         </span>
       </div>
       <div className="relative mt-2 h-1 bg-surface-3">
         <motion.div
-          className={`absolute inset-y-0 left-0 ${
-            warn ? "bg-destructive" : "bg-signal"
-          }`}
+          className={`absolute inset-y-0 left-0 ${warn ? "bg-destructive" : "bg-signal"}`}
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
           transition={{ duration: 0.8, ease: [0.2, 0.8, 0.2, 1] }}
@@ -371,12 +381,14 @@ function Gauge({
   );
 }
 
-function VerdictPicker({
-  v,
-  onChange,
+function ReviewControls({
+  item,
+  onVerdict,
+  onUtility,
 }: {
-  v: Item["verdict"];
-  onChange: (v: Item["verdict"]) => void;
+  item: Item;
+  onVerdict: (v: Item["verdict"]) => void;
+  onUtility: (u: number) => void;
 }) {
   const opts: { val: NonNullable<Item["verdict"]>; label: string; color: string }[] = [
     { val: "keep", label: "K", color: "var(--success)" },
@@ -384,24 +396,42 @@ function VerdictPicker({
     { val: "drop", label: "D", color: "var(--destructive)" },
   ];
   return (
-    <div className="flex gap-1">
-      {opts.map((o) => {
-        const active = v === o.val;
-        return (
-          <button
-            key={o.val}
-            onClick={() => onChange(active ? null : o.val)}
-            className="grid h-5 w-5 place-items-center border font-mono text-[10px] transition"
-            style={{
-              borderColor: active ? o.color : "var(--border-strong)",
-              background: active ? o.color : "transparent",
-              color: active ? "var(--background)" : "var(--muted-foreground)",
-            }}
-          >
-            {o.label}
-          </button>
-        );
-      })}
+    <div className="flex flex-col items-end gap-1">
+      <div className="flex gap-1">
+        {opts.map((o) => {
+          const active = item.verdict === o.val;
+          return (
+            <button
+              key={o.val}
+              onClick={() => onVerdict(active ? null : o.val)}
+              className="grid h-5 w-5 place-items-center border font-mono text-[10px] transition"
+              style={{
+                borderColor: active ? o.color : "var(--border-strong)",
+                background: active ? o.color : "transparent",
+                color: active ? "var(--background)" : "var(--muted-foreground)",
+              }}
+            >
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex items-center gap-0.5">
+        {[1, 2, 3, 4, 5].map((n) => {
+          const active = (item.utility ?? 0) >= n;
+          return (
+            <button
+              key={n}
+              onClick={() => onUtility(item.utility === n ? 0 : n)}
+              className="font-mono text-[11px] leading-none transition"
+              style={{ color: active ? "var(--signal)" : "var(--border-strong)" }}
+              aria-label={`utility ${n}`}
+            >
+              ★
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
