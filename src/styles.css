@@ -48,15 +48,18 @@
   --color-ring: var(--ring);
   --color-signal: var(--signal);
   --color-signal-foreground: var(--signal-foreground);
+  --color-signal-soft: var(--signal-soft);
   --color-success: var(--success);
   --color-warn: var(--warn);
   --color-info: var(--info);
 
   --shadow-cut: 0 1px 0 0 var(--border-strong), 0 0 0 1px var(--border);
-  --shadow-module: 0 0 0 1px var(--border), 0 24px 48px -24px rgb(0 0 0 / 0.6);
+  --shadow-module:
+    0 1px 0 0 oklch(0.42 0.05 160 / 0.04),
+    0 18px 36px -22px oklch(0.30 0.05 160 / 0.18);
 
   --animate-pulse-dot: pulse-dot 1.6s ease-in-out infinite;
-  --animate-tape: tape 12s linear infinite;
+  --animate-tape: tape 18s linear infinite;
   --animate-fill: fill 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   --animate-rise: rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 
@@ -79,66 +82,71 @@
 
 :root {
   --radius: 4px;
-  /* Bright blueprint palette — ivory paper, ink-blue rules, signal orange */
-  --background: oklch(0.985 0.008 95);
-  --foreground: oklch(0.20 0.04 250);
-  --surface: oklch(1 0 0);
-  --surface-2: oklch(0.965 0.012 95);
-  --surface-3: oklch(0.94 0.018 95);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.20 0.04 250);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.20 0.04 250);
 
-  --primary: oklch(0.50 0.20 255);
-  --primary-foreground: oklch(0.99 0.005 250);
-  --secondary: oklch(0.94 0.018 95);
-  --secondary-foreground: oklch(0.20 0.04 250);
-  --muted: oklch(0.95 0.012 95);
-  --muted-foreground: oklch(0.48 0.03 250);
-  --accent: oklch(0.94 0.018 95);
-  --accent-foreground: oklch(0.20 0.04 250);
-  --destructive: oklch(0.60 0.24 25);
-  --destructive-foreground: oklch(0.99 0.005 90);
+  /* === PACKLOG · "Field Notes" palette ===
+     Base : warm paper / oat
+     Ink  : deep moss-green (sage charcoal)
+     Soul : burnished terracotta (warm clay)
+     A refined, journal-like, outdoorsy aesthetic — high-end without being cold.
+  */
+  --background: oklch(0.965 0.012 88);          /* warm oat paper */
+  --foreground: oklch(0.26 0.025 165);          /* deep moss ink */
+  --surface:    oklch(0.99  0.008 88);          /* card paper */
+  --surface-2:  oklch(0.945 0.014 85);          /* sunken paper */
+  --surface-3:  oklch(0.91  0.018 82);          /* deeper trough */
+  --card:       oklch(0.99  0.008 88);
+  --card-foreground: oklch(0.26 0.025 165);
+  --popover:    oklch(0.99  0.008 88);
+  --popover-foreground: oklch(0.26 0.025 165);
 
-  --border: oklch(0.86 0.02 250);
-  --border-strong: oklch(0.70 0.05 250);
-  --input: oklch(0.86 0.02 250);
-  --ring: oklch(0.70 0.20 50);
+  --primary: oklch(0.42 0.06 165);              /* moss */
+  --primary-foreground: oklch(0.97 0.012 88);
+  --secondary: oklch(0.92 0.018 85);
+  --secondary-foreground: oklch(0.26 0.025 165);
+  --muted: oklch(0.93 0.014 85);
+  --muted-foreground: oklch(0.50 0.02 160);
+  --accent: oklch(0.92 0.04 60);                /* warm sand accent */
+  --accent-foreground: oklch(0.26 0.025 165);
+  --destructive: oklch(0.55 0.18 28);
+  --destructive-foreground: oklch(0.98 0.01 88);
 
-  /* Signal / vibrant orange — the soul accent (brighter, more saturated) */
-  --signal: oklch(0.70 0.22 45);
-  --signal-foreground: oklch(0.99 0.01 90);
+  --border: oklch(0.84 0.02 130);               /* sage border */
+  --border-strong: oklch(0.62 0.04 150);        /* sage strong */
+  --input: oklch(0.84 0.02 130);
+  --ring: oklch(0.62 0.12 50);
 
-  --success: oklch(0.66 0.18 155);
-  --warn: oklch(0.78 0.18 80);
-  --info: oklch(0.55 0.20 255);
+  /* Soul accent — burnished terracotta. Warm, earthy, premium. */
+  --signal: oklch(0.62 0.14 45);
+  --signal-foreground: oklch(0.98 0.01 88);
+  --signal-soft: oklch(0.88 0.07 55);
 
-  --chart-1: oklch(0.70 0.22 45);
-  --chart-2: oklch(0.66 0.18 155);
-  --chart-3: oklch(0.55 0.20 255);
-  --chart-4: oklch(0.78 0.18 80);
-  --chart-5: oklch(0.55 0.18 320);
+  --success: oklch(0.58 0.10 155);              /* sage-leaf */
+  --warn:    oklch(0.74 0.14 75);               /* honey */
+  --info:    oklch(0.50 0.08 220);              /* dusk teal */
 
-  --sidebar: oklch(0.97 0.012 95);
-  --sidebar-foreground: oklch(0.20 0.04 250);
-  --sidebar-primary: oklch(0.70 0.22 45);
-  --sidebar-primary-foreground: oklch(0.99 0.01 90);
-  --sidebar-accent: oklch(0.94 0.018 95);
-  --sidebar-accent-foreground: oklch(0.20 0.04 250);
-  --sidebar-border: oklch(0.86 0.02 250);
-  --sidebar-ring: oklch(0.70 0.22 45);
+  --chart-1: oklch(0.62 0.14 45);
+  --chart-2: oklch(0.58 0.10 155);
+  --chart-3: oklch(0.50 0.08 220);
+  --chart-4: oklch(0.74 0.14 75);
+  --chart-5: oklch(0.55 0.10 320);
+
+  --sidebar: oklch(0.95 0.014 85);
+  --sidebar-foreground: oklch(0.26 0.025 165);
+  --sidebar-primary: oklch(0.62 0.14 45);
+  --sidebar-primary-foreground: oklch(0.98 0.01 88);
+  --sidebar-accent: oklch(0.92 0.018 85);
+  --sidebar-accent-foreground: oklch(0.26 0.025 165);
+  --sidebar-border: oklch(0.84 0.02 130);
+  --sidebar-ring: oklch(0.62 0.14 45);
 }
 
 .dark {
-  --background: oklch(0.985 0.008 95);
-  --foreground: oklch(0.20 0.04 250);
+  --background: oklch(0.965 0.012 88);
+  --foreground: oklch(0.26 0.025 165);
 }
 
 @layer base {
-  * {
-    border-color: var(--color-border);
-  }
+  * { border-color: var(--color-border); }
   html, body {
     background-color: var(--color-background);
     color: var(--color-foreground);
@@ -148,11 +156,11 @@
   }
   body {
     background-image:
-      radial-gradient(circle at 85% -10%, oklch(0.85 0.15 45 / 0.18), transparent 55%),
-      radial-gradient(circle at 0% 110%, oklch(0.70 0.18 255 / 0.10), transparent 50%),
-      linear-gradient(oklch(0.55 0.20 255 / 0.07) 1px, transparent 1px),
-      linear-gradient(90deg, oklch(0.55 0.20 255 / 0.07) 1px, transparent 1px);
-    background-size: auto, auto, 32px 32px, 32px 32px;
+      radial-gradient(circle at 88% -8%, oklch(0.78 0.13 50 / 0.18), transparent 55%),
+      radial-gradient(circle at -5% 105%, oklch(0.55 0.08 165 / 0.12), transparent 55%),
+      linear-gradient(oklch(0.42 0.06 165 / 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(0.42 0.06 165 / 0.045) 1px, transparent 1px);
+    background-size: auto, auto, 36px 36px, 36px 36px;
     background-position: 0 0, 0 0, 0 0, 0 0;
     background-attachment: fixed;
   }
@@ -162,6 +170,7 @@
   .font-mono { font-family: var(--font-mono); }
   .text-signal { color: var(--signal); }
   .bg-signal { background-color: var(--signal); }
+  .bg-signal-soft { background-color: var(--signal-soft); }
   .border-signal { border-color: var(--signal); }
 
   .module {
@@ -169,9 +178,7 @@
     border: 1px solid var(--border);
     border-radius: var(--radius);
     position: relative;
-    box-shadow:
-      0 1px 0 0 oklch(0.55 0.20 255 / 0.05),
-      0 12px 28px -18px oklch(0.20 0.04 250 / 0.20);
+    box-shadow: var(--shadow-module);
   }
   .module::before {
     content: "";
@@ -180,7 +187,7 @@
     border-radius: inherit;
     pointer-events: none;
     background:
-      linear-gradient(180deg, oklch(0.55 0.20 255 / 0.025), transparent 30%);
+      linear-gradient(180deg, oklch(0.99 0.01 88 / 0.6), transparent 35%);
   }
 
   .corner-tick::after {
@@ -205,8 +212,8 @@
       0deg,
       transparent 0,
       transparent 3px,
-      oklch(0.20 0.04 250 / 0.06) 3px,
-      oklch(0.20 0.04 250 / 0.06) 4px
+      oklch(0.26 0.025 165 / 0.05) 3px,
+      oklch(0.26 0.025 165 / 0.05) 4px
     );
   }
 
@@ -227,5 +234,12 @@
     text-transform: uppercase;
     color: var(--muted-foreground);
     border-radius: 2px;
+    background: var(--surface);
+  }
+
+  /* Modal scrim */
+  .scrim {
+    background: oklch(0.26 0.025 165 / 0.42);
+    backdrop-filter: blur(4px);
   }
 }
