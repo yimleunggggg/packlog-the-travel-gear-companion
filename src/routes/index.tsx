@@ -1,6 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { tripData, type Trip, type LifecyclePhase } from "@/lib/packlog-data";
+import {
+  tripData,
+  type Trip,
+  type Item,
+  type LifecyclePhase,
+} from "@/lib/packlog-data";
 import { TopBar } from "@/components/packlog/TopBar";
 import { TripBriefing } from "@/components/packlog/TripBriefing";
 import { ContainerModule } from "@/components/packlog/ContainerModule";
@@ -8,6 +13,7 @@ import { ParameterBus } from "@/components/packlog/ParameterBus";
 import { CommunityRail } from "@/components/packlog/CommunityRail";
 import { PostTripReview } from "@/components/packlog/PostTripReview";
 import { motion, AnimatePresence } from "framer-motion";
+import { useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -30,6 +36,7 @@ export const Route = createFileRoute("/")({
 });
 
 function PackLogApp() {
+  const { t } = useI18n();
   const [trip, setTrip] = useState<Trip>(tripData);
   const phase = trip.phase;
 
@@ -71,8 +78,37 @@ function PackLogApp() {
       ),
     }));
 
+  const onAdd = (containerId: string, item: Omit<Item, "id">) =>
+    setTrip((t) => ({
+      ...t,
+      containers: t.containers.map((c) =>
+        c.id !== containerId
+          ? c
+          : {
+              ...c,
+              items: [
+                ...c.items,
+                { ...item, id: `usr-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` },
+              ],
+            },
+      ),
+    }));
+
+  // Quick add from smart suggest panel — drops into the personal carry (most flexible)
+  const onQuickAdd = (name: string, weightG: number, category: string) => {
+    const targetIdx = trip.containers.findIndex((c) => c.type === "personal");
+    const target = trip.containers[targetIdx >= 0 ? targetIdx : 0];
+    onAdd(target.id, {
+      name,
+      qty: 1,
+      weightG,
+      category: category as Item["category"],
+      status: "todo",
+      verdict: null,
+    });
+  };
+
   const onClone = (id: string) => {
-    // Simulated clone -> merge: bump first container with a synthetic item
     setTrip((t) => ({
       ...t,
       containers: t.containers.map((c, idx) =>
@@ -97,7 +133,6 @@ function PackLogApp() {
     }));
   };
 
-  // Sectioning for asymmetric grid
   const main = useMemo(() => trip.containers, [trip.containers]);
 
   return (
@@ -107,7 +142,6 @@ function PackLogApp() {
       <main className="mx-auto max-w-[1480px] space-y-6 px-6 py-6">
         <TripBriefing trip={trip} />
 
-        {/* Asymmetric grid */}
         <div className="grid grid-cols-12 gap-6">
           <div className="col-span-12 lg:col-span-8">
             <AnimatePresence mode="wait">
@@ -119,13 +153,13 @@ function PackLogApp() {
                   exit={{ opacity: 0, y: -10 }}
                   className="grid grid-cols-1 gap-6 md:grid-cols-2"
                 >
-                  {/* Big container spans 2 cols */}
                   <div className="md:col-span-2">
                     <ContainerModule
                       container={main[0]}
                       phase={phase}
                       onToggle={onToggle}
                       onVerdict={onVerdict}
+                      onAdd={onAdd}
                       variant="wide"
                     />
                   </div>
@@ -134,12 +168,14 @@ function PackLogApp() {
                     phase={phase}
                     onToggle={onToggle}
                     onVerdict={onVerdict}
+                    onAdd={onAdd}
                   />
                   <ContainerModule
                     container={main[2]}
                     phase={phase}
                     onToggle={onToggle}
                     onVerdict={onVerdict}
+                    onAdd={onAdd}
                   />
                 </motion.div>
               ) : (
@@ -167,19 +203,18 @@ function PackLogApp() {
             </AnimatePresence>
           </div>
 
-          <div className="col-span-12 lg:col-span-4 space-y-6">
-            <ParameterBus trip={trip} />
+          <div className="col-span-12 space-y-6 lg:col-span-4">
+            <ParameterBus trip={trip} onQuickAdd={onQuickAdd} />
             <CommunityRail onClone={onClone} />
           </div>
         </div>
 
-        {/* Footer ledger */}
         <footer className="module corner-tick relative grid grid-cols-2 gap-6 p-6 md:grid-cols-4">
           {[
-            ["DOC-ID", trip.id],
-            ["BUILD", "PL · 0.4.1 · INDUSTRIAL"],
-            ["ENCODING", "UTF-8 / KGM / ML"],
-            ["SIGNED", "@you · 2026.04.23"],
+            [t("footer.doc"), trip.id],
+            [t("footer.build"), "PL · 0.5.0 · BLUEPRINT"],
+            [t("footer.encoding"), "UTF-8 / KGM / ML"],
+            [t("footer.signed"), "@you · 2026.04.23"],
           ].map(([k, v]) => (
             <div key={k}>
               <div className="font-mono text-[9px] tracking-[0.22em] text-muted-foreground">
