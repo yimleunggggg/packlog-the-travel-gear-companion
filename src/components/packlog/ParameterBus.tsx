@@ -1,14 +1,7 @@
 import { motion } from "framer-motion";
+import { useI18n } from "@/lib/i18n";
 import type { Trip } from "@/lib/packlog-data";
-
-const catLabels: Record<string, string> = {
-  tech: "TECH",
-  apparel: "APPAREL",
-  doc: "DOCS",
-  health: "HEALTH",
-  optic: "OPTICAL",
-  misc: "MISC",
-};
+import { popularSuggestions } from "@/lib/weight-library";
 
 const catColor: Record<string, string> = {
   tech: "var(--info)",
@@ -19,7 +12,14 @@ const catColor: Record<string, string> = {
   misc: "var(--muted-foreground)",
 };
 
-export function ParameterBus({ trip }: { trip: Trip }) {
+export function ParameterBus({
+  trip,
+  onQuickAdd,
+}: {
+  trip: Trip;
+  onQuickAdd?: (name: string, weightG: number, category: string) => void;
+}) {
+  const { t } = useI18n();
   const all = trip.containers.flatMap((c) => c.items);
   const totalKg = all.reduce((s, i) => s + i.weightG * i.qty, 0) / 1000;
   const byCat = all.reduce<Record<string, number>>((acc, i) => {
@@ -32,13 +32,13 @@ export function ParameterBus({ trip }: { trip: Trip }) {
     <aside className="space-y-4">
       <section className="module corner-tick relative p-5">
         <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
-          ◇ MASS · DISTRIBUTION
+          {t("param.distribution")}
         </div>
         <div className="mt-3 flex items-baseline gap-2">
           <span className="font-mono text-4xl tabular-nums">
             {totalKg.toFixed(2)}
           </span>
-          <span className="font-mono text-xs text-muted-foreground">KG TOTAL</span>
+          <span className="font-mono text-xs text-muted-foreground">{t("param.kg")}</span>
         </div>
 
         <div className="mt-4 flex h-3 w-full overflow-hidden border border-border">
@@ -64,7 +64,7 @@ export function ParameterBus({ trip }: { trip: Trip }) {
                   className="h-2 w-2"
                   style={{ background: catColor[cat] }}
                 />
-                <span className="text-muted-foreground">{catLabels[cat]}</span>
+                <span className="text-muted-foreground">{t(`cat.${cat}`)}</span>
               </div>
               <span className="tabular-nums">
                 <span>{(w / 1000).toFixed(2)}kg</span>
@@ -79,62 +79,55 @@ export function ParameterBus({ trip }: { trip: Trip }) {
 
       <section className="module corner-tick relative p-5">
         <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
-          ◈ ANXIETY · INDEX
-        </div>
-        <div className="mt-3">
-          <div className="flex items-baseline gap-2">
-            <span className="font-mono text-4xl tabular-nums text-success">
-              −64
-            </span>
-            <span className="font-mono text-xs text-muted-foreground">
-              % VS. UNPLANNED
-            </span>
-          </div>
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-            Based on your packing rhythm, mass-distribution, and reviewed gear-DNA,
-            departure stress is{" "}
-            <span className="font-mono text-foreground">low</span>. Sleep tonight.
-          </p>
-        </div>
-
-        {/* mini sparkline */}
-        <svg viewBox="0 0 200 50" className="mt-3 h-12 w-full">
-          {Array.from({ length: 24 }).map((_, i) => {
-            const h = 8 + Math.abs(Math.sin(i * 0.7) * 18) + (i / 24) * 14;
-            return (
-              <rect
-                key={i}
-                x={i * 8.3}
-                y={50 - h}
-                width={5}
-                height={h}
-                fill={i > 18 ? "var(--signal)" : "var(--border-strong)"}
-              />
-            );
-          })}
-        </svg>
-        <div className="mt-1 flex justify-between font-mono text-[9px] text-muted-foreground">
-          <span>D−14</span>
-          <span>TODAY</span>
-        </div>
-      </section>
-
-      <section className="module corner-tick relative p-5">
-        <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
-          ⚙ AUTO · ASSIST
+          {t("param.assist")}
         </div>
         <ul className="mt-3 space-y-2 text-xs">
-          {[
-            "Hokkaido in May → +2 hand warmers suggested",
-            "Carry-on at 6.4/7kg → safe for ANA",
-            "Missing: travel adapter (Type-A, JP)",
-          ].map((m) => (
+          {["param.assist.1", "param.assist.2", "param.assist.3"].map((k) => (
             <li
-              key={m}
+              key={k}
               className="flex gap-2 border-l-2 border-signal/60 bg-surface-2 px-3 py-2"
             >
               <span className="font-mono text-signal">▸</span>
-              <span className="leading-relaxed">{m}</span>
+              <span className="leading-relaxed">{t(k)}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="module corner-tick relative p-5">
+        <div className="flex items-baseline justify-between">
+          <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
+            {t("param.suggest")}
+          </div>
+          <span className="tag-chip">N={popularSuggestions.length}</span>
+        </div>
+        <p className="mt-2 text-[11px] text-muted-foreground">{t("param.suggest.tip")}</p>
+        <ul className="mt-3 divide-y divide-border border border-border">
+          {popularSuggestions.map((s) => (
+            <li
+              key={s.name}
+              className="flex items-center justify-between gap-2 bg-surface px-3 py-2 transition hover:bg-surface-2"
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className="h-1.5 w-1.5"
+                  style={{ background: catColor[s.hint.category] }}
+                />
+                <span className="text-xs">{s.name}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[10px] text-muted-foreground tabular-nums">
+                  {s.hint.weightG}g
+                </span>
+                <button
+                  onClick={() =>
+                    onQuickAdd?.(s.name, s.hint.weightG, s.hint.category)
+                  }
+                  className="border border-border-strong px-2 py-0.5 font-mono text-[10px] tracking-[0.15em] hover:bg-signal hover:text-signal-foreground"
+                >
+                  {t("param.suggest.add")}
+                </button>
+              </div>
             </li>
           ))}
         </ul>
