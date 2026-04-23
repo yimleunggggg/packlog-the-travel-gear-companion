@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { reviewTrip } from "@/lib/packlog-data";
+import { useI18n } from "@/lib/i18n";
 
 const verdictMeta = {
   keep: { color: "var(--success)", label: "KEEP", glyph: "✓" },
@@ -8,6 +9,7 @@ const verdictMeta = {
 };
 
 export function PostTripReview() {
+  const { t } = useI18n();
   const counts = {
     keep: reviewTrip.verdicts.filter((v) => v.verdict === "keep").length,
     upgrade: reviewTrip.verdicts.filter((v) => v.verdict === "upgrade").length,
@@ -19,17 +21,17 @@ export function PostTripReview() {
       <div className="flex items-start justify-between border-b border-border pb-4">
         <div>
           <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
-            ⟲ POST-TRIP · DEBRIEF
+            {t("review.head")}
           </div>
           <h3 className="mt-1 font-display text-2xl leading-tight">
-            Last mission · {reviewTrip.title}
+            {t("review.last")} · {reviewTrip.title}
           </h3>
           <p className="mt-1 font-mono text-[10px] text-muted-foreground">
-            {reviewTrip.date} · sealed {reviewTrip.verdicts.length} verdicts
+            {reviewTrip.date} · {t("review.sealed")} {reviewTrip.verdicts.length} {t("review.verdicts")}
           </p>
         </div>
         <button className="border border-border-strong px-3 py-1.5 font-mono text-[10px] tracking-[0.18em] hover:bg-surface-2">
-          OPEN FULL LOG
+          {t("review.openLog")}
         </button>
       </div>
 
@@ -91,15 +93,9 @@ export function PostTripReview() {
 
       <div className="mt-5 border border-signal/40 bg-signal/5 p-4">
         <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
-          ◆ GEAR-DNA · INSIGHT
+          {t("review.dna")}
         </div>
-        <p className="mt-2 text-sm leading-relaxed">
-          Across <span className="font-mono text-signal">12</span> sealed trips, your
-          highest-rated category is <span className="font-mono">OPTICAL</span> (avg
-          4.7). You drop <span className="font-mono">paper-based</span> items{" "}
-          <span className="font-mono text-signal">83%</span> of the time. Suggestion
-          for next pack: skip the journal, bring the ND filter.
-        </p>
+        <p className="mt-2 text-sm leading-relaxed">{t("review.dna.text")}</p>
       </div>
     </section>
   );
