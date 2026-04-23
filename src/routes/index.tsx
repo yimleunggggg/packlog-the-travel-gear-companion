@@ -51,7 +51,38 @@ function PackLogApp() {
   const [cloneTpl, setCloneTpl] = useState<CommunityTemplate | null>(null);
   const containersRef = useRef<HTMLDivElement | null>(null);
 
-  const trip = trips.find((t) => t.id === activeId) ?? trips[0];
+  const trip = trips.find((tr) => tr.id === activeId) ?? trips[0];
+
+  if (!trip) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-8">
+        <div className="module corner-tick max-w-md p-8 text-center">
+          <div className="font-mono text-xs tracking-[0.22em] text-muted-foreground">PACKLOG</div>
+          <h1 className="mt-3 text-xl font-semibold">No trip files found</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Open a fresh field file to begin packing.
+          </p>
+          <button
+            onClick={() => setNewTripOpen(true)}
+            className="mt-5 rounded-md bg-primary px-4 py-2 font-mono text-xs tracking-[0.18em] text-primary-foreground"
+          >
+            + NEW TRIP
+          </button>
+          <NewTripDialog
+            open={newTripOpen}
+            onClose={() => setNewTripOpen(false)}
+            onCreate={(args) => {
+              const fresh = makeFreshTrip(args);
+              setTrips([fresh]);
+              setActiveId(fresh.id);
+              setNewTripOpen(false);
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   const phase = trip.phase;
 
   const updateTrip = (mutator: (t: Trip) => Trip) =>
