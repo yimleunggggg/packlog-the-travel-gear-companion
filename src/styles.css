@@ -11,12 +11,18 @@
     font-weight: 400 800;
     font-display: swap;
   }
+  @font-face {
+    font-family: "InstrumentSerif";
+    src: url("https://fonts.gstatic.com/s/instrumentserif/v4/jizDREVItHgc8qDIbSTKq4XKVUz0xQ.woff2") format("woff2");
+    font-weight: 400;
+    font-display: swap;
+  }
 }
 
 @theme inline {
   --font-mono: "JetBrainsMono", ui-monospace, "SF Mono", Menlo, monospace;
   --font-sans: "Inter Tight", "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Inter Tight", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "InstrumentSerif", "Cormorant Garamond", Georgia, serif;
 
   --radius-sm: 2px;
   --radius-md: 4px;
@@ -55,11 +61,11 @@
 
   --shadow-cut: 0 1px 0 0 var(--border-strong), 0 0 0 1px var(--border);
   --shadow-module:
-    0 1px 0 0 oklch(0.42 0.05 160 / 0.04),
-    0 18px 36px -22px oklch(0.30 0.05 160 / 0.18);
+    0 1px 0 0 oklch(0.30 0.02 240 / 0.04),
+    0 14px 30px -22px oklch(0.40 0.05 240 / 0.18);
 
   --animate-pulse-dot: pulse-dot 1.6s ease-in-out infinite;
-  --animate-tape: tape 18s linear infinite;
+  --animate-tape: tape 22s linear infinite;
   --animate-fill: fill 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   --animate-rise: rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 
@@ -81,68 +87,67 @@
 }
 
 :root {
-  --radius: 4px;
+  --radius: 6px;
 
-  /* === PACKLOG · "Field Notes" palette ===
-     Base : warm paper / oat
-     Ink  : deep moss-green (sage charcoal)
-     Soul : burnished terracotta (warm clay)
-     A refined, journal-like, outdoorsy aesthetic — high-end without being cold.
+  /* === PACKLOG · "Daybreak Field" palette ===
+     Ivory paper background, deep ink-blue type, sun-amber accents,
+     supported by sage green and dusk indigo for state colors.
+     Bright, premium, modern editorial feel.
   */
-  --background: oklch(0.965 0.012 88);          /* warm oat paper */
-  --foreground: oklch(0.26 0.025 165);          /* deep moss ink */
-  --surface:    oklch(0.99  0.008 88);          /* card paper */
-  --surface-2:  oklch(0.945 0.014 85);          /* sunken paper */
-  --surface-3:  oklch(0.91  0.018 82);          /* deeper trough */
-  --card:       oklch(0.99  0.008 88);
-  --card-foreground: oklch(0.26 0.025 165);
-  --popover:    oklch(0.99  0.008 88);
-  --popover-foreground: oklch(0.26 0.025 165);
+  --background: oklch(0.985 0.008 90);          /* warm ivory */
+  --foreground: oklch(0.22 0.04 250);           /* deep ink blue */
+  --surface:    oklch(1.000 0.000 0);           /* pure paper */
+  --surface-2:  oklch(0.965 0.012 88);          /* sunken ivory */
+  --surface-3:  oklch(0.93  0.018 86);          /* deeper trough */
+  --card:       oklch(1.000 0.000 0);
+  --card-foreground: oklch(0.22 0.04 250);
+  --popover:    oklch(1.000 0.000 0);
+  --popover-foreground: oklch(0.22 0.04 250);
 
-  --primary: oklch(0.42 0.06 165);              /* moss */
-  --primary-foreground: oklch(0.97 0.012 88);
-  --secondary: oklch(0.92 0.018 85);
-  --secondary-foreground: oklch(0.26 0.025 165);
-  --muted: oklch(0.93 0.014 85);
-  --muted-foreground: oklch(0.50 0.02 160);
-  --accent: oklch(0.92 0.04 60);                /* warm sand accent */
-  --accent-foreground: oklch(0.26 0.025 165);
-  --destructive: oklch(0.55 0.18 28);
-  --destructive-foreground: oklch(0.98 0.01 88);
+  --primary: oklch(0.34 0.10 252);              /* deep indigo */
+  --primary-foreground: oklch(0.98 0.005 90);
+  --secondary: oklch(0.94 0.018 240);
+  --secondary-foreground: oklch(0.22 0.04 250);
+  --muted: oklch(0.945 0.012 240);
+  --muted-foreground: oklch(0.50 0.04 248);
+  --accent: oklch(0.92 0.07 80);                /* sun-amber soft */
+  --accent-foreground: oklch(0.22 0.04 250);
+  --destructive: oklch(0.58 0.21 25);
+  --destructive-foreground: oklch(0.98 0.005 90);
 
-  --border: oklch(0.84 0.02 130);               /* sage border */
-  --border-strong: oklch(0.62 0.04 150);        /* sage strong */
-  --input: oklch(0.84 0.02 130);
-  --ring: oklch(0.62 0.12 50);
+  --border: oklch(0.88 0.014 240);
+  --border-strong: oklch(0.70 0.04 245);
+  --input: oklch(0.88 0.014 240);
+  --ring: oklch(0.66 0.18 60);
 
-  /* Soul accent — burnished terracotta. Warm, earthy, premium. */
-  --signal: oklch(0.62 0.14 45);
-  --signal-foreground: oklch(0.98 0.01 88);
-  --signal-soft: oklch(0.88 0.07 55);
+  /* Soul accent — bright sun-amber. Warm, alive, premium. */
+  --signal: oklch(0.74 0.16 65);                /* sun amber */
+  --signal-foreground: oklch(0.22 0.04 250);    /* dark text on amber */
+  --signal-soft: oklch(0.92 0.10 75);
 
-  --success: oklch(0.58 0.10 155);              /* sage-leaf */
-  --warn:    oklch(0.74 0.14 75);               /* honey */
-  --info:    oklch(0.50 0.08 220);              /* dusk teal */
+  --success: oklch(0.62 0.13 155);              /* fresh sage */
+  --warn:    oklch(0.78 0.16 75);               /* honey */
+  --info:    oklch(0.55 0.15 245);              /* dusk indigo */
 
-  --chart-1: oklch(0.62 0.14 45);
-  --chart-2: oklch(0.58 0.10 155);
-  --chart-3: oklch(0.50 0.08 220);
-  --chart-4: oklch(0.74 0.14 75);
-  --chart-5: oklch(0.55 0.10 320);
+  --chart-1: oklch(0.74 0.16 65);
+  --chart-2: oklch(0.62 0.13 155);
+  --chart-3: oklch(0.55 0.15 245);
+  --chart-4: oklch(0.78 0.16 75);
+  --chart-5: oklch(0.55 0.16 320);
 
-  --sidebar: oklch(0.95 0.014 85);
-  --sidebar-foreground: oklch(0.26 0.025 165);
-  --sidebar-primary: oklch(0.62 0.14 45);
-  --sidebar-primary-foreground: oklch(0.98 0.01 88);
-  --sidebar-accent: oklch(0.92 0.018 85);
-  --sidebar-accent-foreground: oklch(0.26 0.025 165);
-  --sidebar-border: oklch(0.84 0.02 130);
-  --sidebar-ring: oklch(0.62 0.14 45);
+  --sidebar: oklch(0.965 0.012 88);
+  --sidebar-foreground: oklch(0.22 0.04 250);
+  --sidebar-primary: oklch(0.74 0.16 65);
+  --sidebar-primary-foreground: oklch(0.22 0.04 250);
+  --sidebar-accent: oklch(0.94 0.018 240);
+  --sidebar-accent-foreground: oklch(0.22 0.04 250);
+  --sidebar-border: oklch(0.88 0.014 240);
+  --sidebar-ring: oklch(0.74 0.16 65);
 }
 
 .dark {
-  --background: oklch(0.965 0.012 88);
-  --foreground: oklch(0.26 0.025 165);
+  --background: oklch(0.985 0.008 90);
+  --foreground: oklch(0.22 0.04 250);
 }
 
 @layer base {
@@ -156,22 +161,27 @@
   }
   body {
     background-image:
-      radial-gradient(circle at 88% -8%, oklch(0.78 0.13 50 / 0.18), transparent 55%),
-      radial-gradient(circle at -5% 105%, oklch(0.55 0.08 165 / 0.12), transparent 55%),
-      linear-gradient(oklch(0.42 0.06 165 / 0.045) 1px, transparent 1px),
-      linear-gradient(90deg, oklch(0.42 0.06 165 / 0.045) 1px, transparent 1px);
-    background-size: auto, auto, 36px 36px, 36px 36px;
+      radial-gradient(ellipse at 92% -10%, oklch(0.86 0.15 70 / 0.32), transparent 55%),
+      radial-gradient(ellipse at -8% 110%, oklch(0.65 0.15 250 / 0.18), transparent 55%),
+      linear-gradient(oklch(0.40 0.08 250 / 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(0.40 0.08 250 / 0.04) 1px, transparent 1px);
+    background-size: auto, auto, 40px 40px, 40px 40px;
     background-position: 0 0, 0 0, 0 0, 0 0;
     background-attachment: fixed;
   }
+  h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.01em; }
 }
 
 @layer utilities {
   .font-mono { font-family: var(--font-mono); }
+  .font-display { font-family: var(--font-display); }
   .text-signal { color: var(--signal); }
   .bg-signal { background-color: var(--signal); }
   .bg-signal-soft { background-color: var(--signal-soft); }
   .border-signal { border-color: var(--signal); }
+  .text-info { color: var(--info); }
+  .bg-info { background-color: var(--info); }
+  .border-info { border-color: var(--info); }
 
   .module {
     background: var(--surface);
@@ -187,24 +197,24 @@
     border-radius: inherit;
     pointer-events: none;
     background:
-      linear-gradient(180deg, oklch(0.99 0.01 88 / 0.6), transparent 35%);
+      linear-gradient(180deg, oklch(1 0 0 / 0.5), transparent 30%);
   }
 
   .corner-tick::after {
     content: "";
     position: absolute;
     top: -1px; left: -1px;
-    width: 10px; height: 10px;
-    border-top: 1px solid var(--signal);
-    border-left: 1px solid var(--signal);
+    width: 12px; height: 12px;
+    border-top: 1.5px solid var(--signal);
+    border-left: 1.5px solid var(--signal);
   }
   .corner-tick-br::before {
     content: "";
     position: absolute;
     bottom: -1px; right: -1px;
-    width: 10px; height: 10px;
-    border-bottom: 1px solid var(--signal);
-    border-right: 1px solid var(--signal);
+    width: 12px; height: 12px;
+    border-bottom: 1.5px solid var(--signal);
+    border-right: 1.5px solid var(--signal);
   }
 
   .scanlines {
@@ -212,8 +222,8 @@
       0deg,
       transparent 0,
       transparent 3px,
-      oklch(0.26 0.025 165 / 0.05) 3px,
-      oklch(0.26 0.025 165 / 0.05) 4px
+      oklch(0.40 0.08 250 / 0.05) 3px,
+      oklch(0.40 0.08 250 / 0.05) 4px
     );
   }
 
@@ -233,13 +243,16 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--muted-foreground);
-    border-radius: 2px;
+    border-radius: 3px;
     background: var(--surface);
   }
 
-  /* Modal scrim */
   .scrim {
-    background: oklch(0.26 0.025 165 / 0.42);
-    backdrop-filter: blur(4px);
+    background: oklch(0.22 0.04 250 / 0.45);
+    backdrop-filter: blur(6px);
   }
+
+  /* Drag-and-drop visual */
+  .drop-target { outline: 2px dashed var(--signal); outline-offset: -4px; background: var(--signal-soft); }
+  .dragging { opacity: 0.4; }
 }
