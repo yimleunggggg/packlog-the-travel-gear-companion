@@ -141,13 +141,15 @@ export function ContainerModule({
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: idx * 0.02 }}
                     draggable={phase !== "REVIEW" && !!onMove}
-                    onDragStart={((e: React.DragEvent) => {
-                      e.dataTransfer.setData(
-                        "application/x-packlog-item",
-                        JSON.stringify({ fromContainerId: container.id, itemId: it.id }),
-                      );
-                      e.dataTransfer.effectAllowed = "move";
-                    }) as unknown as React.DragEventHandler}
+                    {...({
+                      onDragStart: (e: React.DragEvent) => {
+                        e.dataTransfer.setData(
+                          "application/x-packlog-item",
+                          JSON.stringify({ fromContainerId: container.id, itemId: it.id }),
+                        );
+                        e.dataTransfer.effectAllowed = "move";
+                      },
+                    } as Record<string, unknown>)}
                     className="group grid grid-cols-12 items-center gap-2 px-4 py-2.5 hover:bg-surface-2"
                   >
                     <div className="col-span-1">
