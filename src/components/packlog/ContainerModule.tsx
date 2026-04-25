@@ -301,17 +301,35 @@ function AddGearForm({
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || weight === "" || +weight <= 0) return;
+    if (!name.trim()) return;
     const trimmed = name.trim();
     const isZh = /[\u4e00-\u9fa5]/.test(trimmed);
+
+    // Weight is optional. Order: explicit user input → library hint → 100g default.
+    let finalWeight: number;
+    let source: Item["weightSource"];
+    if (weight !== "" && +weight > 0) {
+      finalWeight = +weight;
+      source = autoFilled ? "library" : "user";
+    } else {
+      const hint = suggestFromName(trimmed);
+      if (hint) {
+        finalWeight = hint.weightG;
+        source = "library";
+      } else {
+        finalWeight = 100;
+        source = "library";
+      }
+    }
+
     onCommit({
       gearId: null,
       name: trimmed,
       nameEn: isZh ? undefined : trimmed,
       nameZh: isZh ? trimmed : undefined,
       qty: Math.max(1, qty),
-      weightG: +weight,
-      weightSource: autoFilled ? "library" : "user",
+      weightG: finalWeight,
+      weightSource: source,
       category,
       status: "todo",
       verdict: null,
