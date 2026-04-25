@@ -41,12 +41,18 @@ export function TopBar({
           >
             {t("nav.archive")}
           </Link>
-          <span
-            className="cursor-not-allowed border border-transparent px-2.5 py-1 font-mono text-[10px] tracking-[0.18em] text-muted-foreground/50"
-            title="Coming soon"
+          <Link
+            to="/library"
+            className="border border-transparent px-2.5 py-1 font-mono text-[10px] tracking-[0.18em] text-muted-foreground transition hover:text-foreground [&.active]:border-signal [&.active]:bg-signal-soft [&.active]:text-foreground"
           >
             {t("nav.library")}
-          </span>
+          </Link>
+          <Link
+            to="/community"
+            className="border border-transparent px-2.5 py-1 font-mono text-[10px] tracking-[0.18em] text-muted-foreground transition hover:text-foreground [&.active]:border-signal [&.active]:bg-signal-soft [&.active]:text-foreground"
+          >
+            {t("nav.community")}
+          </Link>
         </nav>
 
         {/* Lifecycle Track (only shown inside a trip) */}
