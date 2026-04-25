@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { communityTemplates, type CommunityTemplate, type Trip } from "@/lib/packlog-data";
-import { useI18n, pickName } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
 
 export function CommunityRail({
   scenario,
