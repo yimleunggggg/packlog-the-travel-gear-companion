@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, pickName } from "@/lib/i18n";
 import type { CommunityTemplate, Container } from "@/lib/packlog-data";
 
 const catColor: Record<string, string> = {
@@ -23,7 +23,7 @@ export function CloneSheet({
   onClose: () => void;
   onCommit: (selectedIdx: number[], targetContainerId: string) => void;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [selected, setSelected] = useState<number[]>([]);
   const [target, setTarget] = useState<string>(containers[0]?.id ?? "");
 
@@ -73,12 +73,14 @@ export function CloneSheet({
                 {template.cloned.toLocaleString()} clones
               </span>
             </div>
-            <h3 className="mt-2 font-display text-2xl leading-tight">{template.title}</h3>
+            <h3 className="mt-2 font-display text-2xl leading-tight">
+              {lang === "zh" ? (template.titleZh ?? template.title) : template.title}
+            </h3>
             <div className="mt-1 font-mono text-[10px] text-muted-foreground">
               {t(`scenario.${template.scenario}`)} · {template.climate} · {template.totalWeight}
             </div>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground/85">
-              {template.intro}
+              {lang === "zh" ? (template.introZh ?? template.intro) : template.intro}
             </p>
           </div>
 
@@ -128,10 +130,10 @@ export function CloneSheet({
                     <div className="col-span-5">
                       <div className="flex items-center gap-1.5">
                         <span className="h-1.5 w-1.5" style={{ background: catColor[it.category] }} />
-                        <span className="text-sm">{it.name}</span>
+                        <span className="text-sm">{pickName(lang, it)}</span>
                       </div>
                       <div className="mt-0.5 font-mono text-[10px] leading-relaxed text-muted-foreground">
-                        {it.why}
+                        {lang === "zh" ? (it.whyZh ?? it.why) : it.why}
                       </div>
                     </div>
                     <div className="col-span-1 text-right font-mono text-[10px] text-muted-foreground tabular-nums">

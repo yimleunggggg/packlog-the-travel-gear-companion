@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, pickName } from "@/lib/i18n";
 import type { GearSpec } from "@/lib/packlog-data";
 
 const catColor: Record<string, string> = {
@@ -25,7 +25,7 @@ export function GearLibraryPanel({
   library: GearSpec[];
   onAddToTrip: (gear: GearSpec) => void;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [open, setOpen] = useState<string | null>(null);
   const [q, setQ] = useState("");
 
@@ -84,7 +84,7 @@ export function GearLibraryPanel({
                         {g.category.toUpperCase()}
                       </span>
                     </div>
-                    <div className="mt-1 truncate text-sm font-medium">{g.name}</div>
+                    <div className="mt-1 truncate text-sm font-medium">{pickName(lang, g)}</div>
                     {g.brand && (
                       <div className="font-mono text-[10px] text-muted-foreground">{g.brand}</div>
                     )}
@@ -119,7 +119,7 @@ export function GearLibraryPanel({
                   >
                     <div className="mt-3 border-t border-dashed border-border pt-3">
                       <p className="text-[12px] leading-relaxed text-foreground/85">
-                        {g.description}
+                        {lang === "zh" ? (g.descriptionZh ?? g.description) : g.description}
                       </p>
                       <div className="mt-2 font-mono text-[9px] text-muted-foreground">
                         {t("library.owned")} {g.ownedSince}

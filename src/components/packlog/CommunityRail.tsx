@@ -9,7 +9,7 @@ export function CommunityRail({
   scenario: Trip["scenario"];
   onPreview: (tpl: CommunityTemplate) => void;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
 
   // Score: scenario match first, then by rating
   const ranked = [...communityTemplates].sort((a, b) => {
@@ -58,7 +58,7 @@ export function CommunityRail({
                     )}
                   </div>
                   <div className="mt-1 truncate text-sm font-medium leading-tight">
-                    {tpl.title}
+                    {lang === "zh" ? (tpl.titleZh ?? tpl.title) : tpl.title}
                   </div>
                   <div className="mt-1 font-mono text-[10px] text-muted-foreground">
                     {tpl.climate} · {t(`scenario.${tpl.scenario}`)}
