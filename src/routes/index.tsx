@@ -180,6 +180,7 @@ function PackLogApp() {
       status: "todo",
       verdict: null,
       utility: null,
+      ownership: "owned",
     });
   };
 
@@ -202,6 +203,7 @@ function PackLogApp() {
       status: "todo",
       verdict: null,
       utility: null,
+      ownership: "owned",
     });
   };
 
@@ -229,6 +231,7 @@ function PackLogApp() {
                     status: "todo" as const,
                     verdict: null,
                     utility: null,
+                    ownership: "owned" as const,
                     note: it.why,
                   };
                 }),
@@ -288,10 +291,8 @@ function PackLogApp() {
       <main className="mx-auto max-w-[1480px] space-y-6 px-6 py-6">
         <TripBriefing
           trip={trip}
-          trips={trips}
-          onSwitchTrip={setActiveId}
-          onNewTrip={() => setNewTripOpen(true)}
-          onOpenClone={() => setCloneTpl(trips.length > 0 ? null : null) /* opens via rail click */}
+          onBack={() => {}}
+          onOpenClone={() => setCloneTpl(null)}
           onContinue={scrollToContainers}
         />
 

@@ -41,12 +41,12 @@ export function TopBar({
           >
             {t("nav.archive")}
           </Link>
-          <Link
-            to="/library"
-            className="border border-transparent px-2.5 py-1 font-mono text-[10px] tracking-[0.18em] text-muted-foreground transition hover:text-foreground [&.active]:border-signal [&.active]:bg-signal-soft [&.active]:text-foreground"
+          <span
+            className="cursor-not-allowed border border-transparent px-2.5 py-1 font-mono text-[10px] tracking-[0.18em] text-muted-foreground/50"
+            title="Coming soon"
           >
             {t("nav.library")}
-          </Link>
+          </span>
         </nav>
 
         {/* Lifecycle Track (only shown inside a trip) */}
