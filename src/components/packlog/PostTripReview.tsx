@@ -1,15 +1,17 @@
 import { motion } from "framer-motion";
+import { useState } from "react";
 import { reviewTrip } from "@/lib/packlog-data";
 import { useI18n } from "@/lib/i18n";
 
-const verdictMeta = {
-  keep: { color: "var(--success)", label: "KEEP", glyph: "✓" },
-  upgrade: { color: "var(--signal)", label: "UPGRADE", glyph: "↑" },
-  drop: { color: "var(--destructive)", label: "DROP", glyph: "✕" },
-};
-
 export function PostTripReview({ onSeal }: { onSeal?: () => void }) {
   const { t } = useI18n();
+  const [savedTpl, setSavedTpl] = useState(false);
+  const verdictMeta = {
+    keep:    { color: "var(--success)",     label: t("review.verdict.keep"),    glyph: "✓" },
+    upgrade: { color: "var(--signal)",      label: t("review.verdict.upgrade"), glyph: "★" },
+    drop:    { color: "var(--destructive)", label: t("review.verdict.drop"),    glyph: "·" },
+  } as const;
+
   const counts = {
     keep: reviewTrip.verdicts.filter((v) => v.verdict === "keep").length,
     upgrade: reviewTrip.verdicts.filter((v) => v.verdict === "upgrade").length,
@@ -109,7 +111,19 @@ export function PostTripReview({ onSeal }: { onSeal?: () => void }) {
       </div>
 
       {onSeal && (
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+          {savedTpl && (
+            <span className="font-mono text-[10px] tracking-[0.18em] text-success">
+              {t("review.savedTemplate")}
+            </span>
+          )}
+          <button
+            onClick={() => setSavedTpl(true)}
+            disabled={savedTpl}
+            className="border border-border-strong bg-surface px-3 py-2 font-mono text-[10px] tracking-[0.2em] text-foreground hover:border-signal disabled:opacity-50"
+          >
+            {t("review.saveTemplate")}
+          </button>
           <button
             onClick={onSeal}
             className="border border-signal bg-signal px-4 py-2 font-mono text-[10px] tracking-[0.2em] text-signal-foreground hover:opacity-90"

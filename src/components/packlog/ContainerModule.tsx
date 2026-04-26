@@ -280,24 +280,39 @@ function AddGearForm({
   onCancel: () => void;
   onCommit: (item: Omit<Item, "id">) => void;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [name, setName] = useState("");
   const [qty, setQty] = useState(1);
   const [weight, setWeight] = useState<number | "">("");
   const [category, setCategory] = useState<Item["category"]>("misc");
   const [ownership, setOwnership] = useState<Item["ownership"]>("owned");
-  const [autoFilled, setAutoFilled] = useState(false);
+  // Whether user has manually overridden the weight/category since last suggestion apply.
+  const [userTouchedWeight, setUserTouchedWeight] = useState(false);
+  const [userTouchedCat, setUserTouchedCat] = useState(false);
 
+  // Live suggestion (NEVER auto-overwrites user-typed values).
+  const hint = suggestFromName(name);
+
+  // Apply hint: only when user hasn't touched the weight, and weight is empty.
   useEffect(() => {
-    const hit = suggestFromName(name);
-    if (hit) {
-      if (weight === "" || autoFilled) {
-        setWeight(hit.weightG);
-        setCategory(hit.category);
-        setAutoFilled(true);
-      }
+    if (!hint) return;
+    if (!userTouchedWeight && weight === "") setWeight(hint.weightG);
+    if (!userTouchedCat) setCategory(hint.category);
+  }, [hint?.weightG, hint?.category]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const applyHintNow = () => {
+    if (!hint) return;
+    setWeight(hint.weightG);
+    setCategory(hint.category);
+    // If the hint has a canonical name and the user typed only a partial/brand,
+    // upgrade the input to the canonical form (helps "salomon ultra 4" → "Salomon Ultra 4").
+    const canonical = lang === "zh" ? hint.nameZh : hint.nameEn;
+    if (canonical && canonical.toLowerCase() !== name.trim().toLowerCase()) {
+      setName(canonical);
     }
-  }, [name]); // eslint-disable-line react-hooks/exhaustive-deps
+    setUserTouchedWeight(false);
+    setUserTouchedCat(false);
+  };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -310,23 +325,24 @@ function AddGearForm({
     let source: Item["weightSource"];
     if (weight !== "" && +weight > 0) {
       finalWeight = +weight;
-      source = autoFilled ? "library" : "user";
+      source = userTouchedWeight ? "user" : "library";
+    } else if (hint) {
+      finalWeight = hint.weightG;
+      source = "library";
     } else {
-      const hint = suggestFromName(trimmed);
-      if (hint) {
-        finalWeight = hint.weightG;
-        source = "library";
-      } else {
-        finalWeight = 100;
-        source = "library";
-      }
+      finalWeight = 100;
+      source = "library";
     }
+
+    // Carry over canonical bilingual names from the hint when available.
+    const nameEn = hint?.nameEn ?? (isZh ? undefined : trimmed);
+    const nameZh = hint?.nameZh ?? (isZh ? trimmed : undefined);
 
     onCommit({
       gearId: null,
       name: trimmed,
-      nameEn: isZh ? undefined : trimmed,
-      nameZh: isZh ? trimmed : undefined,
+      nameEn,
+      nameZh,
       qty: Math.max(1, qty),
       weightG: finalWeight,
       weightSource: source,
@@ -347,7 +363,7 @@ function AddGearForm({
         <input
           autoFocus
           value={name}
-          onChange={(e) => { setName(e.target.value); if (!e.target.value) setAutoFilled(false); }}
+          onChange={(e) => setName(e.target.value)}
           placeholder={t("container.add.name")}
           className="col-span-6 rounded border border-border-strong bg-background px-2 py-1.5 text-sm placeholder:text-muted-foreground focus:border-signal focus:outline-none"
         />
@@ -359,18 +375,34 @@ function AddGearForm({
         />
         <input
           type="number" min={1} value={weight}
-          onChange={(e) => { setWeight(e.target.value === "" ? "" : +e.target.value); setAutoFilled(false); }}
+          onChange={(e) => { setWeight(e.target.value === "" ? "" : +e.target.value); setUserTouchedWeight(true); }}
           placeholder={t("container.add.weight")}
           className={`col-span-4 rounded border bg-background px-2 py-1.5 text-right font-mono text-sm focus:border-signal focus:outline-none ${
-            autoFilled ? "border-signal/60 text-signal" : "border-border-strong"
+            !userTouchedWeight && hint ? "border-signal/60 text-signal" : "border-border-strong"
           }`}
         />
       </div>
+
+      {hint && (
+        <button
+          type="button"
+          onClick={applyHintNow}
+          className="flex w-full items-center justify-between rounded border border-signal/40 bg-signal-soft/40 px-2 py-1.5 text-left font-mono text-[10px] hover:bg-signal-soft"
+        >
+          <span className="truncate text-foreground">
+            <span className="text-signal">↳</span>{" "}
+            {(lang === "zh" ? hint.nameZh : hint.nameEn) ?? name}
+            <span className="ml-1.5 text-muted-foreground">· {hint.weightG}g · {t(`cat.${hint.category}`)}</span>
+          </span>
+          <span className="ml-2 shrink-0 tracking-[0.15em] text-signal">USE ↵</span>
+        </button>
+      )}
+
       <div className="flex flex-wrap items-center gap-1">
         {cats.map((c) => (
           <button
             type="button" key={c}
-            onClick={() => setCategory(c)}
+            onClick={() => { setCategory(c); setUserTouchedCat(true); }}
             className={`rounded border px-2 py-0.5 font-mono text-[10px] tracking-[0.15em] ${
               category === c
                 ? "border-signal bg-signal text-signal-foreground"
@@ -397,7 +429,7 @@ function AddGearForm({
         ))}
       </div>
       <p className="font-mono text-[10px] leading-relaxed text-muted-foreground">
-        {autoFilled && "✓ "}{t("container.add.suggest")}
+        {t("container.add.suggest")}
       </p>
       <div className="flex justify-end gap-2">
         <button type="button" onClick={onCancel} className="rounded border border-border-strong px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-muted-foreground hover:text-foreground">
