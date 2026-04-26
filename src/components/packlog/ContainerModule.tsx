@@ -280,24 +280,39 @@ function AddGearForm({
   onCancel: () => void;
   onCommit: (item: Omit<Item, "id">) => void;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [name, setName] = useState("");
   const [qty, setQty] = useState(1);
   const [weight, setWeight] = useState<number | "">("");
   const [category, setCategory] = useState<Item["category"]>("misc");
   const [ownership, setOwnership] = useState<Item["ownership"]>("owned");
-  const [autoFilled, setAutoFilled] = useState(false);
+  // Whether user has manually overridden the weight/category since last suggestion apply.
+  const [userTouchedWeight, setUserTouchedWeight] = useState(false);
+  const [userTouchedCat, setUserTouchedCat] = useState(false);
 
+  // Live suggestion (NEVER auto-overwrites user-typed values).
+  const hint = suggestFromName(name);
+
+  // Apply hint: only when user hasn't touched the weight, and weight is empty.
   useEffect(() => {
-    const hit = suggestFromName(name);
-    if (hit) {
-      if (weight === "" || autoFilled) {
-        setWeight(hit.weightG);
-        setCategory(hit.category);
-        setAutoFilled(true);
-      }
+    if (!hint) return;
+    if (!userTouchedWeight && weight === "") setWeight(hint.weightG);
+    if (!userTouchedCat) setCategory(hint.category);
+  }, [hint?.weightG, hint?.category]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const applyHintNow = () => {
+    if (!hint) return;
+    setWeight(hint.weightG);
+    setCategory(hint.category);
+    // If the hint has a canonical name and the user typed only a partial/brand,
+    // upgrade the input to the canonical form (helps "salomon ultra 4" → "Salomon Ultra 4").
+    const canonical = lang === "zh" ? hint.nameZh : hint.nameEn;
+    if (canonical && canonical.toLowerCase() !== name.trim().toLowerCase()) {
+      setName(canonical);
     }
-  }, [name]); // eslint-disable-line react-hooks/exhaustive-deps
+    setUserTouchedWeight(false);
+    setUserTouchedCat(false);
+  };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -310,23 +325,24 @@ function AddGearForm({
     let source: Item["weightSource"];
     if (weight !== "" && +weight > 0) {
       finalWeight = +weight;
-      source = autoFilled ? "library" : "user";
+      source = userTouchedWeight ? "user" : "library";
+    } else if (hint) {
+      finalWeight = hint.weightG;
+      source = "library";
     } else {
-      const hint = suggestFromName(trimmed);
-      if (hint) {
-        finalWeight = hint.weightG;
-        source = "library";
-      } else {
-        finalWeight = 100;
-        source = "library";
-      }
+      finalWeight = 100;
+      source = "library";
     }
+
+    // Carry over canonical bilingual names from the hint when available.
+    const nameEn = hint?.nameEn ?? (isZh ? undefined : trimmed);
+    const nameZh = hint?.nameZh ?? (isZh ? trimmed : undefined);
 
     onCommit({
       gearId: null,
       name: trimmed,
-      nameEn: isZh ? undefined : trimmed,
-      nameZh: isZh ? trimmed : undefined,
+      nameEn,
+      nameZh,
       qty: Math.max(1, qty),
       weightG: finalWeight,
       weightSource: source,
