@@ -12,8 +12,6 @@ export function PostTripReview({ onSeal }: { onSeal?: () => void }) {
     drop:    { color: "var(--destructive)", label: t("review.verdict.drop"),    glyph: "·" },
   } as const;
 
-export function PostTripReview({ onSeal }: { onSeal?: () => void }) {
-  const { t } = useI18n();
   const counts = {
     keep: reviewTrip.verdicts.filter((v) => v.verdict === "keep").length,
     upgrade: reviewTrip.verdicts.filter((v) => v.verdict === "upgrade").length,
