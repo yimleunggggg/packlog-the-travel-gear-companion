@@ -1,12 +1,16 @@
 import { motion } from "framer-motion";
+import { useState } from "react";
 import { reviewTrip } from "@/lib/packlog-data";
 import { useI18n } from "@/lib/i18n";
 
-const verdictMeta = {
-  keep: { color: "var(--success)", label: "KEEP", glyph: "✓" },
-  upgrade: { color: "var(--signal)", label: "UPGRADE", glyph: "↑" },
-  drop: { color: "var(--destructive)", label: "DROP", glyph: "✕" },
-};
+export function PostTripReview({ onSeal }: { onSeal?: () => void }) {
+  const { t } = useI18n();
+  const [savedTpl, setSavedTpl] = useState(false);
+  const verdictMeta = {
+    keep:    { color: "var(--success)",     label: t("review.verdict.keep"),    glyph: "✓" },
+    upgrade: { color: "var(--signal)",      label: t("review.verdict.upgrade"), glyph: "★" },
+    drop:    { color: "var(--destructive)", label: t("review.verdict.drop"),    glyph: "·" },
+  } as const;
 
 export function PostTripReview({ onSeal }: { onSeal?: () => void }) {
   const { t } = useI18n();
