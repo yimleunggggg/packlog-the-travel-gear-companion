@@ -111,7 +111,19 @@ export function PostTripReview({ onSeal }: { onSeal?: () => void }) {
       </div>
 
       {onSeal && (
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+          {savedTpl && (
+            <span className="font-mono text-[10px] tracking-[0.18em] text-success">
+              {t("review.savedTemplate")}
+            </span>
+          )}
+          <button
+            onClick={() => setSavedTpl(true)}
+            disabled={savedTpl}
+            className="border border-border-strong bg-surface px-3 py-2 font-mono text-[10px] tracking-[0.2em] text-foreground hover:border-signal disabled:opacity-50"
+          >
+            {t("review.saveTemplate")}
+          </button>
           <button
             onClick={onSeal}
             className="border border-signal bg-signal px-4 py-2 font-mono text-[10px] tracking-[0.2em] text-signal-foreground hover:opacity-90"
