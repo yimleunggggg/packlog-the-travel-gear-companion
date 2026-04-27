@@ -286,6 +286,34 @@ export function ContainerModule({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {editingId && onUpdate && (
+        <EditItemDialog
+          item={container.items.find((x) => x.id === editingId)!}
+          inLibrary={isInLibrary?.(container.items.find((x) => x.id === editingId)!) ?? false}
+          onClose={() => setEditingId(null)}
+          onSave={(patch) => {
+            onUpdate(container.id, editingId, patch);
+            setEditingId(null);
+          }}
+          onDelete={
+            onRemove
+              ? () => {
+                  onRemove(container.id, editingId);
+                  setEditingId(null);
+                }
+              : undefined
+          }
+          onSaveToLibrary={
+            onSaveToLibrary
+              ? () => {
+                  const it = container.items.find((x) => x.id === editingId);
+                  if (it) onSaveToLibrary(it);
+                }
+              : undefined
+          }
+        />
+      )}
     </article>
   );
 }
