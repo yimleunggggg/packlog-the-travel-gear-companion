@@ -127,6 +127,16 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
       ),
     }));
 
+  const updateItem: Ctx["updateItem"] = (tripId, containerId, itemId, patch) =>
+    updateTrip(tripId, (t) => ({
+      ...t,
+      containers: t.containers.map((c) =>
+        c.id !== containerId
+          ? c
+          : { ...c, items: c.items.map((i) => (i.id !== itemId ? i : { ...i, ...patch })) },
+      ),
+    }));
+
   const removeItem: Ctx["removeItem"] = (tripId, containerId, itemId) =>
     updateTrip(tripId, (t) => ({
       ...t,
