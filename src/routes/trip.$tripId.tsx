@@ -8,6 +8,7 @@ import { ParameterBus } from "@/components/packlog/ParameterBus";
 import { CommunityRail } from "@/components/packlog/CommunityRail";
 import { PostTripReview } from "@/components/packlog/PostTripReview";
 import { CloneSheet } from "@/components/packlog/CloneSheet";
+import { AddContainerSheet } from "@/components/packlog/AddContainerSheet";
 import { usePacklog } from "@/lib/packlog-store";
 import { useI18n } from "@/lib/i18n";
 import type { CommunityTemplate } from "@/lib/packlog-data";
@@ -24,6 +25,7 @@ function TripDetail() {
   const trip = store.getTrip(tripId);
   const containersRef = useRef<HTMLDivElement | null>(null);
   const [cloneTpl, setCloneTpl] = useState<CommunityTemplate | null>(null);
+  const [addBagOpen, setAddBagOpen] = useState(false);
 
   const main = useMemo(() => trip?.containers ?? [], [trip]);
 
