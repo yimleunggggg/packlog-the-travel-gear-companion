@@ -22,6 +22,8 @@ export type Item = {
   verdict: ReviewVerdict;
   utility: number | null;
   ownership: Ownership;    // do I actually own this yet?
+  brand?: string;          // optional, refined later
+  model?: string;          // optional, refined later
   note?: string;
 };
 

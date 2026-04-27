@@ -40,6 +40,9 @@ export function ContainerModule({
   onMove,
   onCycleOwnership,
   onOpenLibrary,
+  onUpdate,
+  onSaveToLibrary,
+  isInLibrary,
   variant = "tall",
 }: {
   container: Container;
@@ -52,12 +55,16 @@ export function ContainerModule({
   onMove?: (fromContainerId: string, itemId: string, toContainerId: string) => void;
   onCycleOwnership?: (containerId: string, itemId: string) => void;
   onOpenLibrary?: (containerId: string) => void;
+  onUpdate?: (containerId: string, itemId: string, patch: Partial<Item>) => void;
+  onSaveToLibrary?: (item: Item) => void;
+  isInLibrary?: (item: Item) => boolean;
   variant?: "tall" | "wide";
 }) {
   const { t, lang } = useI18n();
   const [expanded, setExpanded] = useState(true);
   const [adding, setAdding] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const totalKg = container.items.reduce((s, i) => s + i.weightG * i.qty, 0) / 1000;
   const loadPct = Math.min(100, (totalKg / container.maxKg) * 100);
@@ -219,6 +226,16 @@ export function ContainerModule({
                             {t(`own.${it.ownership}`)}
                           </button>
                           <span className="tag-chip">{t(`cat.${it.category}`)}</span>
+                          {onUpdate && (
+                            <button
+                              onClick={() => setEditingId(it.id)}
+                              title={t("item.edit")}
+                              className="rounded border border-border-strong px-1.5 py-0.5 font-mono text-[9px] tracking-[0.1em] text-muted-foreground hover:border-signal hover:text-signal"
+                              aria-label="edit"
+                            >
+                              ✎
+                            </button>
+                          )}
                           {onRemove && (
                             <button
                               onClick={() => onRemove(container.id, it.id)}
@@ -269,6 +286,34 @@ export function ContainerModule({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {editingId && onUpdate && (
+        <EditItemDialog
+          item={container.items.find((x) => x.id === editingId)!}
+          inLibrary={isInLibrary?.(container.items.find((x) => x.id === editingId)!) ?? false}
+          onClose={() => setEditingId(null)}
+          onSave={(patch) => {
+            onUpdate(container.id, editingId, patch);
+            setEditingId(null);
+          }}
+          onDelete={
+            onRemove
+              ? () => {
+                  onRemove(container.id, editingId);
+                  setEditingId(null);
+                }
+              : undefined
+          }
+          onSaveToLibrary={
+            onSaveToLibrary
+              ? () => {
+                  const it = container.items.find((x) => x.id === editingId);
+                  if (it) onSaveToLibrary(it);
+                }
+              : undefined
+          }
+        />
+      )}
     </article>
   );
 }
@@ -564,6 +609,158 @@ export function LibraryPicker({
           {t("library.closePanel")}
         </button>
       </div>
+    </div>
+  );
+}
+
+function EditItemDialog({
+  item,
+  inLibrary,
+  onClose,
+  onSave,
+  onDelete,
+  onSaveToLibrary,
+}: {
+  item: Item;
+  inLibrary: boolean;
+  onClose: () => void;
+  onSave: (patch: Partial<Item>) => void;
+  onDelete?: () => void;
+  onSaveToLibrary?: () => void;
+}) {
+  const { t, lang } = useI18n();
+  const [name, setName] = useState(pickName(lang, item));
+  const [brand, setBrand] = useState(item.brand ?? "");
+  const [model, setModel] = useState(item.model ?? "");
+  const [qty, setQty] = useState(item.qty);
+  const [weight, setWeight] = useState<number>(item.weightG);
+  const [category, setCategory] = useState<Item["category"]>(item.category);
+  const [note, setNote] = useState(item.note ?? "");
+  const [savedToLib, setSavedToLib] = useState(inLibrary);
+
+  const cats: Item["category"][] = ["tech", "apparel", "doc", "health", "optic", "misc"];
+  const isZh = /[\u4e00-\u9fa5]/.test(name);
+
+  const save = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    onSave({
+      name: trimmed,
+      nameEn: isZh ? item.nameEn : trimmed,
+      nameZh: isZh ? trimmed : item.nameZh,
+      brand: brand.trim() || undefined,
+      model: model.trim() || undefined,
+      qty: Math.max(1, qty),
+      weightG: Math.max(1, weight),
+      weightSource: weight !== item.weightG ? "user" : item.weightSource,
+      category,
+      note: note.trim() || undefined,
+    });
+  };
+
+  return (
+    <div className="scrim fixed inset-0 z-50 grid place-items-center p-4" onClick={onClose}>
+      <form
+        onSubmit={save}
+        onClick={(e) => e.stopPropagation()}
+        className="module corner-tick relative w-full max-w-md space-y-3 p-5"
+      >
+        <div className="flex items-center justify-between">
+          <div className="font-mono text-[10px] tracking-[0.22em] text-signal">✎ {t("item.edit.title")}</div>
+          <button type="button" onClick={onClose} className="font-mono text-[10px] text-muted-foreground hover:text-foreground">✕</button>
+        </div>
+
+        <input
+          autoFocus value={name} onChange={(e) => setName(e.target.value)}
+          placeholder={t("container.add.name")}
+          className="w-full rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-signal focus:outline-none"
+        />
+
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            value={brand} onChange={(e) => setBrand(e.target.value)}
+            placeholder={t("item.edit.brand")}
+            className="rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-signal focus:outline-none"
+          />
+          <input
+            value={model} onChange={(e) => setModel(e.target.value)}
+            placeholder={t("item.edit.model")}
+            className="rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-signal focus:outline-none"
+          />
+        </div>
+
+        <div className="grid grid-cols-12 gap-2">
+          <input
+            type="number" min={1} value={qty}
+            onChange={(e) => setQty(+e.target.value)}
+            placeholder={t("container.add.qty")}
+            className="col-span-4 rounded border border-border-strong bg-background px-2 py-1.5 text-center font-mono text-sm focus:border-signal focus:outline-none"
+          />
+          <input
+            type="number" min={1} value={weight}
+            onChange={(e) => setWeight(+e.target.value)}
+            placeholder={t("container.add.weight")}
+            className="col-span-8 rounded border border-border-strong bg-background px-2 py-1.5 text-right font-mono text-sm focus:border-signal focus:outline-none"
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1">
+          {cats.map((c) => (
+            <button
+              type="button" key={c}
+              onClick={() => setCategory(c)}
+              className={`rounded border px-2 py-0.5 font-mono text-[10px] tracking-[0.15em] ${
+                category === c
+                  ? "border-signal bg-signal text-signal-foreground"
+                  : "border-border-strong text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t(`cat.${c}`)}
+            </button>
+          ))}
+        </div>
+
+        <textarea
+          value={note} onChange={(e) => setNote(e.target.value)}
+          placeholder={t("item.edit.note")} rows={2}
+          className="w-full resize-none rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-signal focus:outline-none"
+        />
+
+        {onSaveToLibrary && (
+          <button
+            type="button"
+            disabled={savedToLib}
+            onClick={() => {
+              onSaveToLibrary();
+              setSavedToLib(true);
+            }}
+            className={`flex w-full items-center justify-center rounded border px-2 py-1.5 font-mono text-[10px] tracking-[0.15em] transition ${
+              savedToLib
+                ? "border-success/50 bg-success/10 text-success"
+                : "border-signal/50 bg-signal-soft/40 text-signal hover:bg-signal-soft"
+            }`}
+          >
+            {savedToLib ? t("item.edit.inLib") : t("item.edit.toLib")}
+          </button>
+        )}
+
+        <div className="flex justify-between gap-2 pt-1">
+          {onDelete ? (
+            <button type="button" onClick={onDelete} className="rounded border border-destructive/50 px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-destructive hover:bg-destructive/10">
+              {t("item.edit.delete")}
+            </button>
+          ) : <span />}
+          <div className="flex gap-2">
+            <button type="button" onClick={onClose} className="rounded border border-border-strong px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-muted-foreground hover:text-foreground">
+              {t("container.add.cancel")}
+            </button>
+            <button type="submit" className="rounded border border-signal bg-signal px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-signal-foreground hover:opacity-90">
+              {t("item.edit.save")}
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
   );
 }

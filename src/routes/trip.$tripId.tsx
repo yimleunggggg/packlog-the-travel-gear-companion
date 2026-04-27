@@ -82,6 +82,13 @@ function TripDetail() {
                         onRemove={(cid, iid) => store.removeItem(trip.id, cid, iid)}
                         onMove={(from, iid, to) => store.moveItem(trip.id, from, iid, to)}
                         onCycleOwnership={(cid, iid) => store.cycleOwnership(trip.id, cid, iid)}
+                        onUpdate={(cid, iid, patch) => store.updateItem(trip.id, cid, iid, patch)}
+                        onSaveToLibrary={(item) => store.addToLibrary(item)}
+                        isInLibrary={(item) =>
+                          store.library.some(
+                            (g) => g.name === item.name && (g.brand ?? "") === (item.brand ?? ""),
+                          )
+                        }
                         variant="wide"
                       />
                     </div>
@@ -98,6 +105,13 @@ function TripDetail() {
                       onRemove={(cid, iid) => store.removeItem(trip.id, cid, iid)}
                       onMove={(from, iid, to) => store.moveItem(trip.id, from, iid, to)}
                       onCycleOwnership={(cid, iid) => store.cycleOwnership(trip.id, cid, iid)}
+                      onUpdate={(cid, iid, patch) => store.updateItem(trip.id, cid, iid, patch)}
+                      onSaveToLibrary={(item) => store.addToLibrary(item)}
+                      isInLibrary={(item) =>
+                        store.library.some(
+                          (g) => g.name === item.name && (g.brand ?? "") === (item.brand ?? ""),
+                        )
+                      }
                     />
                   ))}
                 </motion.div>

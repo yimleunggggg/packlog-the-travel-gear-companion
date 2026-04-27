@@ -23,10 +23,12 @@ type Ctx = {
   setUtility: (tripId: string, containerId: string, itemId: string, u: number) => void;
   cycleOwnership: (tripId: string, containerId: string, itemId: string) => void;
   addItem: (tripId: string, containerId: string, item: Omit<Item, "id">) => void;
+  updateItem: (tripId: string, containerId: string, itemId: string, patch: Partial<Item>) => void;
   removeItem: (tripId: string, containerId: string, itemId: string) => void;
   moveItem: (tripId: string, fromContainerId: string, itemId: string, toContainerId: string) => void;
   quickAdd: (tripId: string, name: string, weightG: number, category: string) => void;
   addFromLibrary: (tripId: string, gear: GearSpec) => void;
+  addToLibrary: (item: Item) => GearSpec;
   cloneCommunity: (tripId: string, tpl: CommunityTemplate, selectedIdx: number[], targetContainerId: string) => void;
 
   sealReview: (tripId: string) => void;
@@ -125,6 +127,16 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
       ),
     }));
 
+  const updateItem: Ctx["updateItem"] = (tripId, containerId, itemId, patch) =>
+    updateTrip(tripId, (t) => ({
+      ...t,
+      containers: t.containers.map((c) =>
+        c.id !== containerId
+          ? c
+          : { ...c, items: c.items.map((i) => (i.id !== itemId ? i : { ...i, ...patch })) },
+      ),
+    }));
+
   const removeItem: Ctx["removeItem"] = (tripId, containerId, itemId) =>
     updateTrip(tripId, (t) => ({
       ...t,
@@ -192,6 +204,27 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
       utility: null,
       ownership: "owned",
     });
+  };
+
+  const addToLibrary: Ctx["addToLibrary"] = (item) => {
+    const id = `g-usr-${Date.now().toString(36)}`;
+    const spec: GearSpec = {
+      id,
+      name: item.name,
+      nameEn: item.nameEn ?? item.name,
+      nameZh: item.nameZh,
+      brand: item.brand,
+      weightG: item.weightG,
+      category: item.category,
+      description: item.note ?? "",
+      ownership: item.ownership,
+      ownedSince: new Date().toISOString().slice(0, 7).replace("-", "."),
+      history: [],
+    };
+    setLibrary((lib) =>
+      lib.some((g) => g.name === spec.name && (g.brand ?? "") === (spec.brand ?? "")) ? lib : [spec, ...lib],
+    );
+    return spec;
   };
 
   const cloneCommunity: Ctx["cloneCommunity"] = (tripId, tpl, selectedIdx, targetContainerId) =>
@@ -264,8 +297,8 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
       trips, library, getTrip,
       createTrip, setPhase,
       toggleItem, setVerdict, setUtility, cycleOwnership,
-      addItem, removeItem, moveItem,
-      quickAdd, addFromLibrary, cloneCommunity, sealReview,
+      addItem, updateItem, removeItem, moveItem,
+      quickAdd, addFromLibrary, addToLibrary, cloneCommunity, sealReview,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [trips, library],
