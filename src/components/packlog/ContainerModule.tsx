@@ -9,9 +9,18 @@ const typeKey: Record<Container["type"], string> = {
   carry: "container.type.carry",
   camera: "container.type.camera",
   personal: "container.type.personal",
+  daypack: "container.type.daypack",
+  hike: "container.type.hike",
+  toiletry: "container.type.toiletry",
+  makeup: "container.type.makeup",
+  tech: "container.type.tech",
+  clothing: "container.type.clothing",
+  custom: "container.type.custom",
 };
 const typeGlyph: Record<Container["type"], string> = {
   checked: "▣", carry: "▤", camera: "◉", personal: "◍",
+  daypack: "◊", hike: "▲", toiletry: "◐", makeup: "◑",
+  tech: "◈", clothing: "◇", custom: "◯",
 };
 
 const catColor: Record<Item["category"], string> = {
