@@ -206,6 +206,27 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const addToLibrary: Ctx["addToLibrary"] = (item) => {
+    const id = `g-usr-${Date.now().toString(36)}`;
+    const spec: GearSpec = {
+      id,
+      name: item.name,
+      nameEn: item.nameEn ?? item.name,
+      nameZh: item.nameZh,
+      brand: item.brand,
+      weightG: item.weightG,
+      category: item.category,
+      description: item.note ?? "",
+      ownership: item.ownership,
+      ownedSince: new Date().toISOString().slice(0, 7).replace("-", "."),
+      history: [],
+    };
+    setLibrary((lib) =>
+      lib.some((g) => g.name === spec.name && (g.brand ?? "") === (spec.brand ?? "")) ? lib : [spec, ...lib],
+    );
+    return spec;
+  };
+
   const cloneCommunity: Ctx["cloneCommunity"] = (tripId, tpl, selectedIdx, targetContainerId) =>
     updateTrip(tripId, (t) => ({
       ...t,
