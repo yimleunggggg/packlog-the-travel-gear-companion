@@ -297,8 +297,8 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
       trips, library, getTrip,
       createTrip, setPhase,
       toggleItem, setVerdict, setUtility, cycleOwnership,
-      addItem, removeItem, moveItem,
-      quickAdd, addFromLibrary, cloneCommunity, sealReview,
+      addItem, updateItem, removeItem, moveItem,
+      quickAdd, addFromLibrary, addToLibrary, cloneCommunity, sealReview,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [trips, library],
