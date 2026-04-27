@@ -226,6 +226,16 @@ export function ContainerModule({
                             {t(`own.${it.ownership}`)}
                           </button>
                           <span className="tag-chip">{t(`cat.${it.category}`)}</span>
+                          {onUpdate && (
+                            <button
+                              onClick={() => setEditingId(it.id)}
+                              title={t("item.edit")}
+                              className="rounded border border-border-strong px-1.5 py-0.5 font-mono text-[9px] tracking-[0.1em] text-muted-foreground hover:border-signal hover:text-signal"
+                              aria-label="edit"
+                            >
+                              ✎
+                            </button>
+                          )}
                           {onRemove && (
                             <button
                               onClick={() => onRemove(container.id, it.id)}
