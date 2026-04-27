@@ -75,7 +75,7 @@ export function PostTripReview({ onSeal }: { onSeal?: () => void }) {
         <span style={{ color: verdictMeta.drop.color }}>● DROP {counts.drop}</span>
       </div>
 
-      <ul className="mt-5 space-y-2">
+      <ul ref={logRef} className={`mt-5 space-y-2 transition-all ${logExpanded ? "rounded border border-signal/40 bg-signal-soft/20 p-3" : ""}`}>
         {reviewTrip.verdicts.map((v, i) => {
           const m = verdictMeta[v.verdict];
           return (
