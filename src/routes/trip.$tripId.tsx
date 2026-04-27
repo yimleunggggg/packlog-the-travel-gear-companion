@@ -116,6 +116,14 @@ function TripDetail() {
                       }
                     />
                   ))}
+                  <div className="md:col-span-2">
+                    <button
+                      onClick={() => setAddBagOpen(true)}
+                      className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border-strong bg-surface/50 py-3 font-mono text-[11px] tracking-[0.2em] text-muted-foreground transition hover:border-signal hover:bg-signal-soft hover:text-signal"
+                    >
+                      {t("container.add.bag")}
+                    </button>
+                  </div>
                 </motion.div>
               ) : (
                 <motion.div
