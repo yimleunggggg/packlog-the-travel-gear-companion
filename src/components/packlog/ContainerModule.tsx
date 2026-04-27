@@ -520,10 +520,11 @@ function Gauge({ label, current, max, pct, warn }: { label: string; current: str
 }
 
 function ReviewControls({ item, onVerdict, onUtility }: { item: Item; onVerdict: (v: Item["verdict"]) => void; onUtility: (u: number) => void }) {
-  const opts: { val: NonNullable<Item["verdict"]>; label: string; color: string }[] = [
-    { val: "keep", label: "K", color: "var(--success)" },
-    { val: "upgrade", label: "U", color: "var(--signal)" },
-    { val: "drop", label: "D", color: "var(--destructive)" },
+  const { t } = useI18n();
+  const opts: { val: NonNullable<Item["verdict"]>; labelKey: string; color: string }[] = [
+    { val: "keep", labelKey: "review.verdict.keep", color: "var(--success)" },
+    { val: "upgrade", labelKey: "review.verdict.upgrade", color: "var(--signal)" },
+    { val: "drop", labelKey: "review.verdict.drop", color: "var(--destructive)" },
   ];
   return (
     <div className="flex flex-col items-end gap-1">
@@ -534,14 +535,14 @@ function ReviewControls({ item, onVerdict, onUtility }: { item: Item; onVerdict:
             <button
               key={o.val}
               onClick={() => onVerdict(active ? null : o.val)}
-              className="grid h-5 w-5 place-items-center rounded border font-mono text-[10px] transition"
+              className="rounded border px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] transition"
               style={{
                 borderColor: active ? o.color : "var(--border-strong)",
                 background: active ? o.color : "transparent",
                 color: active ? "var(--background)" : "var(--muted-foreground)",
               }}
             >
-              {o.label}
+              {t(o.labelKey)}
             </button>
           );
         })}
