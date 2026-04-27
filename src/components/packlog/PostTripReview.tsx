@@ -1,11 +1,13 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { reviewTrip } from "@/lib/packlog-data";
 import { useI18n } from "@/lib/i18n";
 
 export function PostTripReview({ onSeal }: { onSeal?: () => void }) {
   const { t } = useI18n();
   const [savedTpl, setSavedTpl] = useState(false);
+  const [logExpanded, setLogExpanded] = useState(false);
+  const logRef = useRef<HTMLUListElement | null>(null);
   const verdictMeta = {
     keep:    { color: "var(--success)",     label: t("review.verdict.keep"),    glyph: "✓" },
     upgrade: { color: "var(--signal)",      label: t("review.verdict.upgrade"), glyph: "★" },
