@@ -9,9 +9,18 @@ const typeKey: Record<Container["type"], string> = {
   carry: "container.type.carry",
   camera: "container.type.camera",
   personal: "container.type.personal",
+  daypack: "container.type.daypack",
+  hike: "container.type.hike",
+  toiletry: "container.type.toiletry",
+  makeup: "container.type.makeup",
+  tech: "container.type.tech",
+  clothing: "container.type.clothing",
+  custom: "container.type.custom",
 };
 const typeGlyph: Record<Container["type"], string> = {
   checked: "▣", carry: "▤", camera: "◉", personal: "◍",
+  daypack: "◊", hike: "▲", toiletry: "◐", makeup: "◑",
+  tech: "◈", clothing: "◇", custom: "◯",
 };
 
 const catColor: Record<Item["category"], string> = {
@@ -136,6 +145,11 @@ export function ContainerModule({
                 — empty —
               </div>
             )}
+            {container.items.length > 0 && phase !== "REVIEW" && onUpdate && (
+              <div className="border-b border-dashed border-border bg-surface/40 px-4 py-1.5 text-center font-mono text-[9px] tracking-[0.15em] text-muted-foreground">
+                {t("item.row.tip")}
+              </div>
+            )}
 
             <ul className="divide-y divide-border">
               {container.items.map((it, idx) => {
@@ -183,18 +197,40 @@ export function ContainerModule({
 
                     <div className="col-span-5 flex min-w-0 items-center gap-2">
                       <span className="h-1.5 w-1.5 shrink-0" style={{ background: catColor[it.category] }} />
-                      <span
-                        className={`truncate text-sm ${
-                          it.status === "packed" && phase !== "REVIEW"
-                            ? "text-muted-foreground line-through decoration-signal/50"
-                            : "text-foreground"
-                        }`}
-                      >
-                        {displayName}
-                        {it.gearId && (
-                          <span className="ml-1.5 font-mono text-[9px] text-signal" title="from gear library">⌬</span>
-                        )}
-                      </span>
+                      {phase !== "REVIEW" && onUpdate ? (
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(it.id)}
+                          title={t("item.edit")}
+                          className={`group/name flex min-w-0 items-center gap-1 truncate text-left text-sm hover:text-signal ${
+                            it.status === "packed"
+                              ? "text-muted-foreground line-through decoration-signal/50"
+                              : "text-foreground"
+                          }`}
+                        >
+                          <span className="truncate">{displayName}</span>
+                          {it.brand && (
+                            <span className="shrink-0 font-mono text-[9px] text-muted-foreground">· {it.brand}</span>
+                          )}
+                          {it.gearId && (
+                            <span className="font-mono text-[9px] text-signal" title="from gear library">⌬</span>
+                          )}
+                          <span className="opacity-0 transition group-hover/name:opacity-100 font-mono text-[9px] text-signal">✎</span>
+                        </button>
+                      ) : (
+                        <span
+                          className={`truncate text-sm ${
+                            it.status === "packed" && phase !== "REVIEW"
+                              ? "text-muted-foreground line-through decoration-signal/50"
+                              : "text-foreground"
+                          }`}
+                        >
+                          {displayName}
+                          {it.gearId && (
+                            <span className="ml-1.5 font-mono text-[9px] text-signal" title="from gear library">⌬</span>
+                          )}
+                        </span>
+                      )}
                     </div>
 
                     <div className="col-span-1 text-right font-mono text-[11px] text-muted-foreground tabular-nums">
@@ -511,10 +547,11 @@ function Gauge({ label, current, max, pct, warn }: { label: string; current: str
 }
 
 function ReviewControls({ item, onVerdict, onUtility }: { item: Item; onVerdict: (v: Item["verdict"]) => void; onUtility: (u: number) => void }) {
-  const opts: { val: NonNullable<Item["verdict"]>; label: string; color: string }[] = [
-    { val: "keep", label: "K", color: "var(--success)" },
-    { val: "upgrade", label: "U", color: "var(--signal)" },
-    { val: "drop", label: "D", color: "var(--destructive)" },
+  const { t } = useI18n();
+  const opts: { val: NonNullable<Item["verdict"]>; labelKey: string; color: string }[] = [
+    { val: "keep", labelKey: "review.verdict.keep", color: "var(--success)" },
+    { val: "upgrade", labelKey: "review.verdict.upgrade", color: "var(--signal)" },
+    { val: "drop", labelKey: "review.verdict.drop", color: "var(--destructive)" },
   ];
   return (
     <div className="flex flex-col items-end gap-1">
@@ -525,14 +562,14 @@ function ReviewControls({ item, onVerdict, onUtility }: { item: Item; onVerdict:
             <button
               key={o.val}
               onClick={() => onVerdict(active ? null : o.val)}
-              className="grid h-5 w-5 place-items-center rounded border font-mono text-[10px] transition"
+              className="rounded border px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] transition"
               style={{
                 borderColor: active ? o.color : "var(--border-strong)",
                 background: active ? o.color : "transparent",
                 color: active ? "var(--background)" : "var(--muted-foreground)",
               }}
             >
-              {o.label}
+              {t(o.labelKey)}
             </button>
           );
         })}
@@ -641,16 +678,29 @@ function EditItemDialog({
   const cats: Item["category"][] = ["tech", "apparel", "doc", "health", "optic", "misc"];
   const isZh = /[\u4e00-\u9fa5]/.test(name);
 
+  const slug = (s: string) =>
+    s.trim().toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-").replace(/^-|-$/g, "");
+
   const save = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return;
+    const b = brand.trim();
+    const m = model.trim();
+    // Stable SKU: brand+model preferred, otherwise generic+name. Lets community
+    // / library dedupe "the same thing called many ways".
+    const sku = b && m
+      ? `${slug(b)}:${slug(m)}`
+      : b
+        ? `${slug(b)}:${slug(trimmed)}`
+        : `generic:${slug(trimmed)}`;
     onSave({
       name: trimmed,
       nameEn: isZh ? item.nameEn : trimmed,
       nameZh: isZh ? trimmed : item.nameZh,
-      brand: brand.trim() || undefined,
-      model: model.trim() || undefined,
+      brand: b || undefined,
+      model: m || undefined,
+      sku,
       qty: Math.max(1, qty),
       weightG: Math.max(1, weight),
       weightSource: weight !== item.weightG ? "user" : item.weightSource,
@@ -689,6 +739,33 @@ function EditItemDialog({
             className="rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-signal focus:outline-none"
           />
         </div>
+
+        {(() => {
+          // Re-suggest from combined brand+model+name. If the suggested weight differs
+          // from the current weight, surface a one-click apply chip.
+          const probe = [brand, model, name].filter(Boolean).join(" ").trim();
+          const hint = probe.length > 1 ? suggestFromName(probe) : null;
+          if (!hint || hint.weightG === weight) return null;
+          return (
+            <button
+              type="button"
+              onClick={() => {
+                setWeight(hint.weightG);
+                setCategory(hint.category);
+                const canonical = lang === "zh" ? hint.nameZh : hint.nameEn;
+                if (canonical) setName(canonical);
+              }}
+              className="flex w-full items-center justify-between rounded border border-signal/40 bg-signal-soft/40 px-2 py-1.5 text-left font-mono text-[10px] hover:bg-signal-soft"
+            >
+              <span className="truncate text-foreground">
+                <span className="text-signal">↳</span>{" "}
+                {(lang === "zh" ? hint.nameZh : hint.nameEn) ?? probe}
+                <span className="ml-1.5 text-muted-foreground">· {hint.weightG}g · {t(`cat.${hint.category}`)}</span>
+              </span>
+              <span className="ml-2 shrink-0 tracking-[0.15em] text-signal">USE ↵</span>
+            </button>
+          );
+        })()}
 
         <div className="grid grid-cols-12 gap-2">
           <input

@@ -1,11 +1,13 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { reviewTrip } from "@/lib/packlog-data";
 import { useI18n } from "@/lib/i18n";
 
 export function PostTripReview({ onSeal }: { onSeal?: () => void }) {
   const { t } = useI18n();
   const [savedTpl, setSavedTpl] = useState(false);
+  const [logExpanded, setLogExpanded] = useState(false);
+  const logRef = useRef<HTMLUListElement | null>(null);
   const verdictMeta = {
     keep:    { color: "var(--success)",     label: t("review.verdict.keep"),    glyph: "✓" },
     upgrade: { color: "var(--signal)",      label: t("review.verdict.upgrade"), glyph: "★" },
@@ -34,7 +36,15 @@ export function PostTripReview({ onSeal }: { onSeal?: () => void }) {
             {reviewTrip.date} · {t("review.sealed")} {reviewTrip.verdicts.length} {t("review.verdicts")} · ★ {avgUtility.toFixed(1)} avg
           </p>
         </div>
-        <button className="border border-border-strong bg-surface px-3 py-1.5 font-mono text-[10px] tracking-[0.18em] hover:bg-surface-2">
+        <button
+          onClick={() => {
+            setLogExpanded(true);
+            requestAnimationFrame(() =>
+              logRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+            );
+          }}
+          className="border border-border-strong bg-surface px-3 py-1.5 font-mono text-[10px] tracking-[0.18em] hover:border-signal hover:bg-signal-soft"
+        >
           {t("review.openLog")}
         </button>
       </div>
@@ -65,7 +75,7 @@ export function PostTripReview({ onSeal }: { onSeal?: () => void }) {
         <span style={{ color: verdictMeta.drop.color }}>● DROP {counts.drop}</span>
       </div>
 
-      <ul className="mt-5 space-y-2">
+      <ul ref={logRef} className={`mt-5 space-y-2 transition-all ${logExpanded ? "rounded border border-signal/40 bg-signal-soft/20 p-3" : ""}`}>
         {reviewTrip.verdicts.map((v, i) => {
           const m = verdictMeta[v.verdict];
           return (

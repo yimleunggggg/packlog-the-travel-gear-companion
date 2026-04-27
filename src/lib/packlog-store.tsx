@@ -5,6 +5,7 @@ import {
   makeFreshTrip,
   type Trip,
   type Item,
+  type Container,
   type GearSpec,
   type LifecyclePhase,
   type CommunityTemplate,
@@ -30,6 +31,8 @@ type Ctx = {
   addFromLibrary: (tripId: string, gear: GearSpec) => void;
   addToLibrary: (item: Item) => GearSpec;
   cloneCommunity: (tripId: string, tpl: CommunityTemplate, selectedIdx: number[], targetContainerId: string) => void;
+  addContainer: (tripId: string, draft: Omit<Container, "id" | "code" | "items">) => void;
+  removeContainer: (tripId: string, containerId: string) => void;
 
   sealReview: (tripId: string) => void;
 };
@@ -292,13 +295,30 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const addContainer: Ctx["addContainer"] = (tripId, draft) =>
+    updateTrip(tripId, (t) => {
+      const nextIdx = t.containers.length + 1;
+      const code = `C-${String(nextIdx).padStart(2, "0")}`;
+      const newContainer: Container = {
+        ...draft,
+        id: `c-${Date.now().toString(36)}`,
+        code,
+        items: [],
+      };
+      return { ...t, containers: [...t.containers, newContainer] };
+    });
+
+  const removeContainer: Ctx["removeContainer"] = (tripId, containerId) =>
+    updateTrip(tripId, (t) => ({ ...t, containers: t.containers.filter((c) => c.id !== containerId) }));
+
   const value = useMemo<Ctx>(
     () => ({
       trips, library, getTrip,
       createTrip, setPhase,
       toggleItem, setVerdict, setUtility, cycleOwnership,
       addItem, updateItem, removeItem, moveItem,
-      quickAdd, addFromLibrary, addToLibrary, cloneCommunity, sealReview,
+      quickAdd, addFromLibrary, addToLibrary, cloneCommunity,
+      addContainer, removeContainer, sealReview,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [trips, library],
