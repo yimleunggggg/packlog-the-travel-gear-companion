@@ -36,7 +36,15 @@ export function PostTripReview({ onSeal }: { onSeal?: () => void }) {
             {reviewTrip.date} · {t("review.sealed")} {reviewTrip.verdicts.length} {t("review.verdicts")} · ★ {avgUtility.toFixed(1)} avg
           </p>
         </div>
-        <button className="border border-border-strong bg-surface px-3 py-1.5 font-mono text-[10px] tracking-[0.18em] hover:bg-surface-2">
+        <button
+          onClick={() => {
+            setLogExpanded(true);
+            requestAnimationFrame(() =>
+              logRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+            );
+          }}
+          className="border border-border-strong bg-surface px-3 py-1.5 font-mono text-[10px] tracking-[0.18em] hover:border-signal hover:bg-signal-soft"
+        >
           {t("review.openLog")}
         </button>
       </div>
