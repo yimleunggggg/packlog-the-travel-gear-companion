@@ -6,7 +6,6 @@ import {
   type Trip,
   type Item,
   type Container,
-  type ContainerType,
   type GearSpec,
   type LifecyclePhase,
   type CommunityTemplate,
