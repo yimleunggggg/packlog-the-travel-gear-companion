@@ -192,18 +192,40 @@ export function ContainerModule({
 
                     <div className="col-span-5 flex min-w-0 items-center gap-2">
                       <span className="h-1.5 w-1.5 shrink-0" style={{ background: catColor[it.category] }} />
-                      <span
-                        className={`truncate text-sm ${
-                          it.status === "packed" && phase !== "REVIEW"
-                            ? "text-muted-foreground line-through decoration-signal/50"
-                            : "text-foreground"
-                        }`}
-                      >
-                        {displayName}
-                        {it.gearId && (
-                          <span className="ml-1.5 font-mono text-[9px] text-signal" title="from gear library">⌬</span>
-                        )}
-                      </span>
+                      {phase !== "REVIEW" && onUpdate ? (
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(it.id)}
+                          title={t("item.edit")}
+                          className={`group/name flex min-w-0 items-center gap-1 truncate text-left text-sm hover:text-signal ${
+                            it.status === "packed"
+                              ? "text-muted-foreground line-through decoration-signal/50"
+                              : "text-foreground"
+                          }`}
+                        >
+                          <span className="truncate">{displayName}</span>
+                          {it.brand && (
+                            <span className="shrink-0 font-mono text-[9px] text-muted-foreground">· {it.brand}</span>
+                          )}
+                          {it.gearId && (
+                            <span className="font-mono text-[9px] text-signal" title="from gear library">⌬</span>
+                          )}
+                          <span className="opacity-0 transition group-hover/name:opacity-100 font-mono text-[9px] text-signal">✎</span>
+                        </button>
+                      ) : (
+                        <span
+                          className={`truncate text-sm ${
+                            it.status === "packed" && phase !== "REVIEW"
+                              ? "text-muted-foreground line-through decoration-signal/50"
+                              : "text-foreground"
+                          }`}
+                        >
+                          {displayName}
+                          {it.gearId && (
+                            <span className="ml-1.5 font-mono text-[9px] text-signal" title="from gear library">⌬</span>
+                          )}
+                        </span>
+                      )}
                     </div>
 
                     <div className="col-span-1 text-right font-mono text-[11px] text-muted-foreground tabular-nums">
