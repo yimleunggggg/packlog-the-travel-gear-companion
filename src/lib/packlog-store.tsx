@@ -23,10 +23,12 @@ type Ctx = {
   setUtility: (tripId: string, containerId: string, itemId: string, u: number) => void;
   cycleOwnership: (tripId: string, containerId: string, itemId: string) => void;
   addItem: (tripId: string, containerId: string, item: Omit<Item, "id">) => void;
+  updateItem: (tripId: string, containerId: string, itemId: string, patch: Partial<Item>) => void;
   removeItem: (tripId: string, containerId: string, itemId: string) => void;
   moveItem: (tripId: string, fromContainerId: string, itemId: string, toContainerId: string) => void;
   quickAdd: (tripId: string, name: string, weightG: number, category: string) => void;
   addFromLibrary: (tripId: string, gear: GearSpec) => void;
+  addToLibrary: (item: Item) => GearSpec;
   cloneCommunity: (tripId: string, tpl: CommunityTemplate, selectedIdx: number[], targetContainerId: string) => void;
 
   sealReview: (tripId: string) => void;
