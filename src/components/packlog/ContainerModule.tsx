@@ -40,6 +40,9 @@ export function ContainerModule({
   onMove,
   onCycleOwnership,
   onOpenLibrary,
+  onUpdate,
+  onSaveToLibrary,
+  isInLibrary,
   variant = "tall",
 }: {
   container: Container;
@@ -52,12 +55,16 @@ export function ContainerModule({
   onMove?: (fromContainerId: string, itemId: string, toContainerId: string) => void;
   onCycleOwnership?: (containerId: string, itemId: string) => void;
   onOpenLibrary?: (containerId: string) => void;
+  onUpdate?: (containerId: string, itemId: string, patch: Partial<Item>) => void;
+  onSaveToLibrary?: (item: Item) => void;
+  isInLibrary?: (item: Item) => boolean;
   variant?: "tall" | "wide";
 }) {
   const { t, lang } = useI18n();
   const [expanded, setExpanded] = useState(true);
   const [adding, setAdding] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const totalKg = container.items.reduce((s, i) => s + i.weightG * i.qty, 0) / 1000;
   const loadPct = Math.min(100, (totalKg / container.maxKg) * 100);
