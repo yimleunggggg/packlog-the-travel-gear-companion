@@ -145,6 +145,11 @@ export function ContainerModule({
                 — empty —
               </div>
             )}
+            {container.items.length > 0 && phase !== "REVIEW" && onUpdate && (
+              <div className="border-b border-dashed border-border bg-surface/40 px-4 py-1.5 text-center font-mono text-[9px] tracking-[0.15em] text-muted-foreground">
+                {t("item.row.tip")}
+              </div>
+            )}
 
             <ul className="divide-y divide-border">
               {container.items.map((it, idx) => {
