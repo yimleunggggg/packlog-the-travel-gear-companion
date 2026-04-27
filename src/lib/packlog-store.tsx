@@ -5,6 +5,8 @@ import {
   makeFreshTrip,
   type Trip,
   type Item,
+  type Container,
+  type ContainerType,
   type GearSpec,
   type LifecyclePhase,
   type CommunityTemplate,
@@ -30,6 +32,8 @@ type Ctx = {
   addFromLibrary: (tripId: string, gear: GearSpec) => void;
   addToLibrary: (item: Item) => GearSpec;
   cloneCommunity: (tripId: string, tpl: CommunityTemplate, selectedIdx: number[], targetContainerId: string) => void;
+  addContainer: (tripId: string, draft: Omit<Container, "id" | "code" | "items">) => void;
+  removeContainer: (tripId: string, containerId: string) => void;
 
   sealReview: (tripId: string) => void;
 };
