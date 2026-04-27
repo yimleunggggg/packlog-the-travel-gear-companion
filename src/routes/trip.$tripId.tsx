@@ -169,6 +169,12 @@ function TripDetail() {
           if (cloneTpl) store.cloneCommunity(trip.id, cloneTpl, idx, target);
         }}
       />
+
+      <AddContainerSheet
+        open={addBagOpen}
+        onClose={() => setAddBagOpen(false)}
+        onCommit={(draft) => store.addContainer(trip.id, draft)}
+      />
     </div>
   );
 }
