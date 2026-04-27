@@ -24,15 +24,33 @@ export type Item = {
   ownership: Ownership;    // do I actually own this yet?
   brand?: string;          // optional, refined later
   model?: string;          // optional, refined later
+  // Stable SKU for shared identification across users + community.
+  // Format: "<brand-slug>:<model-slug>" or "generic:<name-slug>".
+  // Anything sharing the same sku is the same physical product.
+  sku?: string;
   note?: string;
 };
+
+// Container types — covers most travel scenarios users described.
+export type ContainerType =
+  | "checked"     // 托运行李箱
+  | "carry"       // 登机箱
+  | "personal"    // 随身包 / personal item
+  | "daypack"     // 城市日用背包
+  | "hike"        // 登山包 / 户外背包
+  | "camera"      // 相机包
+  | "toiletry"    // 洗漱包
+  | "makeup"      // 化妆包
+  | "tech"        // 数码包 / 电子配件包
+  | "clothing"    // 衣物收纳包
+  | "custom";     // 自定义
 
 export type Container = {
   id: string;
   code: string;
   name: string;            // fallback (en)
   nameZh?: string;
-  type: "checked" | "carry" | "camera" | "personal";
+  type: ContainerType;
   capacityL: number;
   maxKg: number;
   items: Item[];
