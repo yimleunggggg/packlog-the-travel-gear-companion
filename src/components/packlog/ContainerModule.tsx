@@ -673,16 +673,29 @@ function EditItemDialog({
   const cats: Item["category"][] = ["tech", "apparel", "doc", "health", "optic", "misc"];
   const isZh = /[\u4e00-\u9fa5]/.test(name);
 
+  const slug = (s: string) =>
+    s.trim().toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-").replace(/^-|-$/g, "");
+
   const save = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return;
+    const b = brand.trim();
+    const m = model.trim();
+    // Stable SKU: brand+model preferred, otherwise generic+name. Lets community
+    // / library dedupe "the same thing called many ways".
+    const sku = b && m
+      ? `${slug(b)}:${slug(m)}`
+      : b
+        ? `${slug(b)}:${slug(trimmed)}`
+        : `generic:${slug(trimmed)}`;
     onSave({
       name: trimmed,
       nameEn: isZh ? item.nameEn : trimmed,
       nameZh: isZh ? trimmed : item.nameZh,
-      brand: brand.trim() || undefined,
-      model: model.trim() || undefined,
+      brand: b || undefined,
+      model: m || undefined,
+      sku,
       qty: Math.max(1, qty),
       weightG: Math.max(1, weight),
       weightSource: weight !== item.weightG ? "user" : item.weightSource,
