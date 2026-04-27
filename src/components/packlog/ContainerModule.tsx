@@ -722,6 +722,33 @@ function EditItemDialog({
           />
         </div>
 
+        {(() => {
+          // Re-suggest from combined brand+model+name. If the suggested weight differs
+          // from the current weight, surface a one-click apply chip.
+          const probe = [brand, model, name].filter(Boolean).join(" ").trim();
+          const hint = probe.length > 1 ? suggestFromName(probe) : null;
+          if (!hint || hint.weightG === weight) return null;
+          return (
+            <button
+              type="button"
+              onClick={() => {
+                setWeight(hint.weightG);
+                setCategory(hint.category);
+                const canonical = lang === "zh" ? hint.nameZh : hint.nameEn;
+                if (canonical) setName(canonical);
+              }}
+              className="flex w-full items-center justify-between rounded border border-signal/40 bg-signal-soft/40 px-2 py-1.5 text-left font-mono text-[10px] hover:bg-signal-soft"
+            >
+              <span className="truncate text-foreground">
+                <span className="text-signal">↳</span>{" "}
+                {(lang === "zh" ? hint.nameZh : hint.nameEn) ?? probe}
+                <span className="ml-1.5 text-muted-foreground">· {hint.weightG}g · {t(`cat.${hint.category}`)}</span>
+              </span>
+              <span className="ml-2 shrink-0 tracking-[0.15em] text-signal">USE ↵</span>
+            </button>
+          );
+        })()}
+
         <div className="grid grid-cols-12 gap-2">
           <input
             type="number" min={1} value={qty}
