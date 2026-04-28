@@ -640,12 +640,13 @@ export const destinationTree: Country[] = [
 ];
 
 export type SelectedDestination = {
-  id: string;       // city id
+  id: string;       // city id or country marker id
   countryId: string;
   regionId: string;
   cityEn: string;
   cityZh: string;
   countryFlag: string;
+  kind?: "city" | "country";
 };
 
 // Continent ordering for the picker
@@ -667,6 +668,7 @@ export function flattenSearch(query: string): SelectedDestination[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];
   const out: SelectedDestination[] = [];
+  const seen = new Set<string>();
   for (const co of destinationTree) {
     const countryHit = `${co.en} ${co.zh}`.toLowerCase().includes(q);
     for (const r of co.regions) {
@@ -674,15 +676,38 @@ export function flattenSearch(query: string): SelectedDestination[] {
       for (const ci of r.cities) {
         const cityHit = `${ci.en} ${ci.zh}`.toLowerCase().includes(q);
         if (countryHit || regionHit || cityHit) {
-          out.push({
+          const entry: SelectedDestination = {
             id: ci.id, countryId: co.id, regionId: r.id,
-            cityEn: ci.en, cityZh: ci.zh, countryFlag: co.flag,
-          });
+            cityEn: ci.en, cityZh: ci.zh, countryFlag: co.flag, kind: "city",
+          };
+          if (!seen.has(entry.id)) {
+            seen.add(entry.id);
+            out.push(entry);
+          }
         }
       }
     }
   }
-  return out.slice(0, 30);
+
+  // Add global country-level matches (supports "country only" selection).
+  for (const co of getGlobalCountries()) {
+    const countryHit = `${co.en} ${co.zh}`.toLowerCase().includes(q);
+    if (!countryHit) continue;
+    const id = `country-${co.id}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push({
+      id,
+      countryId: co.id,
+      regionId: "country",
+      cityEn: co.en,
+      cityZh: co.zh,
+      countryFlag: co.flag,
+      kind: "country",
+    });
+  }
+
+  return out.slice(0, 80);
 }
 
 export function formatDestinations(
@@ -691,4 +716,40 @@ export function formatDestinations(
 ): string {
   if (list.length === 0) return "—";
   return list.map((d) => (lang === "zh" ? d.cityZh : d.cityEn)).join(" · ");
+}
+
+type GlobalCountry = {
+  id: string;
+  en: string;
+  zh: string;
+  flag: string;
+};
+
+const ISO_ALPHA2_CODES = [
+  "AD","AE","AF","AG","AI","AL","AM","AO","AQ","AR","AS","AT","AU","AW","AX","AZ","BA","BB","BD","BE","BF","BG","BH","BI","BJ","BL","BM","BN","BO","BQ","BR","BS","BT","BV","BW","BY","BZ",
+  "CA","CC","CD","CF","CG","CH","CI","CK","CL","CM","CN","CO","CR","CU","CV","CW","CX","CY","CZ","DE","DJ","DK","DM","DO","DZ","EC","EE","EG","EH","ER","ES","ET","FI","FJ","FK","FM","FO","FR",
+  "GA","GB","GD","GE","GF","GG","GH","GI","GL","GM","GN","GP","GQ","GR","GS","GT","GU","GW","GY","HK","HM","HN","HR","HT","HU","ID","IE","IL","IM","IN","IO","IQ","IR","IS","IT","JE","JM","JO",
+  "JP","KE","KG","KH","KI","KM","KN","KP","KR","KW","KY","KZ","LA","LB","LC","LI","LK","LR","LS","LT","LU","LV","LY","MA","MC","MD","ME","MF","MG","MH","MK","ML","MM","MN","MO","MP","MQ","MR",
+  "MS","MT","MU","MV","MW","MX","MY","MZ","NA","NC","NE","NF","NG","NI","NL","NO","NP","NR","NU","NZ","OM","PA","PE","PF","PG","PH","PK","PL","PM","PN","PR","PS","PT","PW","PY","QA","RE","RO",
+  "RS","RU","RW","SA","SB","SC","SD","SE","SG","SH","SI","SJ","SK","SL","SM","SN","SO","SR","SS","ST","SV","SX","SY","SZ","TC","TD","TF","TG","TH","TJ","TK","TL","TM","TN","TO","TR","TT","TV",
+  "TW","TZ","UA","UG","UM","US","UY","UZ","VA","VC","VE","VG","VI","VN","VU","WF","WS","YE","YT","ZA","ZM","ZW"
+] as const;
+
+const flagFromIso2 = (iso2: string): string =>
+  iso2
+    .toUpperCase()
+    .replace(/./g, (char) => String.fromCodePoint(127397 + char.charCodeAt(0)));
+
+let cachedGlobalCountries: GlobalCountry[] | null = null;
+export function getGlobalCountries(): GlobalCountry[] {
+  if (cachedGlobalCountries) return cachedGlobalCountries;
+  const en = new Intl.DisplayNames(["en"], { type: "region" });
+  const zh = new Intl.DisplayNames(["zh-Hans"], { type: "region" });
+  cachedGlobalCountries = ISO_ALPHA2_CODES.map((code) => ({
+    id: code.toLowerCase(),
+    en: en.of(code) ?? code,
+    zh: zh.of(code) ?? (en.of(code) ?? code),
+    flag: flagFromIso2(code),
+  })).sort((a, b) => a.en.localeCompare(b.en));
+  return cachedGlobalCountries;
 }

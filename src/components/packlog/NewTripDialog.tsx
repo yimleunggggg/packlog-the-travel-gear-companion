@@ -2,7 +2,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import type { Trip } from "@/lib/packlog-data";
-import { destinationTree, flattenSearch, type SelectedDestination } from "@/lib/destinations";
+import {
+  destinationTree,
+  flattenSearch,
+  getGlobalCountries,
+  type SelectedDestination,
+} from "@/lib/destinations";
 import type { ScenarioKey } from "@/lib/scenario-templates";
 
 export function NewTripDialog({
@@ -40,12 +45,13 @@ export function NewTripDialog({
 
   const searchResults = useMemo(() => flattenSearch(destSearch), [destSearch]);
 
-  const toggleCity = (d: SelectedDestination) => {
+  const toggleDestination = (d: SelectedDestination) => {
     setDestinations((cur) =>
       cur.find((x) => x.id === d.id) ? cur.filter((x) => x.id !== d.id) : [...cur, d],
     );
   };
   const isSelected = (id: string) => destinations.some((d) => d.id === id);
+  const globalCountries = useMemo(() => getGlobalCountries(), []);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,7 +124,7 @@ export function NewTripDialog({
                       <button
                         type="button"
                         key={d.id}
-                        onClick={() => toggleCity(d)}
+                        onClick={() => toggleDestination(d)}
                         className="flex items-center gap-1.5 rounded-md border border-signal bg-signal-soft px-2 py-1 font-mono text-[10px]"
                       >
                         <span>{d.countryFlag}</span>
@@ -140,7 +146,7 @@ export function NewTripDialog({
                         <button
                           type="button"
                           key={d.id}
-                          onClick={() => toggleCity(d)}
+                          onClick={() => toggleDestination(d)}
                           className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs transition hover:bg-surface-2 ${
                             isSelected(d.id) ? "bg-signal-soft/60" : ""
                           }`}
@@ -151,7 +157,7 @@ export function NewTripDialog({
                               {lang === "zh" ? d.cityZh : d.cityEn}
                             </span>
                             <span className="ml-1 text-muted-foreground">
-                              · {d.cityEn} / {d.cityZh}
+                              · {d.kind === "country" ? (lang === "zh" ? "国家" : "country") : (lang === "zh" ? "城市" : "city")}
                             </span>
                           </span>
                           {isSelected(d.id) && <span className="text-signal">✓</span>}
@@ -165,16 +171,41 @@ export function NewTripDialog({
                       const expanded = openCountry === c.id;
                       return (
                         <div key={c.id} className="border-b border-border last:border-b-0">
-                          <button
-                            type="button"
-                            onClick={() => setOpenCountry(expanded ? null : c.id)}
-                            className="flex w-full items-center justify-between bg-surface-2 px-3 py-1.5 text-left font-mono text-[11px]"
-                          >
-                            <span>
-                              {c.flag} {lang === "zh" ? c.zh : c.en}
-                            </span>
-                            <span className="text-muted-foreground">{expanded ? "−" : "+"}</span>
-                          </button>
+                          <div className="flex items-center justify-between bg-surface-2 px-3 py-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setOpenCountry(expanded ? null : c.id)}
+                              className="text-left font-mono text-[11px]"
+                            >
+                              <span>
+                                {c.flag} {lang === "zh" ? c.zh : c.en}
+                              </span>
+                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  toggleDestination({
+                                    id: `country-${c.id}`,
+                                    countryId: c.id,
+                                    regionId: "country",
+                                    cityEn: c.en,
+                                    cityZh: c.zh,
+                                    countryFlag: c.flag,
+                                    kind: "country",
+                                  })
+                                }
+                                className={`rounded border px-2 py-0.5 text-[10px] ${
+                                  isSelected(`country-${c.id}`)
+                                    ? "border-signal bg-signal text-signal-foreground"
+                                    : "border-border-strong bg-surface"
+                                }`}
+                              >
+                                {lang === "zh" ? "仅国家" : "Country only"}
+                              </button>
+                              <span className="text-muted-foreground">{expanded ? "−" : "+"}</span>
+                            </div>
+                          </div>
                           {expanded && (
                             <div>
                               {c.regions.map((r) => (
@@ -190,9 +221,9 @@ export function NewTripDialog({
                                           type="button"
                                           key={ci.id}
                                           onClick={() =>
-                                            toggleCity({
+                                            toggleDestination({
                                               id: ci.id, countryId: c.id, regionId: r.id,
-                                              cityEn: ci.en, cityZh: ci.zh, countryFlag: c.flag,
+                                              cityEn: ci.en, cityZh: ci.zh, countryFlag: c.flag, kind: "city",
                                             })
                                           }
                                           className={`rounded border px-2 py-0.5 text-[11px] transition ${
@@ -213,6 +244,43 @@ export function NewTripDialog({
                         </div>
                       );
                     })}
+                    <div className="border-t border-border bg-surface-2 px-3 py-2">
+                      <div className="mb-1 font-mono text-[10px] tracking-[0.15em] text-muted-foreground">
+                        {lang === "zh" ? "全球国家（仅国家）" : "Global countries (country-only)"}
+                      </div>
+                      <div className="max-h-28 overflow-y-auto">
+                        <div className="flex flex-wrap gap-1">
+                          {globalCountries.map((co) => {
+                            const id = `country-${co.id}`;
+                            const sel = isSelected(id);
+                            return (
+                              <button
+                                type="button"
+                                key={id}
+                                onClick={() =>
+                                  toggleDestination({
+                                    id,
+                                    countryId: co.id,
+                                    regionId: "country",
+                                    cityEn: co.en,
+                                    cityZh: co.zh,
+                                    countryFlag: co.flag,
+                                    kind: "country",
+                                  })
+                                }
+                                className={`rounded border px-2 py-0.5 text-[11px] ${
+                                  sel
+                                    ? "border-signal bg-signal text-signal-foreground"
+                                    : "border-border-strong bg-surface text-foreground hover:border-signal"
+                                }`}
+                              >
+                                {co.flag} {lang === "zh" ? co.zh : co.en}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
                 {destinations.length === 0 && (
