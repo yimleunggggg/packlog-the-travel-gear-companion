@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   seedTrips,
   gearLibrary as initialGearLibrary,
@@ -26,11 +34,21 @@ type Ctx = {
   addItem: (tripId: string, containerId: string, item: Omit<Item, "id">) => void;
   updateItem: (tripId: string, containerId: string, itemId: string, patch: Partial<Item>) => void;
   removeItem: (tripId: string, containerId: string, itemId: string) => void;
-  moveItem: (tripId: string, fromContainerId: string, itemId: string, toContainerId: string) => void;
+  moveItem: (
+    tripId: string,
+    fromContainerId: string,
+    itemId: string,
+    toContainerId: string,
+  ) => void;
   quickAdd: (tripId: string, name: string, weightG: number, category: string) => void;
   addFromLibrary: (tripId: string, gear: GearSpec) => void;
   addToLibrary: (item: Item) => GearSpec;
-  cloneCommunity: (tripId: string, tpl: CommunityTemplate, selectedIdx: number[], targetContainerId: string) => void;
+  cloneCommunity: (
+    tripId: string,
+    tpl: CommunityTemplate,
+    selectedIdx: number[],
+    targetContainerId: string,
+  ) => void;
   addContainer: (tripId: string, draft: Omit<Container, "id" | "code" | "items">) => void;
   removeContainer: (tripId: string, containerId: string) => void;
 
@@ -86,8 +104,7 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
     return fresh;
   }, []);
 
-  const setPhase: Ctx["setPhase"] = (tripId, p) =>
-    updateTrip(tripId, (t) => ({ ...t, phase: p }));
+  const setPhase: Ctx["setPhase"] = (tripId, p) => updateTrip(tripId, (t) => ({ ...t, phase: p }));
 
   const toggleItem: Ctx["toggleItem"] = (tripId, containerId, itemId) =>
     updateTrip(tripId, (t) => ({
@@ -122,7 +139,9 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
           ? c
           : {
               ...c,
-              items: c.items.map((i) => (i.id !== itemId ? i : { ...i, utility: u === 0 ? null : u })),
+              items: c.items.map((i) =>
+                i.id !== itemId ? i : { ...i, utility: u === 0 ? null : u },
+              ),
             },
       ),
     }));
@@ -217,12 +236,12 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
     if (!t) return;
     const target =
       g.category === "optic"
-        ? t.containers.find((c) => c.type === "camera") ??
+        ? (t.containers.find((c) => c.type === "camera") ??
           t.containers.find((c) => c.type === "personal") ??
-          t.containers[0]
+          t.containers[0])
         : g.category === "doc" || g.category === "tech"
-          ? t.containers.find((c) => c.type === "personal") ?? t.containers[0]
-          : t.containers.find((c) => c.type === "checked") ?? t.containers[0];
+          ? (t.containers.find((c) => c.type === "personal") ?? t.containers[0])
+          : (t.containers.find((c) => c.type === "checked") ?? t.containers[0]);
     if (!target) return;
     addItem(tripId, target.id, {
       gearId: g.id,
@@ -256,7 +275,9 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
       history: [],
     };
     setLibrary((lib) =>
-      lib.some((g) => g.name === spec.name && (g.brand ?? "") === (spec.brand ?? "")) ? lib : [spec, ...lib],
+      lib.some((g) => g.name === spec.name && (g.brand ?? "") === (spec.brand ?? ""))
+        ? lib
+        : [spec, ...lib],
     );
     return spec;
   };
@@ -340,16 +361,33 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
     });
 
   const removeContainer: Ctx["removeContainer"] = (tripId, containerId) =>
-    updateTrip(tripId, (t) => ({ ...t, containers: t.containers.filter((c) => c.id !== containerId) }));
+    updateTrip(tripId, (t) => ({
+      ...t,
+      containers: t.containers.filter((c) => c.id !== containerId),
+    }));
 
   const value = useMemo<Ctx>(
     () => ({
-      trips, library, getTrip,
-      createTrip, setPhase,
-      toggleItem, setVerdict, setUtility, cycleOwnership,
-      addItem, updateItem, removeItem, moveItem,
-      quickAdd, addFromLibrary, addToLibrary, cloneCommunity,
-      addContainer, removeContainer, sealReview,
+      trips,
+      library,
+      getTrip,
+      createTrip,
+      setPhase,
+      toggleItem,
+      setVerdict,
+      setUtility,
+      cycleOwnership,
+      addItem,
+      updateItem,
+      removeItem,
+      moveItem,
+      quickAdd,
+      addFromLibrary,
+      addToLibrary,
+      cloneCommunity,
+      addContainer,
+      removeContainer,
+      sealReview,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [trips, library],
