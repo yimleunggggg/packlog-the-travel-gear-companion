@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   seedTrips,
   gearLibrary as initialGearLibrary,
@@ -39,9 +39,40 @@ type Ctx = {
 
 const StoreCtx = createContext<Ctx | null>(null);
 
+const STORAGE_KEY = "packlog.state.v1";
+
+type StoredState = {
+  trips: Trip[];
+  library: GearSpec[];
+};
+
+const readStoredState = (): StoredState | null => {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<StoredState>;
+    if (!Array.isArray(parsed.trips) || !Array.isArray(parsed.library)) return null;
+    return { trips: parsed.trips as Trip[], library: parsed.library as GearSpec[] };
+  } catch {
+    return null;
+  }
+};
+
 export function PacklogProvider({ children }: { children: ReactNode }) {
-  const [trips, setTrips] = useState<Trip[]>(seedTrips);
-  const [library, setLibrary] = useState<GearSpec[]>(initialGearLibrary);
+  const [trips, setTrips] = useState<Trip[]>(() => readStoredState()?.trips ?? seedTrips);
+  const [library, setLibrary] = useState<GearSpec[]>(
+    () => readStoredState()?.library ?? initialGearLibrary,
+  );
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ trips, library }));
+    } catch {
+      // Storage can be unavailable or quota-limited; keep the in-memory session usable.
+    }
+  }, [trips, library]);
 
   const getTrip = useCallback((id: string) => trips.find((t) => t.id === id), [trips]);
 
