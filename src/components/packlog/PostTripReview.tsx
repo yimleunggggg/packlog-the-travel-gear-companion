@@ -1,10 +1,18 @@
 import { motion } from "framer-motion";
 import { useRef, useState } from "react";
-import { reviewTrip } from "@/lib/packlog-data";
-import { useI18n } from "@/lib/i18n";
+import type { Item, Trip } from "@/lib/packlog-data";
+import { useI18n, pickName } from "@/lib/i18n";
 
-export function PostTripReview({ onSeal }: { onSeal?: () => void }) {
-  const { t } = useI18n();
+type ReviewRow = {
+  id: string;
+  name: string;
+  verdict: NonNullable<Item["verdict"]>;
+  utility: number;
+  note: string;
+};
+
+export function PostTripReview({ trip, onSeal }: { trip: Trip; onSeal?: () => void }) {
+  const { t, lang } = useI18n();
   const [savedTpl, setSavedTpl] = useState(false);
   const [logExpanded, setLogExpanded] = useState(false);
   const logRef = useRef<HTMLUListElement | null>(null);
@@ -14,13 +22,31 @@ export function PostTripReview({ onSeal }: { onSeal?: () => void }) {
     drop:    { color: "var(--destructive)", label: t("review.verdict.drop"),    glyph: "·" },
   } as const;
 
+  const verdicts: ReviewRow[] = trip.containers.flatMap((container) =>
+    container.items.flatMap((item) =>
+      item.verdict
+        ? [
+            {
+              id: `${container.id}-${item.id}`,
+              name: pickName(lang, item),
+              verdict: item.verdict,
+              utility: item.utility ?? 3,
+              note: item.note ?? "",
+            },
+          ]
+        : [],
+    ),
+  );
+  const verdictCount = verdicts.length;
   const counts = {
-    keep: reviewTrip.verdicts.filter((v) => v.verdict === "keep").length,
-    upgrade: reviewTrip.verdicts.filter((v) => v.verdict === "upgrade").length,
-    drop: reviewTrip.verdicts.filter((v) => v.verdict === "drop").length,
+    keep: verdicts.filter((v) => v.verdict === "keep").length,
+    upgrade: verdicts.filter((v) => v.verdict === "upgrade").length,
+    drop: verdicts.filter((v) => v.verdict === "drop").length,
   };
-  const avgUtility =
-    reviewTrip.verdicts.reduce((s, v) => s + v.utility, 0) / reviewTrip.verdicts.length;
+  const avgUtility = verdictCount
+    ? verdicts.reduce((s, v) => s + v.utility, 0) / verdictCount
+    : 0;
+  const pct = (count: number) => (verdictCount ? (count / verdictCount) * 100 : 0);
 
   return (
     <section className="module corner-tick corner-tick-br relative overflow-hidden p-6">
@@ -30,10 +56,10 @@ export function PostTripReview({ onSeal }: { onSeal?: () => void }) {
             {t("review.head")}
           </div>
           <h3 className="mt-1 font-display text-2xl leading-tight">
-            {t("review.last")} · {reviewTrip.title}
+            {t("review.last")} · {trip.title}
           </h3>
           <p className="mt-1 font-mono text-[10px] text-muted-foreground">
-            {reviewTrip.date} · {t("review.sealed")} {reviewTrip.verdicts.length} {t("review.verdicts")} · ★ {avgUtility.toFixed(1)} avg
+            {trip.startDate.slice(0, 7)} · {t("review.sealed")} {verdictCount} {t("review.verdicts")} · ★ {avgUtility.toFixed(1)} avg
           </p>
         </div>
         <button
@@ -52,19 +78,19 @@ export function PostTripReview({ onSeal }: { onSeal?: () => void }) {
       <div className="mt-4 flex h-2 overflow-hidden border border-border">
         <motion.div
           initial={{ width: 0 }}
-          animate={{ width: `${(counts.keep / reviewTrip.verdicts.length) * 100}%` }}
+          animate={{ width: `${pct(counts.keep)}%` }}
           transition={{ duration: 0.9, ease: [0.2, 0.8, 0.2, 1] }}
           style={{ background: verdictMeta.keep.color }}
         />
         <motion.div
           initial={{ width: 0 }}
-          animate={{ width: `${(counts.upgrade / reviewTrip.verdicts.length) * 100}%` }}
+          animate={{ width: `${pct(counts.upgrade)}%` }}
           transition={{ duration: 0.9, delay: 0.1, ease: [0.2, 0.8, 0.2, 1] }}
           style={{ background: verdictMeta.upgrade.color }}
         />
         <motion.div
           initial={{ width: 0 }}
-          animate={{ width: `${(counts.drop / reviewTrip.verdicts.length) * 100}%` }}
+          animate={{ width: `${pct(counts.drop)}%` }}
           transition={{ duration: 0.9, delay: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
           style={{ background: verdictMeta.drop.color }}
         />
@@ -76,11 +102,16 @@ export function PostTripReview({ onSeal }: { onSeal?: () => void }) {
       </div>
 
       <ul ref={logRef} className={`mt-5 space-y-2 transition-all ${logExpanded ? "rounded border border-signal/40 bg-signal-soft/20 p-3" : ""}`}>
-        {reviewTrip.verdicts.map((v, i) => {
+        {verdictCount === 0 && (
+          <li className="border border-dashed border-border bg-surface-2 px-3 py-4 text-center font-mono text-[10px] text-muted-foreground">
+            {t("review.empty")}
+          </li>
+        )}
+        {verdicts.map((v, i) => {
           const m = verdictMeta[v.verdict];
           return (
             <motion.li
-              key={v.name}
+              key={v.id}
               initial={{ opacity: 0, x: -6 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.05 }}
@@ -108,7 +139,7 @@ export function PostTripReview({ onSeal }: { onSeal?: () => void }) {
                 ))}
               </div>
               <div className="col-span-4 font-mono text-[11px] text-muted-foreground">
-                &ldquo;{v.note}&rdquo;
+                {v.note ? <>&ldquo;{v.note}&rdquo;</> : "—"}
               </div>
             </motion.li>
           );

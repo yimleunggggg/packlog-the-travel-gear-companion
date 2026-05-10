@@ -133,7 +133,7 @@ function TripDetail() {
                   exit={{ opacity: 0, y: -10 }}
                   className="space-y-6"
                 >
-                  <PostTripReview onSeal={() => store.sealReview(trip.id)} />
+                  <PostTripReview trip={trip} onSeal={() => store.sealReview(trip.id)} />
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     {main.map((c) => (
                       <ContainerModule
