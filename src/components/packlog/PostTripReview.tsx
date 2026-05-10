@@ -17,9 +17,9 @@ export function PostTripReview({ trip, onSeal }: { trip: Trip; onSeal?: () => vo
   const [logExpanded, setLogExpanded] = useState(false);
   const logRef = useRef<HTMLUListElement | null>(null);
   const verdictMeta = {
-    keep:    { color: "var(--success)",     label: t("review.verdict.keep"),    glyph: "✓" },
-    upgrade: { color: "var(--signal)",      label: t("review.verdict.upgrade"), glyph: "★" },
-    drop:    { color: "var(--destructive)", label: t("review.verdict.drop"),    glyph: "·" },
+    keep: { color: "var(--success)", label: t("review.verdict.keep"), glyph: "✓" },
+    upgrade: { color: "var(--signal)", label: t("review.verdict.upgrade"), glyph: "★" },
+    drop: { color: "var(--destructive)", label: t("review.verdict.drop"), glyph: "·" },
   } as const;
 
   const verdicts: ReviewRow[] = trip.containers.flatMap((container) =>
@@ -43,9 +43,7 @@ export function PostTripReview({ trip, onSeal }: { trip: Trip; onSeal?: () => vo
     upgrade: verdicts.filter((v) => v.verdict === "upgrade").length,
     drop: verdicts.filter((v) => v.verdict === "drop").length,
   };
-  const avgUtility = verdictCount
-    ? verdicts.reduce((s, v) => s + v.utility, 0) / verdictCount
-    : 0;
+  const avgUtility = verdictCount ? verdicts.reduce((s, v) => s + v.utility, 0) / verdictCount : 0;
   const pct = (count: number) => (verdictCount ? (count / verdictCount) * 100 : 0);
 
   return (
@@ -59,7 +57,8 @@ export function PostTripReview({ trip, onSeal }: { trip: Trip; onSeal?: () => vo
             {t("review.last")} · {trip.title}
           </h3>
           <p className="mt-1 font-mono text-[10px] text-muted-foreground">
-            {trip.startDate.slice(0, 7)} · {t("review.sealed")} {verdictCount} {t("review.verdicts")} · ★ {avgUtility.toFixed(1)} avg
+            {trip.startDate.slice(0, 7)} · {t("review.sealed")} {verdictCount}{" "}
+            {t("review.verdicts")} · ★ {avgUtility.toFixed(1)} avg
           </p>
         </div>
         <button
@@ -101,7 +100,10 @@ export function PostTripReview({ trip, onSeal }: { trip: Trip; onSeal?: () => vo
         <span style={{ color: verdictMeta.drop.color }}>● DROP {counts.drop}</span>
       </div>
 
-      <ul ref={logRef} className={`mt-5 space-y-2 transition-all ${logExpanded ? "rounded border border-signal/40 bg-signal-soft/20 p-3" : ""}`}>
+      <ul
+        ref={logRef}
+        className={`mt-5 space-y-2 transition-all ${logExpanded ? "rounded border border-signal/40 bg-signal-soft/20 p-3" : ""}`}
+      >
         {verdictCount === 0 && (
           <li className="border border-dashed border-border bg-surface-2 px-3 py-4 text-center font-mono text-[10px] text-muted-foreground">
             {t("review.empty")}
