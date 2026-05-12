@@ -184,6 +184,7 @@ const dicts: Record<Lang, Dict> = {
     "review.utility": "UTILITY",
     "review.note": "Note",
     "review.notePlaceholder": "Was it useful? Any lesson for next time?",
+    "review.empty": "No item verdicts yet. Rate gear below to build this debrief.",
     "review.seal": "SEAL DEBRIEF → WRITE TO LIBRARY",
 
     "footer.doc": "DOC-ID",
@@ -370,6 +371,7 @@ const dicts: Record<Lang, Dict> = {
     "review.utility": "实用度",
     "review.note": "备注",
     "review.notePlaceholder": "好用吗？下次出行有什么经验？",
+    "review.empty": "还没有物品评价。请在下方给装备打分生成本次复盘。",
     "review.seal": "封存复盘 → 写入装备库",
 
     "footer.doc": "档案号",
@@ -556,6 +558,7 @@ const dicts: Record<Lang, Dict> = {
     "review.utility": "実用度",
     "review.note": "メモ",
     "review.notePlaceholder": "役に立った？次回への学びは？",
+    "review.empty": "アイテム判定はまだありません。下の装備を評価して振返を作成してください。",
     "review.seal": "デブリーフを封印 → ライブラリへ書き込み",
 
     "footer.doc": "DOC-ID",
