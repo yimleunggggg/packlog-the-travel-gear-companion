@@ -210,7 +210,12 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
   };
 
   const addToLibrary: Ctx["addToLibrary"] = (item) => {
-    const id = `g-usr-${Date.now().toString(36)}`;
+    const existing =
+      library.find((g) => item.gearId && g.id === item.gearId) ??
+      library.find((g) => g.name === item.name && (g.brand ?? "") === (item.brand ?? ""));
+    if (existing) return existing;
+
+    const id = `g-usr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
     const spec: GearSpec = {
       id,
       name: item.name,

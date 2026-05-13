@@ -11,7 +11,7 @@ import { CloneSheet } from "@/components/packlog/CloneSheet";
 import { AddContainerSheet } from "@/components/packlog/AddContainerSheet";
 import { usePacklog } from "@/lib/packlog-store";
 import { useI18n } from "@/lib/i18n";
-import type { CommunityTemplate } from "@/lib/packlog-data";
+import type { CommunityTemplate, Item } from "@/lib/packlog-data";
 
 export const Route = createFileRoute("/trip/$tripId")({
   component: TripDetail,
@@ -48,6 +48,14 @@ function TripDetail() {
   const phase = trip.phase;
   const scrollToContainers = () =>
     containersRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const isLinkedToLibrary = (item: Item) =>
+    item.gearId ? store.library.some((g) => g.id === item.gearId) : false;
+  const saveItemToLibrary = (containerId: string, item: Item) => {
+    const gear = store.addToLibrary(item);
+    if (item.gearId !== gear.id) {
+      store.updateItem(trip.id, containerId, item.id, { gearId: gear.id });
+    }
+  };
 
   return (
     <div className="min-h-screen pb-24">
@@ -85,12 +93,8 @@ function TripDetail() {
                         onMove={(from, iid, to) => store.moveItem(trip.id, from, iid, to)}
                         onCycleOwnership={(cid, iid) => store.cycleOwnership(trip.id, cid, iid)}
                         onUpdate={(cid, iid, patch) => store.updateItem(trip.id, cid, iid, patch)}
-                        onSaveToLibrary={(item) => store.addToLibrary(item)}
-                        isInLibrary={(item) =>
-                          store.library.some(
-                            (g) => g.name === item.name && (g.brand ?? "") === (item.brand ?? ""),
-                          )
-                        }
+                        onSaveToLibrary={(item) => saveItemToLibrary(main[0].id, item)}
+                        isInLibrary={isLinkedToLibrary}
                         variant="wide"
                       />
                     </div>
@@ -108,12 +112,8 @@ function TripDetail() {
                       onMove={(from, iid, to) => store.moveItem(trip.id, from, iid, to)}
                       onCycleOwnership={(cid, iid) => store.cycleOwnership(trip.id, cid, iid)}
                       onUpdate={(cid, iid, patch) => store.updateItem(trip.id, cid, iid, patch)}
-                      onSaveToLibrary={(item) => store.addToLibrary(item)}
-                      isInLibrary={(item) =>
-                        store.library.some(
-                          (g) => g.name === item.name && (g.brand ?? "") === (item.brand ?? ""),
-                        )
-                      }
+                      onSaveToLibrary={(item) => saveItemToLibrary(c.id, item)}
+                      isInLibrary={isLinkedToLibrary}
                     />
                   ))}
                   <div className="md:col-span-2">
