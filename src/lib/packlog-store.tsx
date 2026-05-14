@@ -7,6 +7,7 @@ import {
   type Item,
   type Container,
   type GearSpec,
+  type GearReview,
   type LifecyclePhase,
   type CommunityTemplate,
 } from "./packlog-data";
@@ -267,7 +268,7 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
   const sealReview: Ctx["sealReview"] = (tripId) => {
     const t = trips.find((x) => x.id === tripId);
     if (!t) return;
-    const newHistory: { gearId: string; entry: Parameters<typeof Object>[0] }[] = [];
+    const newHistory: { gearId: string; entry: GearReview }[] = [];
     t.containers.forEach((c) =>
       c.items.forEach((i) => {
         if (i.gearId && i.verdict) {
@@ -288,7 +289,16 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
     if (!newHistory.length) return;
     setLibrary((lib) =>
       lib.map((g) => {
-        const matches = newHistory.filter((h) => h.gearId === g.id).map((h) => h.entry as never);
+        const existingTripIds = new Set(g.history.map((h) => h.tripId));
+        const seenTripIds = new Set<string>();
+        const matches = newHistory
+          .filter((h) => h.gearId === g.id)
+          .filter(({ entry }) => {
+            if (existingTripIds.has(entry.tripId) || seenTripIds.has(entry.tripId)) return false;
+            seenTripIds.add(entry.tripId);
+            return true;
+          })
+          .map((h) => h.entry);
         if (!matches.length) return g;
         return { ...g, history: [...matches, ...g.history] };
       }),
