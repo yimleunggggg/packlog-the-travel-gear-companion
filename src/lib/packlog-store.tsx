@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   seedTrips,
   gearLibrary as initialGearLibrary,
@@ -28,6 +36,8 @@ import {
   toggleTripItem,
   updateTripItem,
 } from "./packlog-commands";
+import { preferredContainerForCategory } from "./preferred-container-for-category";
+import { useAuth } from "./auth-context";
 import { createPacklogRepository } from "./packlog-repository";
 
 type Ctx = {
@@ -36,6 +46,7 @@ type Ctx = {
   getTrip: (id: string) => Trip | undefined;
 
   createTrip: (args: Parameters<typeof makeFreshTrip>[0]) => Trip;
+  patchTrip: (tripId: string, patch: Partial<Pick<Trip, "title" | "isPublic" | "tags">>) => void;
   setPhase: (tripId: string, p: LifecyclePhase) => void;
 
   toggleItem: (tripId: string, containerId: string, itemId: string) => void;
@@ -45,11 +56,21 @@ type Ctx = {
   addItem: (tripId: string, containerId: string, item: Omit<Item, "id">) => void;
   updateItem: (tripId: string, containerId: string, itemId: string, patch: Partial<Item>) => void;
   removeItem: (tripId: string, containerId: string, itemId: string) => void;
-  moveItem: (tripId: string, fromContainerId: string, itemId: string, toContainerId: string) => void;
+  moveItem: (
+    tripId: string,
+    fromContainerId: string,
+    itemId: string,
+    toContainerId: string,
+  ) => void;
   quickAdd: (tripId: string, name: string, weightG: number, category: string) => void;
   addFromLibrary: (tripId: string, gear: GearSpec) => void;
   addToLibrary: (item: Item) => GearSpec;
-  cloneCommunity: (tripId: string, tpl: CommunityTemplate, selectedIdx: number[], targetContainerId: string) => void;
+  cloneCommunity: (
+    tripId: string,
+    tpl: CommunityTemplate,
+    selectedIdx: number[],
+    targetContainerId: string,
+  ) => void;
   addContainer: (tripId: string, draft: Omit<Container, "id" | "code" | "items">) => void;
   removeContainer: (tripId: string, containerId: string) => void;
 
@@ -59,13 +80,17 @@ type Ctx = {
 const StoreCtx = createContext<Ctx | null>(null);
 
 export function PacklogProvider({ children }: { children: ReactNode }) {
-  const repository = useMemo(
+  const { user } = useAuth();
+  const seedForRepo = useMemo(
     () =>
-      createPacklogRepository({
-        trips: seedTrips,
-        library: initialGearLibrary,
-      }),
-    [],
+      user?.id
+        ? { trips: [], library: initialGearLibrary }
+        : { trips: seedTrips, library: initialGearLibrary },
+    [user?.id],
+  );
+  const repository = useMemo(
+    () => createPacklogRepository(seedForRepo, { userId: user?.id ?? null }),
+    [seedForRepo, user?.id],
   );
   const [trips, setTrips] = useState<Trip[]>(seedTrips);
   const [library, setLibrary] = useState<GearSpec[]>(initialGearLibrary);
@@ -113,6 +138,10 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
     return fresh;
   }, []);
 
+  const patchTrip: Ctx["patchTrip"] = useCallback((tripId, patch) => {
+    setTrips((cur) => cur.map((t) => (t.id === tripId ? { ...t, ...patch } : t)));
+  }, []);
+
   const setPhase: Ctx["setPhase"] = (tripId, p) =>
     updateTrip(tripId, (trip) => setTripPhase(trip, p));
 
@@ -150,6 +179,7 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
       name,
       qty: 1,
       weightG,
+      weightSource: "user",
       category: category as Item["category"],
       status: "todo",
       verdict: null,
@@ -161,14 +191,7 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
   const addFromLibrary: Ctx["addFromLibrary"] = (tripId, g) => {
     const t = trips.find((x) => x.id === tripId);
     if (!t) return;
-    const target =
-      g.category === "optic"
-        ? t.containers.find((c) => c.type === "camera") ??
-          t.containers.find((c) => c.type === "personal") ??
-          t.containers[0]
-        : g.category === "doc" || g.category === "tech"
-          ? t.containers.find((c) => c.type === "personal") ?? t.containers[0]
-          : t.containers.find((c) => c.type === "checked") ?? t.containers[0];
+    const target = preferredContainerForCategory(t, g.category);
     if (!target) return;
     addItem(tripId, target.id, {
       gearId: g.id,
@@ -193,7 +216,9 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
   };
 
   const cloneCommunity: Ctx["cloneCommunity"] = (tripId, tpl, selectedIdx, targetContainerId) =>
-    updateTrip(tripId, (trip) => cloneCommunityTemplateToTrip(trip, tpl, selectedIdx, targetContainerId));
+    updateTrip(tripId, (trip) =>
+      cloneCommunityTemplateToTrip(trip, tpl, selectedIdx, targetContainerId),
+    );
 
   const sealReview: Ctx["sealReview"] = (tripId) => {
     const trip = trips.find((x) => x.id === tripId);
@@ -210,12 +235,27 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<Ctx>(
     () => ({
-      trips, library, getTrip,
-      createTrip, setPhase,
-      toggleItem, setVerdict, setUtility, cycleOwnership,
-      addItem, updateItem, removeItem, moveItem,
-      quickAdd, addFromLibrary, addToLibrary, cloneCommunity,
-      addContainer, removeContainer, sealReview,
+      trips,
+      library,
+      getTrip,
+      createTrip,
+      patchTrip,
+      setPhase,
+      toggleItem,
+      setVerdict,
+      setUtility,
+      cycleOwnership,
+      addItem,
+      updateItem,
+      removeItem,
+      moveItem,
+      quickAdd,
+      addFromLibrary,
+      addToLibrary,
+      cloneCommunity,
+      addContainer,
+      removeContainer,
+      sealReview,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [trips, library],

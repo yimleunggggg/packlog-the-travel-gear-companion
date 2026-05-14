@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TopBar } from "@/components/packlog/TopBar";
 import { ArchiveList } from "@/components/packlog/ArchiveList";
 import { NewTripDialog } from "@/components/packlog/NewTripDialog";
+import { POST_AUTH_EVENT, type PostAuthIntent } from "@/lib/post-auth-intent";
 import { usePacklog } from "@/lib/packlog-store";
 import { useI18n } from "@/lib/i18n";
 
@@ -32,8 +33,17 @@ function ArchivePage() {
   const { trips, createTrip } = usePacklog();
   const [newTripOpen, setNewTripOpen] = useState(false);
 
+  useEffect(() => {
+    const onResume = (e: Event) => {
+      const d = (e as CustomEvent<PostAuthIntent>).detail;
+      if (d.kind === "openNewTrip") setNewTripOpen(true);
+    };
+    window.addEventListener(POST_AUTH_EVENT, onResume as EventListener);
+    return () => window.removeEventListener(POST_AUTH_EVENT, onResume as EventListener);
+  }, []);
+
   return (
-    <div className="min-h-screen pb-24">
+    <div className="min-h-dvh pb-[calc(6rem+env(safe-area-inset-bottom))]">
       <TopBar showPhase={false} />
       <main className="mx-auto max-w-[1480px] space-y-6 px-4 py-6 md:px-6">
         <ArchiveList
@@ -41,20 +51,6 @@ function ArchivePage() {
           onOpen={(id) => navigate({ to: "/trip/$tripId", params: { tripId: id } })}
           onNewTrip={() => setNewTripOpen(true)}
         />
-
-        <footer className="module corner-tick relative grid grid-cols-2 gap-6 p-6 md:grid-cols-4">
-          {[
-            [t("footer.doc"), "PACKLOG · ARCHIVE"],
-            [t("footer.build"), "PL · 0.7.0 · FIELD"],
-            [t("footer.encoding"), "UTF-8 / KGM / ML"],
-            [t("footer.signed"), "@you · 2026.04.25"],
-          ].map(([k, v]) => (
-            <div key={k}>
-              <div className="font-mono text-[9px] tracking-[0.22em] text-muted-foreground">{k}</div>
-              <div className="mt-1 font-mono text-xs">{v}</div>
-            </div>
-          ))}
-        </footer>
       </main>
 
       <NewTripDialog

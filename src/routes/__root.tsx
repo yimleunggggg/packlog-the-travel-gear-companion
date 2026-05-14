@@ -1,4 +1,6 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { MobileTabBar } from "@/components/packlog/MobileTabBar";
+import { AuthProvider } from "@/lib/auth-context";
 import { I18nProvider } from "@/lib/i18n";
 import { PacklogProvider } from "@/lib/packlog-store";
 
@@ -30,12 +32,21 @@ export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      {
+        name: "viewport",
+        content: "width=device-width, initial-scale=1, viewport-fit=cover",
+      },
       { title: "PACKLOG · 行前志" },
-      { name: "description", content: "Modular, parametric packing for travelers who treat gear as a system." },
+      {
+        name: "description",
+        content: "Modular, parametric packing for travelers who treat gear as a system.",
+      },
       { name: "author", content: "PACKLOG" },
       { property: "og:title", content: "PACKLOG · 行前志" },
-      { property: "og:description", content: "Modular, parametric packing for travelers who treat gear as a system." },
+      {
+        property: "og:description",
+        content: "Modular, parametric packing for travelers who treat gear as a system.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
@@ -69,9 +80,12 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   return (
     <I18nProvider>
-      <PacklogProvider>
-        <Outlet />
-      </PacklogProvider>
+      <AuthProvider>
+        <PacklogProvider>
+          <Outlet />
+          <MobileTabBar />
+        </PacklogProvider>
+      </AuthProvider>
     </I18nProvider>
   );
 }

@@ -1,0 +1,91 @@
+# PACKLOG — Cursor Rules
+
+## What is PACKLOG
+PACKLOG is a scenario-driven trip gear management tool. Users describe a trip (destination, duration, activities), the system generates a personalized packing checklist, users track gear weight and status, review gear after trips, and reference community lists. It serves outdoor enthusiasts (hiking, camping, trail running, diving) AND general travelers (business trips, family vacations).
+
+## Tech Stack
+- Framework: TanStack Start (current) on Cloudflare Workers
+- Database: Supabase (PostgreSQL + Auth + Storage)
+- AI: Claude API (claude-sonnet-4-20250514) via /api/ai routes
+- Language: TypeScript (strict)
+- Styling: Current warm-orange (#C8956C) + cream (#FAF8F5) theme — do NOT change color scheme
+- i18n: Chinese (ZH) primary, English (EN) secondary. Japanese (JA) hidden until translations complete
+
+## Architecture Principles
+
+### Data Model
+- `gear_library`: User's permanent gear inventory. Items persist across trips. Has weight_g, brand, model, weight_source, status (keep/upgrade/drop), kits[], photos[]
+- `trip_items`: Items in a specific trip. References gear_library via gear_id. Has container (checked/carry/personal/worn/consumable), is_checked, is_consumable
+- `gear_reviews`: Post-trip feedback per gear item. Links gear_id + trip_id + verdict + rating + note
+- `gear_kits`: Named bundles of gear_library items (e.g. "露营基础套装")
+- `scene_templates` + `template_items`: System-provided scene templates for auto-generating checklists
+- All tables use text primary keys (not UUID) to match current frontend. Do NOT migrate to UUID.
+- All user data tables have RLS enabled
+
+### Weight Calculation
+```
+totalWeight = sum(all items × quantity)
+wornWeight = sum(items where container='worn')
+consumableWeight = sum(items where is_consumable=true)
+baseWeight = totalWeight - wornWeight - consumableWeight
+big3Weight = sum(shelter + sleep system + main pack)
+```
+
+### Scene-Driven Grouping
+When trip includes outdoor scenes (camping/hiking/trail-running/diving): group items by SYSTEM (睡眠系统/穿着系统/炊事系统/导航安全/补给)
+When trip is city/business only: group by CATEGORY (衣物/鞋/电子/洗护/证件)
+The bottom-level `category` field on items does NOT change. Grouping is a frontend display mapping only.
+
+### AI Integration Pattern
+All AI features go through `/api/ai/[action]` server routes. Each route has a specific system prompt and returns structured JSON. The frontend never calls Claude directly.
+AI features are gated behind Pro subscription — free users use manual input only.
+
+## Design Rules
+
+### Color Usage
+- Orange (#C8956C): ONLY for primary action buttons, progress bars, active tab highlight, important numbers
+- Link text: dark brown #6B5234, NOT orange
+- Decorative labels: gray or light brown, NOT orange
+- Cards: add `border: 1px solid rgba(0,0,0,0.06)` for definition against cream background
+
+### Button Hierarchy
+- Primary (solid orange, white text, bold): 开始打包, 创建行程, 添加到行程
+- Secondary (orange border, orange text, transparent bg): 看看别人带了什么, 参考社区
+- Tertiary (text only, underline, dark brown): 导出, 编辑, 删除
+
+### Mobile First
+- Default styles = mobile. Desktop overrides via `@media (min-width: 768px)`
+- Page padding: 16px mobile, 24px desktop
+- Touch targets: minimum 44×44px
+- Checkbox: minimum 28×28px
+- List row height: minimum 56px
+- Bottom navigation on mobile (<768px): 🗺️行程 / 📦装备库 / 👥社区, height 56px + safe area
+- Desktop: top navigation bar (current style)
+
+### Packing View
+- Full-screen immersive mode: hide global nav, hide bottom tabs
+- Only show: ← back button + trip name + progress
+- Bottom fixed: [+ 添加装备]
+- Disable pull-to-refresh
+- Each row collapsed: [✓] name · ×qty · weight — nothing else
+- Tap row to expand details (brand, note, status, container, edit/delete)
+
+### Translation
+- In ZH mode: NO English labels anywhere. All category tags (TECH→数码), status tags (KEEP→保留), hashtags (#CAMERA→#摄影), descriptions must be Chinese
+- In EN mode: all Chinese content translated
+- See the complete translation table in PACKLOG-SPEC.md section 四
+
+### What to NEVER show to users
+- TRP-xxxx internal IDs
+- Database field names or technical terms
+- Version numbers, encoding info, build info
+- "容器" as a concept word (use specific names: 托运箱/背包/随身)
+- Phase indicators (01/打包 → 02/复盘)
+- Placeholder features with "后续支持..." text
+- Explanatory text that describes implementation details
+
+## File Structure Reference
+- Product spec: `/PACKLOG-SPEC.md` (the single source of truth)
+- Database migrations: `/supabase/migrations/`
+- AI routes: `/api/ai/[action].ts`
+- Components follow domain grouping: trip/, gear/, community/, layout/, shared/

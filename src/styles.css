@@ -55,6 +55,9 @@
   --color-signal: var(--signal);
   --color-signal-foreground: var(--signal-foreground);
   --color-signal-soft: var(--signal-soft);
+  --color-link: var(--link);
+  --color-link-hover: var(--link-hover);
+  --color-label: var(--label);
   --color-success: var(--success);
   --color-warn: var(--warn);
   --color-info: var(--info);
@@ -94,11 +97,11 @@
      supported by sage green and dusk indigo for state colors.
      Bright, premium, modern editorial feel.
   */
-  --background: oklch(0.985 0.008 90);          /* warm ivory */
+  --background: oklch(0.978 0.009 90);          /* warm ivory — slightly deeper for card contrast */
   --foreground: oklch(0.22 0.04 250);           /* deep ink blue */
   --surface:    oklch(1.000 0.000 0);           /* pure paper */
-  --surface-2:  oklch(0.965 0.012 88);          /* sunken ivory */
-  --surface-3:  oklch(0.93  0.018 86);          /* deeper trough */
+  --surface-2:  oklch(0.962 0.012 88);          /* sunken ivory */
+  --surface-3:  oklch(0.925 0.018 86);          /* deeper trough */
   --card:       oklch(1.000 0.000 0);
   --card-foreground: oklch(0.22 0.04 250);
   --popover:    oklch(1.000 0.000 0);
@@ -124,6 +127,11 @@
   --signal: oklch(0.74 0.16 65);                /* sun amber */
   --signal-foreground: oklch(0.22 0.04 250);    /* dark text on amber */
   --signal-soft: oklch(0.92 0.10 75);
+
+  /* Links & small caps — warm umber, not sun-amber (reserve signal for CTAs + progress). */
+  --link: oklch(0.38 0.055 58);
+  --link-hover: oklch(0.32 0.06 58);
+  --label: oklch(0.44 0.035 250);               /* section kicker / labels */
 
   --success: oklch(0.62 0.13 155);              /* fresh sage */
   --warn:    oklch(0.78 0.16 75);               /* honey */
@@ -152,6 +160,15 @@
 
 @layer base {
   * { border-color: var(--color-border); }
+  /**
+   * Mobile web: 限制整页横向漂移与根部橡皮筋回弹；主纵向滚动仍由各页面主栏承担。
+   * dvh 避免 100vh 在移动浏览器地址栏伸缩时的高度跳动。
+   */
+  html {
+    height: 100%;
+    overflow-x: clip;
+    overscroll-behavior-x: none;
+  }
   html, body {
     background-color: var(--color-background);
     color: var(--color-foreground);
@@ -160,6 +177,11 @@
     -webkit-font-smoothing: antialiased;
   }
   body {
+    min-height: 100%;
+    min-height: 100dvh;
+    overflow-x: clip;
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: rgb(0 0 0 / 0.08);
     background-image:
       radial-gradient(ellipse at 92% -10%, oklch(0.86 0.15 70 / 0.32), transparent 55%),
       radial-gradient(ellipse at -8% 110%, oklch(0.65 0.15 250 / 0.18), transparent 55%),
@@ -167,9 +189,31 @@
       linear-gradient(90deg, oklch(0.40 0.08 250 / 0.04) 1px, transparent 1px);
     background-size: auto, auto, 40px 40px, 40px 40px;
     background-position: 0 0, 0 0, 0 0, 0 0;
-    background-attachment: fixed;
+    /* fixed 背景在 iOS / Android WebView 上易抖动与错位；桌面保留固定视差感 */
+    background-attachment: scroll;
+  }
+  @media (min-width: 768px) {
+    body {
+      background-attachment: fixed;
+    }
+  }
+  /* 降低双击缩放等待，触控按钮更符合「工具」预期（仍保留系统级双指缩放） */
+  a[href],
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  input[type="submit"],
+  label[for],
+  summary {
+    touch-action: manipulation;
   }
   h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.01em; }
+  a.text-link {
+    color: var(--link);
+    text-underline-offset: 2px;
+  }
+  a.text-link:hover {
+    color: var(--link-hover);
+  }
 }
 
 @layer utilities {
@@ -185,7 +229,7 @@
 
   .module {
     background: var(--surface);
-    border: 1px solid var(--border);
+    border: 1px solid rgba(0, 0, 0, 0.06);
     border-radius: var(--radius);
     position: relative;
     box-shadow: var(--shadow-module);
@@ -205,16 +249,16 @@
     position: absolute;
     top: -1px; left: -1px;
     width: 12px; height: 12px;
-    border-top: 1.5px solid var(--signal);
-    border-left: 1.5px solid var(--signal);
+    border-top: 1.5px solid var(--link);
+    border-left: 1.5px solid var(--link);
   }
   .corner-tick-br::before {
     content: "";
     position: absolute;
     bottom: -1px; right: -1px;
     width: 12px; height: 12px;
-    border-bottom: 1.5px solid var(--signal);
-    border-right: 1.5px solid var(--signal);
+    border-bottom: 1.5px solid var(--link);
+    border-right: 1.5px solid var(--link);
   }
 
   .scanlines {

@@ -14,17 +14,94 @@ type Preset = {
 // Curated, real-world bag types — covers the user's enumerated cases:
 // 托运行李箱、登机箱、随身包、登山包、洗漱包、相机包、化妆包、衣物等.
 const PRESETS: Preset[] = [
-  { type: "checked",  glyph: "▣", defaultName: "Checked Suitcase",  defaultNameZh: "托运行李箱",  capacityL: 80, maxKg: 23 },
-  { type: "carry",    glyph: "▤", defaultName: "Carry-On",          defaultNameZh: "登机箱",      capacityL: 35, maxKg: 7 },
-  { type: "personal", glyph: "◍", defaultName: "Personal Bag",      defaultNameZh: "随身包",      capacityL: 18, maxKg: 7 },
-  { type: "daypack",  glyph: "◊", defaultName: "City Daypack",      defaultNameZh: "城市日用包",  capacityL: 20, maxKg: 6 },
-  { type: "hike",     glyph: "▲", defaultName: "Hiking Pack",       defaultNameZh: "登山包",      capacityL: 55, maxKg: 16 },
-  { type: "camera",   glyph: "◉", defaultName: "Camera Bag",        defaultNameZh: "相机包",      capacityL: 12, maxKg: 6 },
-  { type: "toiletry", glyph: "◐", defaultName: "Toiletry Pouch",    defaultNameZh: "洗漱包",      capacityL: 4,  maxKg: 2 },
-  { type: "makeup",   glyph: "◑", defaultName: "Makeup Pouch",      defaultNameZh: "化妆包",      capacityL: 3,  maxKg: 1 },
-  { type: "tech",     glyph: "◈", defaultName: "Tech Pouch",        defaultNameZh: "数码配件包",  capacityL: 3,  maxKg: 2 },
-  { type: "clothing", glyph: "◇", defaultName: "Clothing Cube",     defaultNameZh: "衣物收纳袋",  capacityL: 15, maxKg: 5 },
-  { type: "custom",   glyph: "◯", defaultName: "Custom",            defaultNameZh: "自定义",      capacityL: 10, maxKg: 5 },
+  {
+    type: "checked",
+    glyph: "▣",
+    defaultName: "Checked Suitcase",
+    defaultNameZh: "托运行李箱",
+    capacityL: 80,
+    maxKg: 23,
+  },
+  {
+    type: "carry",
+    glyph: "▤",
+    defaultName: "Carry-On",
+    defaultNameZh: "登机箱",
+    capacityL: 35,
+    maxKg: 7,
+  },
+  {
+    type: "personal",
+    glyph: "◍",
+    defaultName: "Personal Bag",
+    defaultNameZh: "随身包",
+    capacityL: 18,
+    maxKg: 7,
+  },
+  {
+    type: "daypack",
+    glyph: "◊",
+    defaultName: "City Daypack",
+    defaultNameZh: "城市日用包",
+    capacityL: 20,
+    maxKg: 6,
+  },
+  {
+    type: "hike",
+    glyph: "▲",
+    defaultName: "Hiking Pack",
+    defaultNameZh: "登山包",
+    capacityL: 55,
+    maxKg: 16,
+  },
+  {
+    type: "camera",
+    glyph: "◉",
+    defaultName: "Camera Bag",
+    defaultNameZh: "相机包",
+    capacityL: 12,
+    maxKg: 6,
+  },
+  {
+    type: "toiletry",
+    glyph: "◐",
+    defaultName: "Toiletry Pouch",
+    defaultNameZh: "洗漱包",
+    capacityL: 4,
+    maxKg: 2,
+  },
+  {
+    type: "makeup",
+    glyph: "◑",
+    defaultName: "Makeup Pouch",
+    defaultNameZh: "化妆包",
+    capacityL: 3,
+    maxKg: 1,
+  },
+  {
+    type: "tech",
+    glyph: "◈",
+    defaultName: "Tech Pouch",
+    defaultNameZh: "数码配件包",
+    capacityL: 3,
+    maxKg: 2,
+  },
+  {
+    type: "clothing",
+    glyph: "◇",
+    defaultName: "Clothing Cube",
+    defaultNameZh: "衣物收纳袋",
+    capacityL: 15,
+    maxKg: 5,
+  },
+  {
+    type: "custom",
+    glyph: "◯",
+    defaultName: "Custom",
+    defaultNameZh: "自定义",
+    capacityL: 10,
+    maxKg: 5,
+  },
 ];
 
 export function AddContainerSheet({
@@ -66,19 +143,32 @@ export function AddContainerSheet({
   };
 
   return (
-    <div className="scrim fixed inset-0 z-50 grid place-items-center p-4" onClick={onClose}>
+    <div
+      className="scrim fixed inset-0 z-50 grid touch-none place-items-center overscroll-none p-3 sm:p-4"
+      onClick={onClose}
+    >
       <form
         onSubmit={submit}
         onClick={(e) => e.stopPropagation()}
-        className="module corner-tick relative w-full max-w-lg space-y-4 p-5"
+        className="module corner-tick relative max-h-[min(90dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] w-full max-w-lg touch-pan-y space-y-4 overflow-y-auto overscroll-y-contain p-5"
       >
         <div className="flex items-center justify-between">
           <div>
-            <div className="font-mono text-[10px] tracking-[0.22em] text-signal">+ {t("container.add.bag")}</div>
+            <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
+              + {t("container.add.bag")}
+            </div>
             <h3 className="mt-1 font-display text-xl">{t("container.new.title")}</h3>
-            <p className="mt-1 font-mono text-[10px] text-muted-foreground">{t("container.new.subtitle")}</p>
+            <p className="mt-1 font-mono text-[10px] text-muted-foreground">
+              {t("container.new.subtitle")}
+            </p>
           </div>
-          <button type="button" onClick={onClose} className="font-mono text-[10px] text-muted-foreground hover:text-foreground">✕</button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="font-mono text-[10px] text-muted-foreground hover:text-foreground"
+          >
+            ✕
+          </button>
         </div>
 
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
@@ -107,13 +197,19 @@ export function AddContainerSheet({
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder={t("container.new.name") + " · " + (lang === "zh" ? picked.defaultNameZh : picked.defaultName)}
+          placeholder={
+            t("container.new.name") +
+            " · " +
+            (lang === "zh" ? picked.defaultNameZh : picked.defaultName)
+          }
           className="w-full rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-signal focus:outline-none"
         />
 
         <div className="grid grid-cols-2 gap-2">
           <label className="flex items-center gap-2 rounded border border-border-strong bg-background px-2 py-1.5">
-            <span className="font-mono text-[10px] text-muted-foreground">{t("container.new.capacity")}</span>
+            <span className="font-mono text-[10px] text-muted-foreground">
+              {t("container.new.capacity")}
+            </span>
             <input
               type="number"
               min={1}
@@ -123,7 +219,9 @@ export function AddContainerSheet({
             />
           </label>
           <label className="flex items-center gap-2 rounded border border-border-strong bg-background px-2 py-1.5">
-            <span className="font-mono text-[10px] text-muted-foreground">{t("container.new.max")}</span>
+            <span className="font-mono text-[10px] text-muted-foreground">
+              {t("container.new.max")}
+            </span>
             <input
               type="number"
               min={1}
@@ -135,10 +233,17 @@ export function AddContainerSheet({
         </div>
 
         <div className="flex justify-end gap-2 pt-1">
-          <button type="button" onClick={onClose} className="rounded border border-border-strong px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-muted-foreground hover:text-foreground">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded border border-border-strong px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-muted-foreground hover:text-foreground"
+          >
             {t("container.add.cancel")}
           </button>
-          <button type="submit" className="rounded border border-signal bg-signal px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-signal-foreground hover:opacity-90">
+          <button
+            type="submit"
+            className="rounded border border-signal bg-signal px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-signal-foreground hover:opacity-90"
+          >
             {t("container.new.commit")}
           </button>
         </div>

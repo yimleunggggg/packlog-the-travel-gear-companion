@@ -24,15 +24,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
-        env:
-          VITE_DATA_BACKEND: ${{ secrets.VITE_DATA_BACKEND }}
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          VITE_PACKLOG_WORKSPACE: ${{ secrets.VITE_PACKLOG_WORKSPACE }}
-        run: npm run build
-
-      - name: Deploy
+      - name: Build and deploy to Workers
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -40,4 +32,4 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_PACKLOG_WORKSPACE: ${{ secrets.VITE_PACKLOG_WORKSPACE }}
-        run: npm run deploy
+        run: npm run release:cf

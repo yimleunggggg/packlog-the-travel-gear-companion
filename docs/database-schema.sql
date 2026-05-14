@@ -69,7 +69,7 @@ create table if not exists trip_items (
   name_zh text,
   qty integer not null default 1 check (qty > 0),
   weight_g double precision not null default 0 check (weight_g >= 0),
-  weight_source text check (weight_source in ('library', 'user', 'spec')),
+  weight_source text check (weight_source in ('library', 'user', 'spec', 'ai_estimate', 'community_median')),
   category text not null check (category in ('tech', 'apparel', 'doc', 'health', 'optic', 'misc')),
   status text not null check (status in ('todo', 'packed')),
   verdict text check (verdict in ('keep', 'drop', 'upgrade')),

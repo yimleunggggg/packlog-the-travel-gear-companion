@@ -1,17 +1,16 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
+import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TopBar } from "@/components/packlog/TopBar";
 import { TripBriefing } from "@/components/packlog/TripBriefing";
-import { ContainerModule } from "@/components/packlog/ContainerModule";
-import { ParameterBus } from "@/components/packlog/ParameterBus";
-import { CommunityRail } from "@/components/packlog/CommunityRail";
+import { WeightDistributionPanel } from "@/components/packlog/WeightDistributionPanel";
+import { TripScenarioAssist } from "@/components/packlog/TripScenarioAssist";
 import { PostTripReview } from "@/components/packlog/PostTripReview";
-import { CloneSheet } from "@/components/packlog/CloneSheet";
-import { AddContainerSheet } from "@/components/packlog/AddContainerSheet";
+import { ContainerModule } from "@/components/packlog/ContainerModule";
+import { POST_AUTH_EVENT, type PostAuthIntent } from "@/lib/post-auth-intent";
+import { communityTemplates } from "@/lib/packlog-data";
 import { usePacklog } from "@/lib/packlog-store";
 import { useI18n } from "@/lib/i18n";
-import type { CommunityTemplate } from "@/lib/packlog-data";
 
 export const Route = createFileRoute("/trip/$tripId")({
   component: TripDetail,
@@ -20,129 +19,107 @@ export const Route = createFileRoute("/trip/$tripId")({
 function TripDetail() {
   const { tripId } = Route.useParams();
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { t } = useI18n();
   const store = usePacklog();
   const trip = store.getTrip(tripId);
-  const containersRef = useRef<HTMLDivElement | null>(null);
-  const [cloneTpl, setCloneTpl] = useState<CommunityTemplate | null>(null);
-  const [addBagOpen, setAddBagOpen] = useState(false);
 
-  const main = useMemo(() => trip?.containers ?? [], [trip]);
+  useEffect(() => {
+    const onResume = (e: Event) => {
+      const d = (e as CustomEvent<PostAuthIntent>).detail;
+      if (d.kind === "communityClone" && d.tripId === tripId) {
+        const tpl = communityTemplates.find((x) => x.id === d.templateId);
+        if (tpl) store.cloneCommunity(tripId, tpl, d.selectedIdx, d.targetContainerId);
+        return;
+      }
+      if (d.kind === "saveItemToLibrary" && d.tripId === tripId) {
+        const tr = store.getTrip(tripId);
+        const c = tr?.containers.find((x) => x.id === d.containerId);
+        const item = c?.items.find((x) => x.id === d.itemId);
+        if (item) store.addToLibrary(item);
+        return;
+      }
+      if (d.kind === "tripSharing" && d.tripId === tripId) {
+        store.patchTrip(tripId, d.patch);
+      }
+    };
+    window.addEventListener(POST_AUTH_EVENT, onResume as EventListener);
+    return () => window.removeEventListener(POST_AUTH_EVENT, onResume as EventListener);
+  }, [tripId, store]);
 
   if (!trip) {
     return (
       <div className="min-h-screen">
         <TopBar showPhase={false} />
         <div className="mx-auto max-w-2xl p-12 text-center">
-          <div className="font-mono text-[10px] tracking-[0.22em] text-muted-foreground">PACKLOG</div>
-          <h1 className="mt-3 font-display text-3xl">Trip not found</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{t("archive.empty")}</p>
-          <Link to="/" className="mt-5 inline-block rounded border border-signal bg-signal px-4 py-2 font-mono text-[10px] tracking-[0.18em] text-signal-foreground">
-            {t("archive.back")}
-          </Link>
+          <div className="font-mono text-[10px] tracking-[0.22em] text-muted-foreground">
+            PACKLOG
+          </div>
+          <h1 className="mt-3 font-display text-3xl">{t("trip.notFound.title")}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t("trip.notFound.subtitle")}</p>
         </div>
       </div>
     );
   }
 
   const phase = trip.phase;
-  const scrollToContainers = () =>
-    containersRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  /** Child route `/trip/$tripId/pack` renders the full packing surface (checklist + bags). */
+  const isPackSubRoute = /\/pack\/?$/.test(pathname);
+
+  if (isPackSubRoute) {
+    return <Outlet />;
+  }
 
   return (
-    <div className="min-h-screen pb-24">
-      <TopBar phase={phase} onPhase={(p) => store.setPhase(trip.id, p)} />
+    <div className="min-h-dvh pb-[calc(6rem+env(safe-area-inset-bottom))]">
+      <TopBar showPhase={false} />
 
       <main className="mx-auto max-w-[1480px] space-y-6 px-4 py-6 md:px-6">
         <TripBriefing
           trip={trip}
+          phase={phase}
+          onPhase={(p) => store.setPhase(trip.id, p)}
           onBack={() => navigate({ to: "/" })}
           onOpenClone={() => navigate({ to: "/community" })}
-          onContinue={scrollToContainers}
+          onSharingPatch={(patch) => store.patchTrip(trip.id, patch)}
         />
 
-        <div ref={containersRef} className="grid grid-cols-12 gap-6">
-          <div className="col-span-12 lg:col-span-8">
+        <div className="grid grid-cols-12 gap-6">
+          <div className="col-span-12 space-y-6 lg:col-span-8">
             <AnimatePresence mode="wait">
               {phase !== "REVIEW" ? (
                 <motion.div
-                  key="containers"
-                  initial={{ opacity: 0, y: 10 }}
+                  key="overview-pack"
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="grid grid-cols-1 gap-6 md:grid-cols-2"
+                  exit={{ opacity: 0, y: -8 }}
+                  className="space-y-6"
                 >
-                  {main[0] && (
-                    <div className="md:col-span-2">
-                      <ContainerModule
-                        container={main[0]}
-                        phase={phase}
-                        onToggle={(cid, iid) => store.toggleItem(trip.id, cid, iid)}
-                        onVerdict={(cid, iid, v) => store.setVerdict(trip.id, cid, iid, v)}
-                        onUtility={(cid, iid, u) => store.setUtility(trip.id, cid, iid, u)}
-                        onAdd={(cid, item) => store.addItem(trip.id, cid, item)}
-                        onRemove={(cid, iid) => store.removeItem(trip.id, cid, iid)}
-                        onMove={(from, iid, to) => store.moveItem(trip.id, from, iid, to)}
-                        onCycleOwnership={(cid, iid) => store.cycleOwnership(trip.id, cid, iid)}
-                        onUpdate={(cid, iid, patch) => store.updateItem(trip.id, cid, iid, patch)}
-                        onSaveToLibrary={(item) => store.addToLibrary(item)}
-                        isInLibrary={(item) =>
-                          store.library.some(
-                            (g) => g.name === item.name && (g.brand ?? "") === (item.brand ?? ""),
-                          )
-                        }
-                        variant="wide"
-                      />
-                    </div>
-                  )}
-                  {main.slice(1).map((c) => (
-                    <ContainerModule
-                      key={c.id}
-                      container={c}
-                      phase={phase}
-                      onToggle={(cid, iid) => store.toggleItem(trip.id, cid, iid)}
-                      onVerdict={(cid, iid, v) => store.setVerdict(trip.id, cid, iid, v)}
-                      onUtility={(cid, iid, u) => store.setUtility(trip.id, cid, iid, u)}
-                      onAdd={(cid, item) => store.addItem(trip.id, cid, item)}
-                      onRemove={(cid, iid) => store.removeItem(trip.id, cid, iid)}
-                      onMove={(from, iid, to) => store.moveItem(trip.id, from, iid, to)}
-                      onCycleOwnership={(cid, iid) => store.cycleOwnership(trip.id, cid, iid)}
-                      onUpdate={(cid, iid, patch) => store.updateItem(trip.id, cid, iid, patch)}
-                      onSaveToLibrary={(item) => store.addToLibrary(item)}
-                      isInLibrary={(item) =>
-                        store.library.some(
-                          (g) => g.name === item.name && (g.brand ?? "") === (item.brand ?? ""),
-                        )
-                      }
-                    />
-                  ))}
-                  <div className="md:col-span-2">
-                    <button
-                      onClick={() => setAddBagOpen(true)}
-                      className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border-strong bg-surface/50 py-3 font-mono text-[11px] tracking-[0.2em] text-muted-foreground transition hover:border-signal hover:bg-signal-soft hover:text-signal"
-                    >
-                      {t("container.add.bag")}
-                    </button>
-                  </div>
+                  <TripScenarioAssist
+                    trip={trip}
+                    onQuickAdd={(name, w, cat) => store.quickAdd(trip.id, name, w, cat)}
+                  />
                 </motion.div>
               ) : (
                 <motion.div
                   key="review"
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
+                  exit={{ opacity: 0, y: -8 }}
                   className="space-y-6"
                 >
-                  <PostTripReview onSeal={() => store.sealReview(trip.id)} />
+                  <PostTripReview trip={trip} onSeal={() => store.sealReview(trip.id)} />
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                    {main.map((c) => (
+                    {(trip.containers ?? []).map((c) => (
                       <ContainerModule
                         key={c.id}
                         container={c}
                         phase={phase}
+                        tripId={trip.id}
                         onToggle={(cid, iid) => store.toggleItem(trip.id, cid, iid)}
                         onVerdict={(cid, iid, v) => store.setVerdict(trip.id, cid, iid, v)}
                         onUtility={(cid, iid, u) => store.setUtility(trip.id, cid, iid, u)}
+                        onUpdate={(cid, iid, patch) => store.updateItem(trip.id, cid, iid, patch)}
                       />
                     ))}
                   </div>
@@ -152,29 +129,10 @@ function TripDetail() {
           </div>
 
           <div className="col-span-12 space-y-6 lg:col-span-4">
-            <ParameterBus
-              trip={trip}
-              onQuickAdd={(n, w, c) => store.quickAdd(trip.id, n, w, c)}
-            />
-            <CommunityRail scenario={trip.scenario} onPreview={(tpl) => setCloneTpl(tpl)} />
+            <WeightDistributionPanel trip={trip} />
           </div>
         </div>
       </main>
-
-      <CloneSheet
-        template={cloneTpl}
-        containers={trip.containers}
-        onClose={() => setCloneTpl(null)}
-        onCommit={(idx, target) => {
-          if (cloneTpl) store.cloneCommunity(trip.id, cloneTpl, idx, target);
-        }}
-      />
-
-      <AddContainerSheet
-        open={addBagOpen}
-        onClose={() => setAddBagOpen(false)}
-        onCommit={(draft) => store.addContainer(trip.id, draft)}
-      />
     </div>
   );
 }

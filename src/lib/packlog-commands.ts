@@ -7,6 +7,7 @@ import type {
   LifecyclePhase,
   Trip,
 } from "./packlog-data";
+import { itemNameKeys, mergedScenarioSeedsForTrip } from "./packing-pool";
 
 function withUpdatedItem(
   trip: Trip,
@@ -51,7 +52,12 @@ export function setTripItemVerdict(
   return withUpdatedItem(trip, containerId, itemId, (item) => ({ ...item, verdict }));
 }
 
-export function setTripItemUtility(trip: Trip, containerId: string, itemId: string, utility: number): Trip {
+export function setTripItemUtility(
+  trip: Trip,
+  containerId: string,
+  itemId: string,
+  utility: number,
+): Trip {
   return withUpdatedItem(trip, containerId, itemId, (item) => ({
     ...item,
     utility: utility === 0 ? null : utility,
@@ -60,7 +66,7 @@ export function setTripItemUtility(trip: Trip, containerId: string, itemId: stri
 
 export function cycleTripItemOwnership(trip: Trip, containerId: string, itemId: string): Trip {
   return withUpdatedItem(trip, containerId, itemId, (item) => {
-    const order: Item["ownership"][] = ["owned", "wishlist", "undecided"];
+    const order: Item["ownership"][] = ["owned", "wishlist", "borrowed", "undecided"];
     const next = order[(order.indexOf(item.ownership) + 1) % order.length];
     return { ...item, ownership: next };
   });
@@ -90,17 +96,47 @@ export function updateTripItem(
 }
 
 export function removeTripItem(trip: Trip, containerId: string, itemId: string): Trip {
-  return {
+  const container = trip.containers.find((c) => c.id === containerId);
+  const removed = container?.items.find((i) => i.id === itemId);
+
+  const next: Trip = {
     ...trip,
-    containers: trip.containers.map((container) =>
-      container.id !== containerId
-        ? container
-        : { ...container, items: container.items.filter((item) => item.id !== itemId) },
+    containers: trip.containers.map((c) =>
+      c.id !== containerId ? c : { ...c, items: c.items.filter((item) => item.id !== itemId) },
     ),
   };
+
+  if (!removed) return next;
+
+  const scenarioSeeds = mergedScenarioSeedsForTrip(trip);
+  const removedKeys = itemNameKeys(removed);
+  const seedNormsFromRemoved = scenarioSeeds
+    .map((s) => s.en.trim().toLowerCase())
+    .filter((n) => removedKeys.includes(n));
+
+  if (seedNormsFromRemoved.length === 0) return next;
+
+  const stillPacked = new Set<string>();
+  for (const c of next.containers) {
+    for (const it of c.items) {
+      for (const k of itemNameKeys(it)) stillPacked.add(k);
+    }
+  }
+
+  const toDismiss = seedNormsFromRemoved.filter((k) => !stillPacked.has(k));
+  if (toDismiss.length === 0) return next;
+
+  const prev = trip.dismissedScenarioSeeds ?? [];
+  const mergedDismissed = [...new Set([...prev, ...toDismiss])];
+  return { ...next, dismissedScenarioSeeds: mergedDismissed };
 }
 
-export function moveTripItem(trip: Trip, fromContainerId: string, itemId: string, toContainerId: string): Trip {
+export function moveTripItem(
+  trip: Trip,
+  fromContainerId: string,
+  itemId: string,
+  toContainerId: string,
+): Trip {
   const fromContainer = trip.containers.find((container) => container.id === fromContainerId);
   const item = fromContainer?.items.find((candidate) => candidate.id === itemId);
   if (!fromContainer || !item) return trip;
@@ -109,7 +145,10 @@ export function moveTripItem(trip: Trip, fromContainerId: string, itemId: string
     ...trip,
     containers: trip.containers.map((container) => {
       if (container.id === fromContainerId) {
-        return { ...container, items: container.items.filter((candidate) => candidate.id !== itemId) };
+        return {
+          ...container,
+          items: container.items.filter((candidate) => candidate.id !== itemId),
+        };
       }
       if (container.id === toContainerId) {
         return { ...container, items: [...container.items, item] };
@@ -188,6 +227,7 @@ export function buildLibrarySpecFromItem(item: Item): GearSpec {
     nameEn: item.nameEn ?? item.name,
     nameZh: item.nameZh,
     brand: item.brand,
+    sku: item.sku,
     weightG: item.weightG,
     category: item.category,
     description: item.note ?? "",
@@ -198,7 +238,9 @@ export function buildLibrarySpecFromItem(item: Item): GearSpec {
 }
 
 export function mergeLibrarySpec(library: GearSpec[], spec: GearSpec): GearSpec[] {
-  return library.some((gear) => gear.name === spec.name && (gear.brand ?? "") === (spec.brand ?? ""))
+  return library.some(
+    (gear) => gear.name === spec.name && (gear.brand ?? "") === (spec.brand ?? ""),
+  )
     ? library
     : [spec, ...library];
 }

@@ -12,7 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LibraryRouteImport } from './routes/library'
 import { Route as CommunityRouteImport } from './routes/community'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CommunityIndexRouteImport } from './routes/community.index'
 import { Route as TripTripIdRouteImport } from './routes/trip.$tripId'
+import { Route as CommunityTemplateIdRouteImport } from './routes/community.$templateId'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as TripTripIdPackRouteImport } from './routes/trip.$tripId.pack'
+import { Route as ApiAiActionRouteImport } from './routes/api.ai.$action'
 
 const LibraryRoute = LibraryRouteImport.update({
   id: '/library',
@@ -29,44 +34,112 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CommunityIndexRoute = CommunityIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CommunityRoute,
+} as any)
 const TripTripIdRoute = TripTripIdRouteImport.update({
   id: '/trip/$tripId',
   path: '/trip/$tripId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CommunityTemplateIdRoute = CommunityTemplateIdRouteImport.update({
+  id: '/$templateId',
+  path: '/$templateId',
+  getParentRoute: () => CommunityRoute,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TripTripIdPackRoute = TripTripIdPackRouteImport.update({
+  id: '/pack',
+  path: '/pack',
+  getParentRoute: () => TripTripIdRoute,
+} as any)
+const ApiAiActionRoute = ApiAiActionRouteImport.update({
+  id: '/api/ai/$action',
+  path: '/api/ai/$action',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/community': typeof CommunityRoute
+  '/community': typeof CommunityRouteWithChildren
   '/library': typeof LibraryRoute
-  '/trip/$tripId': typeof TripTripIdRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/community/$templateId': typeof CommunityTemplateIdRoute
+  '/trip/$tripId': typeof TripTripIdRouteWithChildren
+  '/community/': typeof CommunityIndexRoute
+  '/api/ai/$action': typeof ApiAiActionRoute
+  '/trip/$tripId/pack': typeof TripTripIdPackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/community': typeof CommunityRoute
   '/library': typeof LibraryRoute
-  '/trip/$tripId': typeof TripTripIdRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/community/$templateId': typeof CommunityTemplateIdRoute
+  '/trip/$tripId': typeof TripTripIdRouteWithChildren
+  '/community': typeof CommunityIndexRoute
+  '/api/ai/$action': typeof ApiAiActionRoute
+  '/trip/$tripId/pack': typeof TripTripIdPackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/community': typeof CommunityRoute
+  '/community': typeof CommunityRouteWithChildren
   '/library': typeof LibraryRoute
-  '/trip/$tripId': typeof TripTripIdRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/community/$templateId': typeof CommunityTemplateIdRoute
+  '/trip/$tripId': typeof TripTripIdRouteWithChildren
+  '/community/': typeof CommunityIndexRoute
+  '/api/ai/$action': typeof ApiAiActionRoute
+  '/trip/$tripId/pack': typeof TripTripIdPackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/community' | '/library' | '/trip/$tripId'
+  fullPaths:
+    | '/'
+    | '/community'
+    | '/library'
+    | '/auth/callback'
+    | '/community/$templateId'
+    | '/trip/$tripId'
+    | '/community/'
+    | '/api/ai/$action'
+    | '/trip/$tripId/pack'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/community' | '/library' | '/trip/$tripId'
-  id: '__root__' | '/' | '/community' | '/library' | '/trip/$tripId'
+  to:
+    | '/'
+    | '/library'
+    | '/auth/callback'
+    | '/community/$templateId'
+    | '/trip/$tripId'
+    | '/community'
+    | '/api/ai/$action'
+    | '/trip/$tripId/pack'
+  id:
+    | '__root__'
+    | '/'
+    | '/community'
+    | '/library'
+    | '/auth/callback'
+    | '/community/$templateId'
+    | '/trip/$tripId'
+    | '/community/'
+    | '/api/ai/$action'
+    | '/trip/$tripId/pack'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  CommunityRoute: typeof CommunityRoute
+  CommunityRoute: typeof CommunityRouteWithChildren
   LibraryRoute: typeof LibraryRoute
-  TripTripIdRoute: typeof TripTripIdRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
+  TripTripIdRoute: typeof TripTripIdRouteWithChildren
+  ApiAiActionRoute: typeof ApiAiActionRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -92,6 +165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/community/': {
+      id: '/community/'
+      path: '/'
+      fullPath: '/community/'
+      preLoaderRoute: typeof CommunityIndexRouteImport
+      parentRoute: typeof CommunityRoute
+    }
     '/trip/$tripId': {
       id: '/trip/$tripId'
       path: '/trip/$tripId'
@@ -99,14 +179,70 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TripTripIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/community/$templateId': {
+      id: '/community/$templateId'
+      path: '/$templateId'
+      fullPath: '/community/$templateId'
+      preLoaderRoute: typeof CommunityTemplateIdRouteImport
+      parentRoute: typeof CommunityRoute
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trip/$tripId/pack': {
+      id: '/trip/$tripId/pack'
+      path: '/pack'
+      fullPath: '/trip/$tripId/pack'
+      preLoaderRoute: typeof TripTripIdPackRouteImport
+      parentRoute: typeof TripTripIdRoute
+    }
+    '/api/ai/$action': {
+      id: '/api/ai/$action'
+      path: '/api/ai/$action'
+      fullPath: '/api/ai/$action'
+      preLoaderRoute: typeof ApiAiActionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface CommunityRouteChildren {
+  CommunityTemplateIdRoute: typeof CommunityTemplateIdRoute
+  CommunityIndexRoute: typeof CommunityIndexRoute
+}
+
+const CommunityRouteChildren: CommunityRouteChildren = {
+  CommunityTemplateIdRoute: CommunityTemplateIdRoute,
+  CommunityIndexRoute: CommunityIndexRoute,
+}
+
+const CommunityRouteWithChildren = CommunityRoute._addFileChildren(
+  CommunityRouteChildren,
+)
+
+interface TripTripIdRouteChildren {
+  TripTripIdPackRoute: typeof TripTripIdPackRoute
+}
+
+const TripTripIdRouteChildren: TripTripIdRouteChildren = {
+  TripTripIdPackRoute: TripTripIdPackRoute,
+}
+
+const TripTripIdRouteWithChildren = TripTripIdRoute._addFileChildren(
+  TripTripIdRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  CommunityRoute: CommunityRoute,
+  CommunityRoute: CommunityRouteWithChildren,
   LibraryRoute: LibraryRoute,
-  TripTripIdRoute: TripTripIdRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
+  TripTripIdRoute: TripTripIdRouteWithChildren,
+  ApiAiActionRoute: ApiAiActionRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
