@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
+import { packlogSubscriptionTier } from "@/lib/packlog-subscription-tier";
 import {
   destinationTree,
   findCountryById,
@@ -8,6 +9,22 @@ import {
   type SelectedDestination,
 } from "@/lib/destinations";
 import type { ScenarioKey } from "@/lib/scenario-templates";
+import {
+  packlogBtnPrimary,
+  packlogBtnSecondary,
+  packlogBtnSm,
+  packlogBtnTertiary,
+  packlogPageTitle,
+} from "@/lib/packlog-button-classes";
+import { cn } from "@/lib/utils";
+import { SheetDragHandle } from "@/components/ui/sheet-drag-handle";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import {
+  packlogModalBodyScroll,
+  packlogModalScrim,
+  packlogModalSurface,
+} from "@/lib/packlog-mobile-modal-shell";
+
 export function NewTripDialog({
   open,
   onClose,
@@ -26,6 +43,7 @@ export function NewTripDialog({
   }) => void;
 }) {
   const { t, lang } = useI18n();
+  const mdUp = useMediaQuery("(min-width: 768px)");
   const [title, setTitle] = useState("");
   const [titleManual, setTitleManual] = useState(false);
   const [destinations, setDestinations] = useState<SelectedDestination[]>([]);
@@ -46,6 +64,8 @@ export function NewTripDialog({
   const scenarios: ScenarioKey[] = [
     "winter-city",
     "summer-beach",
+    "camping",
+    "hiking",
     "trail-run",
     "alpine",
     "desert",
@@ -170,7 +190,7 @@ export function NewTripDialog({
     if (!text) return;
     setAiBusy(true);
     setAiNote(null);
-    const subscriptionTier = parseSubscriptionTier();
+    const subscriptionTier = packlogSubscriptionTier();
     try {
       const res = await fetch("/api/ai/parse-trip", {
         method: "POST",
@@ -212,7 +232,7 @@ export function NewTripDialog({
       else if (code === "AI_NOT_CONFIGURED") setAiNote(t("newTrip.ai.errorNotConfigured"));
       else if (code === "PARSE_FAILED") setAiNote(t("newTrip.ai.errorParse"));
       else if (code === "MISSING_TEXT") setAiNote(t("newTrip.ai.errorUnknown"));
-      else setAiNote(body.message?.trim() || t("newTrip.ai.errorUnknown"));
+      else setAiNote(t("newTrip.ai.errorUnknown"));
     } catch {
       setAiNote(t("newTrip.ai.errorNetwork"));
     } finally {
@@ -227,30 +247,41 @@ export function NewTripDialog({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="scrim fixed inset-0 z-50 grid touch-none place-items-center overscroll-none p-3 md:p-4"
+          className={cn("scrim", packlogModalScrim)}
           onClick={onClose}
         >
           <motion.form
             onSubmit={submit}
             onClick={(e) => e.stopPropagation()}
-            initial={{ y: 20, opacity: 0 }}
+            initial={mdUp ? { y: 20, opacity: 0 } : { y: "100%", opacity: 1 }}
             animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 20, opacity: 0 }}
-            className="module corner-tick corner-tick-br relative flex max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem))] w-full max-w-2xl touch-pan-y flex-col overflow-hidden overscroll-y-contain p-5 md:p-6"
+            exit={mdUp ? { y: 20, opacity: 0 } : { y: "100%", opacity: 1 }}
+            transition={
+              mdUp
+                ? { duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }
+                : { type: "spring", damping: 30, stiffness: 320 }
+            }
+            className={cn(
+              packlogModalSurface,
+              "flex w-full flex-col overflow-hidden",
+              "max-md:max-h-[90vh]",
+              "md:max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem))] md:max-w-2xl md:rounded-lg",
+            )}
           >
-            <div className="shrink-0 flex items-start justify-between gap-3 border-b border-[#E8E2D9] pb-3">
-              <h3 className="font-display text-2xl md:text-3xl">{t("trips.create.title")}</h3>
+            <SheetDragHandle />
+            <div className="relative shrink-0 border-b border-[#E8E2D9] px-5 pb-3 pt-1 md:px-6 md:pt-4">
+              <h3 className={cn(packlogPageTitle, "pr-12")}>{t("trips.create.title")}</h3>
               <button
                 type="button"
                 onClick={onClose}
-                className="font-mono text-xs text-muted-foreground hover:text-foreground"
+                className="absolute right-4 top-2 rounded-sm font-mono text-lg leading-none text-muted-foreground hover:text-foreground md:top-4"
                 aria-label="close"
               >
                 ×
               </button>
             </div>
 
-            <div className="mt-4 flex-1 space-y-4 overflow-y-auto pr-1">
+            <div className={cn(packlogModalBodyScroll, "mt-4 space-y-4 px-5 pr-1 md:px-6")}>
               <div className="rounded-md border border-border bg-surface-2/60 p-3">
                 <label className="block font-mono text-[9px] tracking-[0.15em] text-muted-foreground">
                   AI
@@ -267,14 +298,19 @@ export function NewTripDialog({
                     type="button"
                     disabled={aiBusy || !nlTrip.trim()}
                     onClick={() => void runAiParse()}
-                    className="rounded-md border border-signal bg-signal px-3 py-1.5 font-mono text-[10px] font-semibold tracking-[0.15em] text-signal-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                    className={cn(
+                      packlogBtnPrimary,
+                      packlogBtnSm,
+                      "disabled:cursor-not-allowed disabled:opacity-40",
+                    )}
                   >
                     {aiBusy ? t("newTrip.ai.busy") : t("newTrip.ai.cta")}
                   </button>
-                  {aiNote ? (
-                    <span className="font-mono text-[10px] text-muted-foreground">{aiNote}</span>
-                  ) : null}
+                  <span className="font-mono text-[10px] text-muted-foreground">(Pro)</span>
                 </div>
+                {aiNote ? (
+                  <p className="mt-2 font-mono text-[10px] text-muted-foreground">{aiNote}</p>
+                ) : null}
               </div>
 
               {/* Destinations first — title auto-fills from selections */}
@@ -294,7 +330,7 @@ export function NewTripDialog({
                         type="button"
                         key={d.id}
                         onClick={() => toggleDestination(d)}
-                        className="flex items-center gap-1.5 rounded-md border border-signal bg-signal-soft px-2 py-1 font-mono text-[10px]"
+                        className="flex items-center gap-1.5 rounded-md border border-border-strong bg-surface-2 px-2 py-1 font-mono text-[10px]"
                       >
                         <span>{d.countryFlag}</span>
                         <span>
@@ -323,7 +359,7 @@ export function NewTripDialog({
                           key={d.id}
                           onClick={() => pickFromSearch(d)}
                           className={`flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-xs transition hover:bg-surface-2 ${
-                            isSelected(d.id) ? "bg-signal-soft/60" : ""
+                            isSelected(d.id) ? "bg-[#C8956C]/12" : ""
                           }`}
                         >
                           <span>
@@ -346,7 +382,7 @@ export function NewTripDialog({
                             </span>
                           </span>
                           {isSelected(d.id) && (
-                            <span className="font-mono text-[9px] text-signal">✓</span>
+                            <span className="font-mono text-[9px] text-[#6B5234]">✓</span>
                           )}
                         </button>
                       ))
@@ -358,11 +394,9 @@ export function NewTripDialog({
                   <button
                     type="button"
                     onClick={() => setShowCascade((v) => !v)}
-                    className="font-mono text-[10px] tracking-[0.18em] text-signal hover:underline"
+                    className="font-mono text-[10px] tracking-[0.18em] text-[#6B5234] hover:underline"
                   >
-                    {showCascade
-                      ? t("trips.create.dest.cascade.hide")
-                      : t("trips.create.dest.cascade.show")}
+                    {showCascade ? t("trips.create.options.less") : t("trips.create.options.more")}
                   </button>
 
                   {showCascade && cascadeCountry && (
@@ -449,12 +483,6 @@ export function NewTripDialog({
                     </div>
                   )}
                 </div>
-
-                {destinations.length === 0 && (
-                  <p className="mt-1 font-mono text-[10px] text-muted-foreground">
-                    {t("trips.create.dest.none")}
-                  </p>
-                )}
               </Field>
 
               <Field label={t("trips.create.name")}>
@@ -530,31 +558,36 @@ export function NewTripDialog({
                   type="checkbox"
                   checked={seed}
                   onChange={(e) => setSeed(e.target.checked)}
-                  className="h-3.5 w-3.5 accent-[var(--signal)]"
+                  className="h-3.5 w-3.5 accent-[#C8956C]"
                 />
                 <span className="text-xs">{t("trips.create.seed")}</span>
               </label>
             </div>
 
-            <div className="mt-4 flex flex-col gap-2 border-t border-border pt-3 sm:flex-row sm:justify-end sm:gap-3">
+            <div className="mt-4 flex shrink-0 flex-col gap-2 border-t border-border px-5 pb-[max(1rem,calc(env(safe-area-inset-bottom)+0.75rem))] pt-3 sm:flex-row sm:justify-end sm:gap-3 md:px-6">
               <button
                 type="button"
                 onClick={onClose}
-                className="order-2 min-h-11 rounded border border-border-strong bg-surface px-4 py-2.5 font-mono text-[10px] tracking-[0.18em] text-muted-foreground hover:text-foreground sm:order-1"
+                className={cn(
+                  packlogBtnTertiary,
+                  "order-2 min-h-11 px-2 py-2.5 text-[10px] sm:order-1",
+                )}
               >
                 {t("trips.create.cancel")}
               </button>
               <button
                 type="submit"
                 disabled={!title.trim() || destinations.length === 0}
-                className="order-1 min-h-11 flex-1 rounded-md border border-signal bg-signal px-4 py-2.5 font-mono text-[10px] font-semibold tracking-[0.18em] text-signal-foreground shadow-sm transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40 sm:order-2 sm:max-w-xs sm:flex-none"
+                className={cn(
+                  "order-1 min-h-11 flex-1 rounded-[10px] border border-[#B87333] bg-[#C8956C] px-4 py-2.5 font-mono text-[10px] font-semibold tracking-[0.18em] text-white shadow-sm transition hover:brightness-[1.03] active:brightness-[0.97] disabled:cursor-not-allowed disabled:opacity-40 sm:order-2 sm:max-w-xs sm:flex-none",
+                )}
               >
                 {t("trips.create.commit")}
               </button>
             </div>
 
             <style>{`.input{ width:100%; border:1px solid var(--border-strong); background: var(--background); padding:0.45rem 0.6rem; font-size:0.875rem; outline:none; border-radius: 4px; }
-              .input:focus{ border-color: var(--signal); box-shadow: 0 0 0 3px var(--signal-soft); }
+              .input:focus{ border-color: #c8956c; box-shadow: 0 0 0 3px rgba(200, 149, 108, 0.22); }
               .input.input-trip-title{ font-size: clamp(0.78rem, 2.6vw, 0.95rem); line-height: 1.35; min-height: 2.45rem; max-height: 7rem; overflow-y: auto; resize: vertical; word-break: break-word; }`}</style>
           </motion.form>
         </motion.div>
@@ -598,18 +631,12 @@ function tripDaysInclusive(startIso: string, endIso: string): number {
   return Math.round((b - a) / 86400000) + 1;
 }
 
-/** Vite: `VITE_PACKLOG_SUBSCRIPTION_TIER=pro` sends Pro tier to the API (server still enforces key + optional bypass). */
-function parseSubscriptionTier(): "pro" | "free" {
-  const raw = String(import.meta.env.VITE_PACKLOG_SUBSCRIPTION_TIER ?? "")
-    .toLowerCase()
-    .trim();
-  return raw === "pro" ? "pro" : "free";
-}
-
 const CHINESE_SCENE_TO_SCENARIO: Record<string, ScenarioKey> = {
   通用: "general",
   "冬季/城市": "winter-city",
   "夏季/海滩": "summer-beach",
+  露营: "camping",
+  徒步: "hiking",
   越野跑: "trail-run",
   "山地/高山": "alpine",
   沙漠: "desert",

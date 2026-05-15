@@ -1,9 +1,29 @@
 import { motion } from "framer-motion";
+import { useNavigate } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { AuthGate } from "@/components/auth/AuthGate";
 import { useI18n } from "@/lib/i18n";
 import type { Trip } from "@/lib/packlog-data";
 import { formatDestinations } from "@/lib/destinations";
+import { filterTripTagList } from "@/lib/community-tag-display";
+import {
+  canonicalTagKey,
+  formatTagForUi,
+  isPresetTagId,
+  tripTagMatchStrength,
+} from "@/lib/tag-presets";
+import {
+  packlogBtnBlock,
+  packlogBtnPrimary,
+  packlogBtnSm,
+  packlogHint,
+  packlogPageTitle,
+  packlogSectionTitle,
+} from "@/lib/packlog-button-classes";
+import { tripTitleDisplay } from "@/lib/trip-list-label";
 import { tripScenarios } from "@/lib/trip-scenarios";
+import { calendarDaysUntilTripStart } from "@/lib/trip-date";
+import { cn } from "@/lib/utils";
 
 function tripAggregate(tr: Trip) {
   let totalItems = 0;
@@ -29,26 +49,39 @@ function tripAggregate(tr: Trip) {
 
 export function ArchiveList({
   trips,
+  tagFilter,
   onOpen,
   onNewTrip,
 }: {
   trips: Trip[];
+  tagFilter?: string;
   onOpen: (id: string) => void;
   onNewTrip: () => void;
 }) {
   const { t, lang } = useI18n();
+  const navigate = useNavigate();
+
+  const visibleTrips = useMemo(() => {
+    if (!tagFilter?.trim()) return trips;
+    return [...trips]
+      .map((tr) => ({ tr, s: tripTagMatchStrength(tr.tags, tagFilter) }))
+      .filter((x) => x.s !== "none")
+      .sort((a, b) => {
+        if (a.s === b.s) return 0;
+        if (a.s === "exact") return -1;
+        if (b.s === "exact") return 1;
+        return 0;
+      })
+      .map((x) => x.tr);
+  }, [trips, tagFilter]);
 
   const today = new Date();
-  const daysUntil = (yyyymmdd: string) => {
-    const [y, m, d] = yyyymmdd.split(".").map(Number);
-    const dt = new Date(y, (m ?? 1) - 1, d ?? 1);
-    return Math.round((dt.getTime() - today.getTime()) / 86400000);
-  };
+  const daysUntil = (yyyymmdd: string) => calendarDaysUntilTripStart(yyyymmdd, today) ?? 0;
 
   const upcoming: Trip[] = [];
   const active: Trip[] = [];
   const past: Trip[] = [];
-  trips.forEach((tr) => {
+  visibleTrips.forEach((tr) => {
     if (tr.phase === "REVIEW") past.push(tr);
     else if (daysUntil(tr.startDate) <= 14) active.push(tr);
     else upcoming.push(tr);
@@ -81,6 +114,14 @@ export function ArchiveList({
               .slice(0, 4)
               .join(" ");
             const places = formatDestinations(tr.destinations, lang);
+            const titleShown = tripTitleDisplay(tr, lang);
+            const briefDay = `${tr.days}${t("brief.days")}`;
+            const titleHasTripDays =
+              tr.days > 0 &&
+              (titleShown.includes(briefDay) ||
+                titleShown.includes(`${tr.days}天`) ||
+                titleShown.includes(`${tr.days}日`) ||
+                new RegExp(`${tr.days}\\s*d(?:ays)?\\b`, "i").test(titleShown));
 
             const smartPrimary = (() => {
               if (!isPack) return null;
@@ -118,14 +159,13 @@ export function ArchiveList({
                 className="module corner-tick group relative overflow-hidden rounded-md p-4 text-left transition hover:-translate-y-0.5"
               >
                 <div className="min-w-0">
-                  <h3 className="truncate font-display text-xl leading-snug text-foreground">
-                    {t("archive.card.titleDays")
-                      .replace("{title}", tr.title)
-                      .replace("{n}", String(tr.days))}
-                  </h3>
+                  <h3 className={cn(packlogSectionTitle, "truncate")}>{titleShown}</h3>
                   <p className="mt-1 truncate text-xs text-muted-foreground">
                     {flags ? `${flags} ` : ""}
                     {places} · {tr.startDate}
+                    {typeof tr.days === "number" && tr.days > 0 && !titleHasTripDays
+                      ? ` · ${tr.days} ${t("brief.days")}`
+                      : ""}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1">
                     {tripScenarios(tr).map((s) => (
@@ -137,6 +177,35 @@ export function ArchiveList({
                       </span>
                     ))}
                   </div>
+                  {filterTripTagList(tr.tags).length > 0 ? (
+                    <div
+                      className="mt-2 flex flex-wrap gap-1"
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      role="presentation"
+                    >
+                      {filterTripTagList(tr.tags).map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate({
+                              to: "/tag/$tagName",
+                              params: { tagName: canonicalTagKey(tag) },
+                            });
+                          }}
+                          className={cn(
+                            "tag-chip cursor-pointer font-mono text-[9px] transition hover:border-foreground/25 hover:text-foreground",
+                            !isPresetTagId(tag) &&
+                              "border-dashed border-muted-foreground/70 bg-transparent",
+                          )}
+                        >
+                          {formatTagForUi(tag, lang)}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
 
                 {isPack && totalItems > 0 ? (
@@ -195,41 +264,36 @@ export function ArchiveList({
               <div className="font-mono text-[10px] tracking-[0.28em] text-muted-foreground">
                 {t("archive.kicker")}
               </div>
-              <h1 className="mt-2 font-display text-4xl leading-[1.05] md:text-5xl">
-                {t("archive.title")}
-              </h1>
-              <p className="mt-2 max-w-md text-sm text-muted-foreground">{t("archive.subtitle")}</p>
+              <h1 className={cn("mt-2", packlogPageTitle)}>{t("archive.title")}</h1>
+              <p className={cn("mt-2 max-w-md", packlogHint)}>{t("archive.subtitle")}</p>
             </>
           ) : (
-            <h1 className="font-display text-2xl leading-tight tracking-tight text-foreground md:text-3xl">
-              {t("archive.title")}
-            </h1>
+            <h1 className={packlogPageTitle}>{t("archive.title")}</h1>
           )}
         </div>
         <AuthGate pendingAction={onNewTrip} resumeIntent={{ v: 1, kind: "openNewTrip" }}>
-          <button
-            type="button"
-            className="shrink-0 rounded-md border border-signal bg-signal px-4 py-2.5 font-mono text-[11px] tracking-[0.18em] text-signal-foreground shadow-sm hover:opacity-90"
-          >
+          <button type="button" className={cn(packlogBtnPrimary, packlogBtnSm, "shrink-0")}>
             {t("archive.new")}
           </button>
         </AuthGate>
       </header>
 
       {trips.length === 0 ? (
-        <div className="mx-auto max-w-md rounded-md border border-border bg-surface px-6 py-14 text-center shadow-sm">
+        <div className="module mx-auto max-w-md px-6 py-14 text-center">
           <p className="font-display text-xl leading-snug text-foreground md:text-2xl">
             {t("archive.empty.lead")}
           </p>
           <AuthGate pendingAction={onNewTrip} resumeIntent={{ v: 1, kind: "openNewTrip" }}>
             <button
               type="button"
-              className="mt-8 w-full max-w-xs rounded-md border border-signal bg-signal px-5 py-3 font-mono text-[11px] font-semibold tracking-[0.2em] text-signal-foreground shadow-sm transition hover:opacity-90"
+              className={cn(packlogBtnPrimary, packlogBtnBlock, "mt-8 max-w-xs")}
             >
               {t("archive.new")}
             </button>
           </AuthGate>
         </div>
+      ) : tagFilter && visibleTrips.length === 0 ? (
+        <p className="font-mono text-[11px] text-muted-foreground">{t("tag.filter.empty")}</p>
       ) : (
         <>
           <Section title={t("archive.active")} items={active} />

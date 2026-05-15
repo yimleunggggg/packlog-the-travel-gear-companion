@@ -1,6 +1,9 @@
+import { useMemo } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import {
   communityTemplates,
+  communityTemplateKind,
   libraryCategoryMatchForTemplate,
   type CommunityTemplate,
   type Trip,
@@ -9,6 +12,9 @@ import type { ScenarioKey } from "@/lib/scenario-templates";
 import { tripMatchesTemplateScenario, tripScenarios } from "@/lib/trip-scenarios";
 import { usePacklog } from "@/lib/packlog-store";
 import { useI18n } from "@/lib/i18n";
+import { formatCommunityTag } from "@/lib/community-tag-display";
+import { canonicalTagKey, isPresetTagId } from "@/lib/tag-presets";
+import { cn } from "@/lib/utils";
 
 export function CommunityRail({
   trip,
@@ -20,12 +26,18 @@ export function CommunityRail({
   onPreview: (tpl: CommunityTemplate) => void;
 }) {
   const { t, lang } = useI18n();
+  const navigate = useNavigate();
   const { library } = usePacklog();
 
   const scenarioTags = trip ? tripScenarios(trip) : (scenarios ?? []);
 
+  const pool = useMemo(
+    () => communityTemplates.filter((x) => communityTemplateKind(x) === "blueprint"),
+    [],
+  );
+
   // Score: any scenario match first, then by rating
-  const ranked = [...communityTemplates].sort((a, b) => {
+  const ranked = [...pool].sort((a, b) => {
     const aMatch = tripMatchesTemplateScenario(scenarioTags, a.scenario) ? 1 : 0;
     const bMatch = tripMatchesTemplateScenario(scenarioTags, b.scenario) ? 1 : 0;
     if (aMatch !== bMatch) return bMatch - aMatch;
@@ -51,6 +63,7 @@ export function CommunityRail({
           return (
             <motion.button
               key={tpl.id}
+              type="button"
               onClick={() => onPreview(tpl)}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
@@ -60,11 +73,13 @@ export function CommunityRail({
               <div className="flex items-start justify-between">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 font-mono text-[10px] text-muted-foreground">
-                    <span>{tpl.author}</span>
+                    <span>{lang === "zh" && tpl.authorZh ? tpl.authorZh : tpl.author}</span>
                     <span>·</span>
                     <span className="tabular-nums text-foreground">★ {tpl.rating}</span>
                     <span>·</span>
-                    <span>{tpl.cloned.toLocaleString()} clones</span>
+                    <span>
+                      {t("community.stats.clones").replace("{n}", tpl.cloned.toLocaleString())}
+                    </span>
                     {matched && (
                       <span className="ml-1 rounded border border-border-strong bg-surface px-1.5 py-0.5 text-[9px] tracking-[0.12em] text-foreground">
                         {t("community.matched")}
@@ -88,7 +103,8 @@ export function CommunityRail({
                     </a>
                   ) : null}
                   <div className="mt-1 font-mono text-[10px] text-muted-foreground">
-                    {tpl.climate} · {t(`scenario.${tpl.scenario}`)}
+                    {lang === "zh" && tpl.climateZh ? tpl.climateZh : tpl.climate} ·{" "}
+                    {t(`scenario.${tpl.scenario}`)}
                   </div>
                   <div className="mt-1 font-mono text-[10px] text-muted-foreground">
                     {t("community.match")}{" "}
@@ -103,16 +119,38 @@ export function CommunityRail({
                     {t("community.items")}
                   </div>
                   <div>
-                    <span className="text-foreground">{tpl.totalWeight}</span>
+                    <span className="text-foreground">
+                      {lang === "zh" && tpl.totalWeightZh ? tpl.totalWeightZh : tpl.totalWeight}
+                    </span>
                   </div>
                 </div>
               </div>
               <div className="mt-3 flex items-center justify-between">
-                <div className="flex flex-wrap gap-1">
+                <div
+                  className="flex flex-wrap gap-1"
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  role="presentation"
+                >
                   {tpl.tags.map((tag) => (
-                    <span key={tag} className="tag-chip">
-                      #{tag}
-                    </span>
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate({
+                          to: "/community",
+                          search: { tag: canonicalTagKey(tag), kind: undefined },
+                        });
+                      }}
+                      className={cn(
+                        "tag-chip cursor-pointer font-mono text-[9px] transition hover:border-foreground/25 hover:text-foreground",
+                        !isPresetTagId(tag) &&
+                          "border-dashed border-muted-foreground/70 bg-transparent",
+                      )}
+                    >
+                      {formatCommunityTag(tag, lang)}
+                    </button>
                   ))}
                 </div>
                 <span className="border border-border-strong px-3 py-1.5 font-mono text-[10px] tracking-[0.18em] text-foreground transition group-hover:border-foreground group-hover:bg-foreground group-hover:text-background">

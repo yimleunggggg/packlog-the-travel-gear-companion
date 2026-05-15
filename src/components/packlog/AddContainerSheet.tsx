@@ -1,6 +1,21 @@
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useI18n } from "@/lib/i18n";
 import type { Container, ContainerType } from "@/lib/packlog-data";
+import {
+  packlogBtnPrimary,
+  packlogBtnSm,
+  packlogBtnTertiary,
+  packlogSectionTitle,
+} from "@/lib/packlog-button-classes";
+import { cn } from "@/lib/utils";
+import { SheetDragHandle } from "@/components/ui/sheet-drag-handle";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import {
+  packlogModalBodyScroll,
+  packlogModalScrim,
+  packlogModalSurface,
+} from "@/lib/packlog-mobile-modal-shell";
 
 type Preset = {
   type: ContainerType;
@@ -114,12 +129,11 @@ export function AddContainerSheet({
   onCommit: (draft: Omit<Container, "id" | "code" | "items">) => void;
 }) {
   const { t, lang } = useI18n();
+  const mdUp = useMediaQuery("(min-width: 768px)");
   const [picked, setPicked] = useState<Preset>(PRESETS[0]);
   const [name, setName] = useState("");
   const [capacity, setCapacity] = useState<number>(PRESETS[0].capacityL);
   const [maxKg, setMaxKg] = useState<number>(PRESETS[0].maxKg);
-
-  if (!open) return null;
 
   const choose = (p: Preset) => {
     setPicked(p);
@@ -143,111 +157,134 @@ export function AddContainerSheet({
   };
 
   return (
-    <div
-      className="scrim fixed inset-0 z-50 grid touch-none place-items-center overscroll-none p-3 sm:p-4"
-      onClick={onClose}
-    >
-      <form
-        onSubmit={submit}
-        onClick={(e) => e.stopPropagation()}
-        className="module corner-tick relative max-h-[min(90dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] w-full max-w-lg touch-pan-y space-y-4 overflow-y-auto overscroll-y-contain p-5"
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
-              + {t("container.add.bag")}
-            </div>
-            <h3 className="mt-1 font-display text-xl">{t("container.new.title")}</h3>
-            <p className="mt-1 font-mono text-[10px] text-muted-foreground">
-              {t("container.new.subtitle")}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="font-mono text-[10px] text-muted-foreground hover:text-foreground"
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className={cn("scrim", packlogModalScrim)}
+          onClick={onClose}
+        >
+          <motion.form
+            onSubmit={submit}
+            onClick={(e) => e.stopPropagation()}
+            initial={mdUp ? { y: 20, opacity: 0 } : { y: "100%", opacity: 1 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={mdUp ? { y: 20, opacity: 0 } : { y: "100%", opacity: 1 }}
+            transition={
+              mdUp
+                ? { duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }
+                : { type: "spring", damping: 30, stiffness: 320 }
+            }
+            className={cn(
+              packlogModalSurface,
+              "flex w-full flex-col overflow-hidden",
+              "max-md:max-h-[90vh]",
+              "md:max-h-[min(90dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] md:max-w-lg md:rounded-lg",
+            )}
           >
-            ✕
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-          {PRESETS.map((p) => {
-            const active = picked.type === p.type;
-            return (
+            <SheetDragHandle />
+            <div className="relative shrink-0 border-b border-border px-5 pb-3 pt-1 md:px-6 md:pt-3">
+              <div className="pr-10">
+                <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
+                  + {t("container.add.bag")}
+                </div>
+                <h3 className={cn("mt-1", packlogSectionTitle)}>{t("container.new.title")}</h3>
+                {t("container.new.subtitle").trim() ? (
+                  <p className="mt-1 font-mono text-[10px] text-muted-foreground">
+                    {t("container.new.subtitle")}
+                  </p>
+                ) : null}
+              </div>
               <button
                 type="button"
-                key={p.type}
-                onClick={() => choose(p)}
-                className={`flex items-center gap-2 rounded border px-2.5 py-2 text-left transition ${
-                  active
-                    ? "border-signal bg-signal-soft text-foreground"
-                    : "border-border-strong bg-surface text-muted-foreground hover:border-signal/40 hover:text-foreground"
-                }`}
+                onClick={onClose}
+                className="absolute right-4 top-2 font-mono text-sm text-muted-foreground hover:text-foreground md:top-3"
+                aria-label="close"
               >
-                <span className="font-mono text-base text-signal">{p.glyph}</span>
-                <span className="truncate font-mono text-[11px] tracking-[0.1em]">
-                  {t(`container.type.${p.type}`)}
-                </span>
+                ✕
               </button>
-            );
-          })}
-        </div>
+            </div>
 
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={
-            t("container.new.name") +
-            " · " +
-            (lang === "zh" ? picked.defaultNameZh : picked.defaultName)
-          }
-          className="w-full rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-signal focus:outline-none"
-        />
+            <div className={cn(packlogModalBodyScroll, "space-y-4 px-5 py-4 md:px-6")}>
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                {PRESETS.map((p) => {
+                  const active = picked.type === p.type;
+                  return (
+                    <button
+                      type="button"
+                      key={p.type}
+                      onClick={() => choose(p)}
+                      className={`flex items-center gap-2 rounded border px-2.5 py-2 text-left transition ${
+                        active
+                          ? "border-signal bg-signal-soft text-foreground"
+                          : "border-border-strong bg-surface text-muted-foreground hover:border-foreground/25 hover:text-foreground"
+                      }`}
+                    >
+                      <span className="font-mono text-base text-signal">{p.glyph}</span>
+                      <span className="truncate font-mono text-[11px] tracking-[0.1em]">
+                        {t(`container.type.${p.type}`)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <label className="flex items-center gap-2 rounded border border-border-strong bg-background px-2 py-1.5">
-            <span className="font-mono text-[10px] text-muted-foreground">
-              {t("container.new.capacity")}
-            </span>
-            <input
-              type="number"
-              min={1}
-              value={capacity}
-              onChange={(e) => setCapacity(+e.target.value)}
-              className="ml-auto w-16 bg-transparent text-right font-mono text-sm focus:outline-none"
-            />
-          </label>
-          <label className="flex items-center gap-2 rounded border border-border-strong bg-background px-2 py-1.5">
-            <span className="font-mono text-[10px] text-muted-foreground">
-              {t("container.new.max")}
-            </span>
-            <input
-              type="number"
-              min={1}
-              value={maxKg}
-              onChange={(e) => setMaxKg(+e.target.value)}
-              className="ml-auto w-16 bg-transparent text-right font-mono text-sm focus:outline-none"
-            />
-          </label>
-        </div>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={
+                  t("container.new.name") +
+                  " · " +
+                  (lang === "zh" ? picked.defaultNameZh : picked.defaultName)
+                }
+                className="w-full rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-[#C8956C] focus:outline-none"
+              />
 
-        <div className="flex justify-end gap-2 pt-1">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded border border-border-strong px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-muted-foreground hover:text-foreground"
-          >
-            {t("container.add.cancel")}
-          </button>
-          <button
-            type="submit"
-            className="rounded border border-signal bg-signal px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-signal-foreground hover:opacity-90"
-          >
-            {t("container.new.commit")}
-          </button>
-        </div>
-      </form>
-    </div>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="flex items-center gap-2 rounded border border-border-strong bg-background px-2 py-1.5">
+                  <span className="font-mono text-[10px] text-muted-foreground">
+                    {t("container.new.capacity")}
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={capacity}
+                    onChange={(e) => setCapacity(+e.target.value)}
+                    className="ml-auto w-16 bg-transparent text-right font-mono text-sm focus:outline-none"
+                  />
+                </label>
+                <label className="flex items-center gap-2 rounded border border-border-strong bg-background px-2 py-1.5">
+                  <span className="font-mono text-[10px] text-muted-foreground">
+                    {t("container.new.max")}
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={maxKg}
+                    onChange={(e) => setMaxKg(+e.target.value)}
+                    className="ml-auto w-16 bg-transparent text-right font-mono text-sm focus:outline-none"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="flex shrink-0 justify-end gap-2 border-t border-border px-5 py-3 md:px-6">
+              <button
+                type="button"
+                onClick={onClose}
+                className={cn(packlogBtnTertiary, "px-3 py-1 text-[10px]")}
+              >
+                {t("container.add.cancel")}
+              </button>
+              <button type="submit" className={cn(packlogBtnPrimary, packlogBtnSm)}>
+                {t("container.new.commit")}
+              </button>
+            </div>
+          </motion.form>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

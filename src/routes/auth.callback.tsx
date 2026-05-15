@@ -1,4 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { packlogBtnPrimary, packlogBtnSm } from "@/lib/packlog-button-classes";
+import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase-client";
 
@@ -52,8 +54,8 @@ function AuthCallbackPage() {
       {error && (
         <button
           type="button"
-          onClick={() => navigate({ to: "/" })}
-          className="rounded border border-signal bg-signal px-4 py-2 font-mono text-[10px] tracking-[0.18em] text-signal-foreground"
+          onClick={() => navigate({ to: "/", search: { tag: undefined } })}
+          className={cn(packlogBtnPrimary, packlogBtnSm)}
         >
           Back home
         </button>

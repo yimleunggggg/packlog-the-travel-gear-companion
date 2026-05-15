@@ -1,6 +1,10 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
+import { packlogBtnPrimary, packlogBtnSecondary } from "@/lib/packlog-button-classes";
+import { cn } from "@/lib/utils";
+import { SheetDragHandle } from "@/components/ui/sheet-drag-handle";
+import { packlogModalBodyScroll, packlogModalScrim } from "@/lib/packlog-mobile-modal-shell";
 
 type Props = {
   open: boolean;
@@ -81,7 +85,7 @@ export function LoginSheet({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="scrim fixed inset-0 z-[60] flex touch-none flex-col justify-end overscroll-none p-0"
+          className={cn("scrim", packlogModalScrim, "z-[60]")}
           onClick={onClose}
         >
           <motion.div
@@ -90,11 +94,25 @@ export function LoginSheet({
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 28, stiffness: 320 }}
             onClick={(e) => e.stopPropagation()}
-            className="module corner-tick relative max-h-[min(85dvh,560px)] w-full touch-pan-y overflow-y-auto overscroll-y-contain rounded-t-lg border-b-0 border-border bg-background p-6 pb-[max(2.5rem,calc(env(safe-area-inset-bottom)+1.25rem))] shadow-2xl"
+            className="module corner-tick relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-lg border-b-0 border-border bg-background p-0 shadow-2xl"
           >
-            <div className="mx-auto max-w-md">
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div>
+            <SheetDragHandle />
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute right-4 top-2 z-10 font-mono text-sm text-muted-foreground hover:text-foreground"
+              aria-label="close"
+            >
+              ✕
+            </button>
+            <div
+              className={cn(
+                packlogModalBodyScroll,
+                "px-6 pb-[max(2.5rem,calc(env(safe-area-inset-bottom)+1.25rem))] pt-2",
+              )}
+            >
+              <div className="mx-auto max-w-md">
+                <div className="mb-4 pr-8">
                   <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
                     {t("auth.kicker")}
                   </div>
@@ -103,96 +121,95 @@ export function LoginSheet({
                     {t("auth.subtitle")}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="font-mono text-[10px] text-muted-foreground hover:text-foreground"
-                >
-                  ✕
-                </button>
-              </div>
 
-              {!authConfigured && (
-                <p className="rounded border border-warn/40 bg-warn/10 px-3 py-2 font-mono text-[11px] text-foreground">
-                  {t("auth.error.config")}
-                </p>
-              )}
-
-              <form onSubmit={sendOtp} className="mt-4 space-y-3">
-                <label className="block">
-                  <span className="mb-1 block font-mono text-[9px] tracking-[0.15em] text-muted-foreground">
-                    {t("auth.email")}
-                  </span>
-                  <input
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={!authConfigured || busy !== null || otpCooldownSec > 0}
-                    placeholder="you@example.com"
-                    className="w-full rounded border border-border-strong bg-background px-3 py-2 text-sm focus:border-signal focus:outline-none"
-                  />
-                </label>
-
-                <label className="flex cursor-pointer gap-3 rounded border border-border-strong bg-surface/80 px-3 py-3">
-                  <input
-                    type="checkbox"
-                    checked={marketingOptIn}
-                    onChange={(e) => setMarketingOptIn(e.target.checked)}
-                    disabled={!authConfigured || busy !== null || otpCooldownSec > 0}
-                    className="mt-0.5 h-4 w-4 shrink-0 accent-[color:var(--signal)]"
-                  />
-                  <span className="min-w-0">
-                    <span className="block font-mono text-[11px] leading-snug text-foreground">
-                      {t("auth.marketing.label")}
-                    </span>
-                    <span className="mt-1 block font-mono text-[9px] leading-relaxed text-muted-foreground">
-                      {t("auth.marketing.hint")}
-                    </span>
-                  </span>
-                </label>
-
-                <button
-                  type="submit"
-                  disabled={!authConfigured || busy !== null || otpCooldownSec > 0}
-                  className="w-full rounded border border-signal bg-signal py-2.5 font-mono text-[11px] tracking-[0.18em] text-signal-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {busy === "otp"
-                    ? t("auth.otp.sending")
-                    : otpCooldownSec > 0
-                      ? t("auth.otp.waitRetry").replace("{s}", String(otpCooldownSec))
-                      : t("auth.otp.cta")}
-                </button>
-              </form>
-
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border" />
-                </div>
-                <div className="relative flex justify-center">
-                  <span className="bg-background px-2 font-mono text-[9px] tracking-[0.2em] text-muted-foreground">
-                    {t("auth.divider")}
-                  </span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                disabled={!authConfigured || busy !== null}
-                onClick={() => void google()}
-                className="flex w-full items-center justify-center gap-2 rounded border border-border-strong bg-surface py-2.5 font-mono text-[11px] tracking-[0.15em] hover:border-signal hover:bg-signal-soft disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <GoogleGlyph />
-                {busy === "google" ? "…" : t("auth.google")}
-              </button>
-
-              <div role="status" aria-live="polite" className="min-h-[1.25rem]">
-                {msg && (
-                  <p className="mt-4 rounded border border-signal/30 bg-signal-soft/30 px-3 py-2 font-mono text-[11px] text-foreground">
-                    {msg}
+                {!authConfigured && (
+                  <p className="rounded border border-warn/40 bg-warn/10 px-3 py-2 font-mono text-[11px] text-foreground">
+                    {t("auth.error.config")}
                   </p>
                 )}
-                {err && <p className="mt-2 font-mono text-[11px] text-destructive">{err}</p>}
+
+                <form onSubmit={sendOtp} className="mt-4 space-y-3">
+                  <label className="block">
+                    <span className="mb-1 block font-mono text-[9px] tracking-[0.15em] text-muted-foreground">
+                      {t("auth.email")}
+                    </span>
+                    <input
+                      type="email"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={!authConfigured || busy !== null || otpCooldownSec > 0}
+                      placeholder="you@example.com"
+                      className="w-full rounded border border-border-strong bg-background px-3 py-2 text-sm focus:border-[#C8956C] focus:outline-none"
+                    />
+                  </label>
+
+                  <label className="flex cursor-pointer gap-3 rounded border border-border-strong bg-surface/80 px-3 py-3">
+                    <input
+                      type="checkbox"
+                      checked={marketingOptIn}
+                      onChange={(e) => setMarketingOptIn(e.target.checked)}
+                      disabled={!authConfigured || busy !== null || otpCooldownSec > 0}
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-[color:var(--signal)]"
+                    />
+                    <span className="min-w-0">
+                      <span className="block font-mono text-[11px] leading-snug text-foreground">
+                        {t("auth.marketing.label")}
+                      </span>
+                      <span className="mt-1 block font-mono text-[9px] leading-relaxed text-muted-foreground">
+                        {t("auth.marketing.hint")}
+                      </span>
+                    </span>
+                  </label>
+
+                  <button
+                    type="submit"
+                    disabled={!authConfigured || busy !== null || otpCooldownSec > 0}
+                    className={cn(
+                      packlogBtnPrimary,
+                      "w-full py-2.5 text-[11px] tracking-[0.18em] disabled:cursor-not-allowed disabled:opacity-40",
+                    )}
+                  >
+                    {busy === "otp"
+                      ? t("auth.otp.sending")
+                      : otpCooldownSec > 0
+                        ? t("auth.otp.waitRetry").replace("{s}", String(otpCooldownSec))
+                        : t("auth.otp.cta")}
+                  </button>
+                </form>
+
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-border" />
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="bg-background px-2 font-mono text-[9px] tracking-[0.2em] text-muted-foreground">
+                      {t("auth.divider")}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={!authConfigured || busy !== null}
+                  onClick={() => void google()}
+                  className={cn(
+                    packlogBtnSecondary,
+                    "w-full gap-2 py-2.5 text-[11px] tracking-[0.15em] disabled:cursor-not-allowed disabled:opacity-40",
+                  )}
+                >
+                  <GoogleGlyph />
+                  {busy === "google" ? "…" : t("auth.google")}
+                </button>
+
+                <div role="status" aria-live="polite" className="min-h-[1.25rem]">
+                  {msg && (
+                    <p className="mt-4 rounded border border-signal/30 bg-signal-soft/30 px-3 py-2 font-mono text-[11px] text-foreground">
+                      {msg}
+                    </p>
+                  )}
+                  {err && <p className="mt-2 font-mono text-[11px] text-destructive">{err}</p>}
+                </div>
               </div>
             </div>
           </motion.div>

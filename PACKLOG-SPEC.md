@@ -8,15 +8,18 @@
 ## 一、产品定位
 
 ### 一句话
+
 PACKLOG 是一个场景驱动的出行装备管理工具，帮助户外爱好者和频繁出行者管理装备、追踪重量、记录使用反馈、参考社区清单。
 
 ### 核心差异（vs 竞品）
+
 1. **场景模板自动生成清单**——竞品全部要求用户从零手动搭建清单
 2. **装备生命周期追踪**——不只是打包工具，是装备的长期档案
 3. **中英双语**——全球所有竞品只做英文，中文户外市场空白
 4. **社区蓝图可发现+可复制**——LighterPack 无社区，其他竞品社区极弱
 
 ### 目标用户
+
 - **主要：** 户外运动爱好者（徒步/露营/越野跑/潜水），装备>20件，年出行>3次
 - **次要：** 频繁出行者（出差/旅行），不关注重量但需要场景化打包
 - **用户画像文案：** "如果你出门前总是翻上次的备忘录复制粘贴，如果你的装备超过20件还在用 Notes 记录——PACKLOG 就是为你做的。"
@@ -26,6 +29,7 @@ PACKLOG 是一个场景驱动的出行装备管理工具，帮助户外爱好者
 ## 二、系统架构（长期演进视角）
 
 ### 2.1 技术栈
+
 ```
 前端：TanStack Start（你当前用的）或 Next.js
 部署：Cloudflare Workers（当前）/ Vercel
@@ -39,6 +43,7 @@ AI 调用：Claude API（截图识别、重量估算）
 ### 2.2 数据模型（完整版，考虑长期演进）
 
 #### 核心实体关系图
+
 ```
 profiles (用户)
   ├── gear_library (装备库) —— 用户拥有的所有装备，长期持久
@@ -59,6 +64,7 @@ scene_templates (场景模板) —— 系统预设
 ```
 
 #### 关键字段设计原则
+
 - `gear_library.id`：保持 text 类型（你当前用的），不要改 UUID。前端已经依赖 text id 的格式
 - `trip_items` 必须有 `gear_id` 外键指向 `gear_library`：这样同一件装备在不同行程中的使用可以被追踪
 - `gear_library.weight_g`：整数，单位克。前端显示时做 g/kg 转换
@@ -112,6 +118,7 @@ CREATE TABLE IF NOT EXISTS gear_kits (
 ```
 
 ### 2.3 重量计算逻辑
+
 ```typescript
 // 核心计算公式
 const totalWeight = items.reduce((sum, item) => sum + (item.weight_g * item.quantity), 0)
@@ -126,21 +133,22 @@ const big3Percentage = Math.round((big3Weight / baseWeight) * 100)
 ```
 
 ### 2.4 场景驱动的分组映射
+
 ```typescript
 // 底层 category 不变，前端加映射层
 const OUTDOOR_SYSTEM_MAP: Record<string, string[]> = {
-  '睡眠系统': ['帐篷', '睡袋', '睡垫', '枕头', '地布', '蛋巢垫'],
-  '穿着系统': ['base layer', '打底', '保暖层', '羽绒', '硬壳', '冲锋衣', '雨衣', '抓绒', '速干'],
-  '炊事系统': ['炉头', '气罐', '锅', '餐具', '打火机', '挡风板'],
-  '导航安全': ['GPS', '头灯', '急救', '求生哨', '指南针', '地图', '信标'],
-  '行进装备': ['登山杖', '背包', '越野包', '腰包'],
-  '补给': ['水', '能量胶', '盐丸', '电解质', '食物'],
-}
+  睡眠系统: ["帐篷", "睡袋", "睡垫", "枕头", "地布", "蛋巢垫"],
+  穿着系统: ["base layer", "打底", "保暖层", "羽绒", "硬壳", "冲锋衣", "雨衣", "抓绒", "速干"],
+  炊事系统: ["炉头", "气罐", "锅", "餐具", "打火机", "挡风板"],
+  导航安全: ["GPS", "头灯", "急救", "求生哨", "指南针", "地图", "信标"],
+  行进装备: ["登山杖", "背包", "越野包", "腰包"],
+  补给: ["水", "能量胶", "盐丸", "电解质", "食物"],
+};
 
 // 判断逻辑：如果行程场景包含户外标签，用系统分组
-function getGroupMode(scenes: string[]): 'outdoor' | 'city' {
-  const outdoorScenes = ['露营', '徒步', '越野跑', '山地/高山', '潜水/浮潜', '滑雪/单板']
-  return scenes.some(s => outdoorScenes.includes(s)) ? 'outdoor' : 'city'
+function getGroupMode(scenes: string[]): "outdoor" | "city" {
+  const outdoorScenes = ["露营", "徒步", "越野跑", "山地/高山", "潜水/浮潜", "滑雪/单板"];
+  return scenes.some((s) => outdoorScenes.includes(s)) ? "outdoor" : "city";
 }
 ```
 
@@ -151,6 +159,7 @@ function getGroupMode(scenes: string[]): 'outdoor' | 'city' {
 ### 3.1 首页——我的行程（`/trips`）
 
 #### 未登录状态
+
 ```
 ┌─────────────────────────────────────┐
 │  PL  PACKLOG                        │
@@ -168,6 +177,7 @@ function getGroupMode(scenes: string[]): 'outdoor' | 'city' {
 ```
 
 #### 已登录 - 有行程
+
 ```
 ┌─────────────────────────────────────┐
 │  PL  PACKLOG   [行程][装备库][社区]   │
@@ -195,6 +205,7 @@ function getGroupMode(scenes: string[]): 'outdoor' | 'city' {
 ```
 
 #### 行程卡片设计规范
+
 - 标题：用户自定义名称 或 "目的地·天数"，不拼接场景标签
 - 场景标签：独立一行，小圆角标签
 - 进度条：橙色渐变
@@ -242,6 +253,7 @@ function getGroupMode(scenes: string[]): 'outdoor' | 'city' {
 ```
 
 **删掉的元素：**
+
 - "◆ NEW · TRIP" 装饰标签
 - "用中英文搜城市/国家；候选项会显示中英文名对照" 说明文字
 - "一旦手动输入标题，将不再自动覆盖" 说明文字
@@ -294,6 +306,7 @@ function getGroupMode(scenes: string[]): 'outdoor' | 'city' {
 ```
 
 **删掉的元素：**
+
 - 滚动信息条
 - 阶段指示器（01/打包 → 02/复盘）
 - "你的装备正在被专业接管"
@@ -340,6 +353,7 @@ function getGroupMode(scenes: string[]): 'outdoor' | 'city' {
 #### 打包行为规范
 
 **每一行的交互：**
+
 - 默认折叠：[✓/✗] 物品名 · ×数量 · 重量 — 只这些
 - 点击行 → 展开详情面板：
   ```
@@ -353,6 +367,7 @@ function getGroupMode(scenes: string[]): 'outdoor' | 'city' {
 - 移动端左滑某行 → 快速切换箱包
 
 **Checkbox 动效：**
+
 - 打勾：checkbox 从空心变实心绿色，✓ 弹入（scale 0→1.2→1, 200ms）
 - 行文字添加删除线（从左到右划过动画）
 - 行背景变为浅灰半透明
@@ -360,11 +375,13 @@ function getGroupMode(scenes: string[]): 'outdoor' | 'city' {
 - 移动端 navigator.vibrate(10)
 
 **全部打包完成：**
+
 - 进度条变绿 100%
 - 显示 "出发就绪 🎒" 替代进度文字
 - 可选 confetti 撒花（canvas-confetti）
 
 **打包视图的导航：**
+
 - 隐藏底部 Tab 导航和顶部全局导航
 - 只保留"← 返回"和行程名+进度
 - 全屏沉浸式体验
@@ -409,6 +426,7 @@ function getGroupMode(scenes: string[]): 'outdoor' | 'city' {
 ```
 
 **装备详情（点击卡片展开）：**
+
 ```
 ┌─────────────────────────────────────┐
 │ ■ 拍摄 · 徕卡 Q3                    │
@@ -491,9 +509,13 @@ function getGroupMode(scenes: string[]): 'outdoor' | 'city' {
 ```
 
 **关键：此页面必须是独立的 SSR 页面（不是弹窗），包含完整的 meta 标签：**
+
 ```html
 <title>超轻徒步装备清单（REI）- PACKLOG</title>
-<meta name="description" content="REI 专家推荐的79件超轻徒步装备，三季山地，约15.3kg。2406人已复制。" />
+<meta
+  name="description"
+  content="REI 专家推荐的79件超轻徒步装备，三季山地，约15.3kg。2406人已复制。"
+/>
 <meta property="og:title" content="超轻徒步装备清单 - PACKLOG" />
 <meta property="og:image" content="/api/og/community/[id]" />
 ```
@@ -503,114 +525,122 @@ function getGroupMode(scenes: string[]): 'outdoor' | 'city' {
 ## 四、完整翻译对照表
 
 ### 4.1 导航与全局
-| 当前 | 修改为（ZH） | EN |
-|------|------------|-----|
-| 档案 | 行程 | Trips |
-| 装备库 | 装备库 | Gear |
-| 社区 | 社区 | Community |
-| 新建行程档案 | 新建行程 | New Trip |
-| ◆ NEW · TRIP | 删掉 | - |
+
+| 当前         | 修改为（ZH） | EN        |
+| ------------ | ------------ | --------- |
+| 档案         | 行程         | Trips     |
+| 装备库       | 装备库       | Gear      |
+| 社区         | 社区         | Community |
+| 新建行程档案 | 新建行程     | New Trip  |
+| ◆ NEW · TRIP | 删掉         | -         |
 
 ### 4.2 行程相关
-| 当前 | 修改为（ZH） | EN |
-|------|------------|-----|
-| 行程档案 | 我的行程 | My Trips |
-| 打开档案 | 打开 | Open |
-| 打开行程 → | 直接点卡片进入 | - |
-| 进入装备 | 开始打包 | Start Packing |
+
+| 当前         | 修改为（ZH）     | EN               |
+| ------------ | ---------------- | ---------------- |
+| 行程档案     | 我的行程         | My Trips         |
+| 打开档案     | 打开             | Open             |
+| 打开行程 →   | 直接点卡片进入   | -                |
+| 进入装备     | 开始打包         | Start Packing    |
 | 参考社区装备 | 看看别人带了什么 | See Others' Gear |
-| 导出清单 | 导出 | Export |
-| 分享与标签 | 公开分享 | Share |
-| 已归档 | 已完成 | Completed |
-| DEBRIEFED | 已完成 | Completed |
-| passed | 已过 | Past |
-| 打包中 | 打包中 | Packing |
-| 箱包 | 箱包 | Bags |
+| 导出清单     | 导出             | Export           |
+| 分享与标签   | 公开分享         | Share            |
+| 已归档       | 已完成           | Completed        |
+| DEBRIEFED    | 已完成           | Completed        |
+| passed       | 已过             | Past             |
+| 打包中       | 打包中           | Packing          |
+| 箱包         | 箱包             | Bags             |
 
 ### 4.3 容器
-| 当前 | 修改为（ZH） | EN |
-|------|------------|-----|
-| 容器 | 删掉这个词 | - |
-| 目标容器 | 放进哪个包 | Add to |
-| C-01 · 托运行李 · 托运箱 | 托运箱 | Checked |
-| C-02 · 登机行李 · 背包 | 背包 | Carry Pack |
-| C-03 · 随身物品 | 随身 | Personal |
-| 穿着（新增） | 穿着 | Worn |
+
+| 当前                     | 修改为（ZH） | EN         |
+| ------------------------ | ------------ | ---------- |
+| 容器                     | 删掉这个词   | -          |
+| 目标容器                 | 放进哪个包   | Add to     |
+| C-01 · 托运行李 · 托运箱 | 托运箱       | Checked    |
+| C-02 · 登机行李 · 背包   | 背包         | Carry Pack |
+| C-03 · 随身物品          | 随身         | Personal   |
+| 穿着（新增）             | 穿着         | Worn       |
 
 ### 4.4 分类标签
-| 当前（英文） | ZH | EN |
-|------------|-----|-----|
-| TECH | 数码 | Tech |
-| APPAREL | 服装 | Apparel |
-| OPTIC | 拍摄 | Optic |
-| MISC | 其他 | Misc |
-| DOC | 证件 | Doc |
-| HEALTH | 健康 | Health |
+
+| 当前（英文） | ZH   | EN      |
+| ------------ | ---- | ------- |
+| TECH         | 数码 | Tech    |
+| APPAREL      | 服装 | Apparel |
+| OPTIC        | 拍摄 | Optic   |
+| MISC         | 其他 | Misc    |
+| DOC          | 证件 | Doc     |
+| HEALTH       | 健康 | Health  |
 
 ### 4.5 状态标签
-| 当前 | ZH | EN |
-|------|-----|-----|
-| KEEP | 保留 | Keep |
-| UPGRADE | 升级 | Upgrade |
-| DROP | 淘汰 | Drop |
-| 心愿 | 想买 | Want |
-| 待定 | 待定 | Undecided |
-| 已有 | 已有 | Own |
+
+| 当前          | ZH    | EN          |
+| ------------- | ----- | ----------- |
+| KEEP          | 保留  | Keep        |
+| UPGRADE       | 升级  | Upgrade     |
+| DROP          | 淘汰  | Drop        |
+| 心愿          | 想买  | Want        |
+| 待定          | 待定  | Undecided   |
+| 已有          | 已有  | Own         |
 | 借/租（新增） | 借/租 | Borrow/Rent |
 
 ### 4.6 社区标签
-| 当前（英文） | ZH |
-|------------|-----|
-| #CAMERA | #摄影 |
-| #MINIMAL | #极简 |
-| #CITY | #城市 |
-| #SELF-DRIVE | #自驾 |
-| #OUTDOOR | #户外 |
-| #RAIN | #雨天 |
-| #ULTRALIGHT | #轻量化 |
-| #FASTPACK | #快速打包 |
-| #DESERT | #沙漠 |
-| #SELF-SUPPORTED | #自补给 |
-| #ULTRA | #超长距离 |
-| #SKI | #滑雪 |
-| #POWDER | #粉雪 |
-| #JAPAN | #日本 |
-| #BACKPACKING | #背包徒步 |
-| #FIRST-AID | #急救 |
-| #WILDERNESS | #野外 |
-| #HEALTH | #健康 |
-| #EMERGENCY | #应急 |
-| #3-SEASON | #三季 |
-| #MOUNTAIN | #山地 |
-| #TRAIL-RUNNING | #越野跑 |
+
+| 当前（英文）    | ZH        |
+| --------------- | --------- |
+| #CAMERA         | #摄影     |
+| #MINIMAL        | #极简     |
+| #CITY           | #城市     |
+| #SELF-DRIVE     | #自驾     |
+| #OUTDOOR        | #户外     |
+| #RAIN           | #雨天     |
+| #ULTRALIGHT     | #轻量化   |
+| #FASTPACK       | #快速打包 |
+| #DESERT         | #沙漠     |
+| #SELF-SUPPORTED | #自补给   |
+| #ULTRA          | #超长距离 |
+| #SKI            | #滑雪     |
+| #POWDER         | #粉雪     |
+| #JAPAN          | #日本     |
+| #BACKPACKING    | #背包徒步 |
+| #FIRST-AID      | #急救     |
+| #WILDERNESS     | #野外     |
+| #HEALTH         | #健康     |
+| #EMERGENCY      | #应急     |
+| #3-SEASON       | #三季     |
+| #MOUNTAIN       | #山地     |
+| #TRAIL-RUNNING  | #越野跑   |
 
 ### 4.7 其他文案
-| 当前 | 修改为 |
-|------|--------|
-| 公开行程蓝图（本设备） | 我公开的行程 |
-| 在本机标记为公开的行程 | 我设为公开的行程 |
-| 精选蓝图 | 热门清单 |
-| 社区·蓝图 | 社区清单 |
-| 预览并复制 | 查看 & 复制 |
-| 将合并的物品 | 要添加的装备 |
-| 装备库匹配（按大类）8/9 | 你已有 8/9 件 |
-| 常被忘带 | 别忘了带 |
-| 场景辅助 | 删掉标题 |
-| 完善物品信息 | 编辑装备 |
-| 加入装备库 | 存到我的装备库 |
-| 杂项 | 其他 |
-| 重量·分布 | 重量 |
-| 装备明细 | 我的装备 |
-| 你的装备正在被专业接管 | 删掉 |
+
+| 当前                                     | 修改为                         |
+| ---------------------------------------- | ------------------------------ |
+| 公开行程蓝图（本设备）                   | 我公开的行程                   |
+| 在本机标记为公开的行程                   | 我设为公开的行程               |
+| 精选蓝图                                 | 热门清单                       |
+| 社区·蓝图                                | 社区清单                       |
+| 预览并复制                               | 查看 & 复制                    |
+| 将合并的物品                             | 要添加的装备                   |
+| 装备库匹配（按大类）8/9                  | 你已有 8/9 件                  |
+| 常被忘带                                 | 别忘了带                       |
+| 场景辅助                                 | 删掉标题                       |
+| 完善物品信息                             | 编辑装备                       |
+| 加入装备库                               | 存到我的装备库                 |
+| 杂项                                     | 其他                           |
+| 重量·分布                                | 重量                           |
+| 装备明细                                 | 我的装备                       |
+| 你的装备正在被专业接管                   | 删掉                           |
 | 3-season mountains · variable ~15.3kg... | 三季山地 · 气候多变 · 约15.3kg |
-| REI Expert Advice | REI 专家推荐 |
-| 2条评价·2次行程·保留2·升级0·淘汰0 | 用过2次 · 一直保留 |
+| REI Expert Advice                        | REI 专家推荐                   |
+| 2条评价·2次行程·保留2·升级0·淘汰0        | 用过2次 · 一直保留             |
 
 ---
 
 ## 五、视觉设计规范
 
 ### 5.1 保持不变的
+
 - 暖橙主色 #C8956C + 奶油色背景 #FAF8F5——品牌辨识度高，保留
 - Monospace 用于数据（重量、日期、编号）
 - 卡片式布局
@@ -619,28 +649,44 @@ function getGroupMode(scenes: string[]): 'outdoor' | 'city' {
 ### 5.2 需要调整的
 
 **橙色使用控制：**
+
 - 橙色只用于：Primary 按钮、进度条、当前 Tab 高亮、重要数字
 - 链接文字改用深棕色 #6B5234
 - 装饰性标签用灰色或浅棕
 - 分割线用 #E8E2D9 而不是橙色
 
 **对比度提升：**
+
 - 卡片增加边框 `border: 1px solid rgba(0,0,0,0.06)`
 - 或卡片加微弱阴影 `box-shadow: 0 1px 3px rgba(0,0,0,0.04)`
 
 **按钮层级视觉：**
+
 ```css
 /* Primary - 实心橙 */
-.btn-primary { background: #C8956C; color: #fff; font-weight: 600; }
+.btn-primary {
+  background: #c8956c;
+  color: #fff;
+  font-weight: 600;
+}
 
 /* Secondary - 描边 */
-.btn-secondary { border: 1.5px solid #C8956C; color: #C8956C; background: transparent; }
+.btn-secondary {
+  border: 1.5px solid #c8956c;
+  color: #c8956c;
+  background: transparent;
+}
 
 /* Tertiary - 纯文字 */
-.btn-tertiary { color: #6B5234; background: transparent; text-decoration: underline; }
+.btn-tertiary {
+  color: #6b5234;
+  background: transparent;
+  text-decoration: underline;
+}
 ```
 
 ### 5.3 移动端字体规范
+
 ```
 页面大标题：20px / font-weight: 700
 卡片标题：16px / font-weight: 600
@@ -655,6 +701,7 @@ function getGroupMode(scenes: string[]): 'outdoor' | 'city' {
 ## 六、导出功能规范
 
 ### 6.1 TXT 导出格式优化
+
 ```
 PACKLOG · 屋久岛 · 5天
 目的地：屋久岛
@@ -682,6 +729,7 @@ PACKLOG · 屋久岛 · 5天
 ```
 
 ### 6.2 分享卡片图（PNG 1080px 宽）
+
 - 竖版，适合手机分享和社交媒体
 - 内容：行程标题 + 目的地 + 天数 + 装备清单（按箱包分组）+ 总重/基础重量 + PACKLOG 水印 + 链接
 - 技术：html2canvas 渲染 React 组件为 PNG
@@ -692,6 +740,7 @@ PACKLOG · 屋久岛 · 5天
 ## 七、商业化路径
 
 ### 7.1 免费版
+
 - 3 个行程
 - 20 件装备库
 - 浏览社区清单
@@ -699,6 +748,7 @@ PACKLOG · 屋久岛 · 5天
 - 场景模板自动生成
 
 ### 7.2 Premium（$4-8/月 或 ¥28-58/月）
+
 - 无限行程和装备
 - 截图导入（AI 识别）
 - 分享卡片图生成
@@ -708,6 +758,7 @@ PACKLOG · 屋久岛 · 5天
 - Big 3 分析
 
 ### 7.3 Affiliate
+
 - 装备详情页可选填购买链接
 - 社区蓝图装备附推荐链接
 - 透明标注"包含推广链接"
@@ -718,6 +769,7 @@ PACKLOG · 屋久岛 · 5天
 ## 八、实施阶段
 
 ### 第一阶段（立即）：主链路可用
+
 - 行程详情页拆分（概览+打包）
 - 清单行精简
 - 按钮层级修复
@@ -725,23 +777,27 @@ PACKLOG · 屋久岛 · 5天
 - 翻译修复
 
 ### 第二阶段：移动端可用
+
 - 底部导航
 - 打包全屏模式
 - 触控区域规范
 - PWA 完善
 
 ### 第三阶段：专业度提升
+
 - 基础重量计算
 - 穿着/消耗品标记
 - 场景驱动分组
 - Big 3 高亮
 
 ### 第四阶段：社交闭环
+
 - 分享卡片图生成
 - 社区蓝图独立页面（SSR + SEO）
 - 截图导入
 
 ### 第五阶段：深度装备
+
 - 装备套装 Kit
 - 子系统重量趋势
 - 装备升级链
@@ -749,6 +805,7 @@ PACKLOG · 屋久岛 · 5天
 - 经验等级标注
 
 ### 第六阶段：商业化
+
 - Premium 订阅 + Stripe 接入
 - 落地页
 - SEO 内容页

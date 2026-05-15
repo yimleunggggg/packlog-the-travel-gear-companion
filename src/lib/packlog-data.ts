@@ -3,6 +3,7 @@ import { scenarioTemplates } from "./scenario-templates";
 import type { SelectedDestination } from "./destinations";
 import { reiFirstAidCommunityTemplate } from "./rei-first-aid-community-template";
 import { reiUltralightCommunityTemplate } from "./rei-ultralight-community-template";
+import { communityGuideSeeds } from "./community-guide-seeds";
 
 export type ItemStatus = "todo" | "packed";
 export type ReviewVerdict = "keep" | "drop" | "upgrade" | null;
@@ -916,33 +917,55 @@ export type CommunityItem = {
   whyZh?: string;
 };
 
+/** Community entry kind: pack list vs Markdown guide (still one shared record shape, no CMS). */
+export type CommunityTemplateType = "blueprint" | "guide";
+
 export type CommunityTemplate = {
   id: string;
   author: string;
+  /** 中文 UI 下的作者展示（如 REI 模板）。 */
+  authorZh?: string;
   rating: number;
   cloned: number;
   title: string;
   titleZh?: string;
   scenario: ScenarioKey;
   climate: string;
+  climateZh?: string;
   totalWeight: string;
+  totalWeightZh?: string;
   tags: string[];
   intro: string;
   introZh?: string;
   items: CommunityItem[];
+  /** `blueprint` (default) = list-first; `guide` = Markdown body, optional attachable `items`. */
+  type?: CommunityTemplateType;
+  /** Guide article body (Markdown). Used when `type === "guide"`. */
+  markdown?: string;
+  markdownZh?: string;
   /** Original article URL for attribution (shown in community UI). */
   sourceUrl?: string;
   /** Short label for the source link, e.g. article title. */
   sourceTitle?: string;
+  sourceTitleZh?: string;
   /** Optional hero image (may be omitted if hotlinking is unreliable). */
   coverImageUrl?: string;
 };
+
+export function communityTemplateKind(t: CommunityTemplate): CommunityTemplateType {
+  return t.type === "guide" ? "guide" : "blueprint";
+}
+
+export function isCommunityGuide(t: CommunityTemplate): boolean {
+  return communityTemplateKind(t) === "guide";
+}
 
 /** How many blueprint rows match the user's gear library by category (broad match, not brand). */
 export function libraryCategoryMatchForTemplate(
   tpl: CommunityTemplate,
   library: GearSpec[],
 ): { matched: number; total: number } {
+  if (tpl.items.length === 0) return { matched: 0, total: 0 };
   const libCats = new Set(library.map((g) => g.category));
   let matched = 0;
   for (const it of tpl.items) {
@@ -1385,6 +1408,7 @@ export const communityTemplates: CommunityTemplate[] = [
   },
   reiUltralightCommunityTemplate,
   reiFirstAidCommunityTemplate,
+  ...communityGuideSeeds,
 ];
 
 /* === Scenario-based smart suggestions === */
@@ -1408,6 +1432,16 @@ export const scenarioSuggestions: Record<
     { name: "Quick-dry Towel", nameZh: "速干毛巾", weightG: 180, category: "misc" },
     { name: "Reef-safe Sunblock", nameZh: "珊瑚礁防晒", weightG: 90, category: "health" },
     { name: "Sunglasses", nameZh: "墨镜", weightG: 35, category: "apparel" },
+  ],
+  camping: [
+    { name: "Tent Stakes", nameZh: "地钉套装", weightG: 180, category: "misc" },
+    { name: "Repair Tape", nameZh: "修补贴 / 胶带", weightG: 45, category: "misc" },
+    { name: "Water Filter", nameZh: "净水滤芯", weightG: 60, category: "misc" },
+  ],
+  hiking: [
+    { name: "GPS Watch", nameZh: "GPS 手表", weightG: 62, category: "tech" },
+    { name: "Emergency Whistle", nameZh: "求生哨", weightG: 8, category: "misc" },
+    { name: "Salt Tablets", nameZh: "盐丸", weightG: 20, category: "health" },
   ],
   "trail-run": [
     { name: "Energy Gels", nameZh: "能量胶", weightG: 32, category: "misc" },

@@ -91,6 +91,8 @@ export const lifecyclePhaseSchema = z.enum(["PACK", "REVIEW"]);
 export const scenarioSchema = z.enum([
   "winter-city",
   "summer-beach",
+  "camping",
+  "hiking",
   "trail-run",
   "alpine",
   "desert",

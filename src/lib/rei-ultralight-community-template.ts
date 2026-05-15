@@ -10,16 +10,20 @@ import type { CommunityTemplate } from "./packlog-data";
 export const reiUltralightCommunityTemplate: CommunityTemplate = {
   id: "rei-ultralight-backpacking-checklist",
   author: "REI Expert Advice",
+  authorZh: "REI 专家推荐",
   rating: 4.95,
   cloned: 2406,
   title: "Ultralight Backpacking Gear Checklist",
   titleZh: "超轻徒步装备清单（REI）",
   scenario: "alpine",
   climate: "3-season mountains · variable",
+  climateZh: "三季山地 · 天气变化大",
   totalWeight: "~15.3kg if every line checked",
+  totalWeightZh: "全部勾选约 15.3kg",
   tags: ["ultralight", "backpacking", "rei", "3-season", "mountain"],
   sourceUrl: "https://www.rei.com/learn/expert-advice/ultralight-backpacking-checklist.html",
   sourceTitle: "Ultralight Backpacking Gear Checklist · REI",
+  sourceTitleZh: "REI 超轻徒步装备清单",
   intro:
     "Curated from REI’s ultralight backpacking checklist (Sarah Grothjan, updated Mar 2026). Treat it as a gear menu—uncheck what your route does not need. Ten Essentials and local regulations still apply.",
   introZh:

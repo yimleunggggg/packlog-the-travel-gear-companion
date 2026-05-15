@@ -8,6 +8,7 @@ import type {
   Trip,
 } from "./packlog-data";
 import { itemNameKeys, mergedScenarioSeedsForTrip } from "./packing-pool";
+import { ensureUnassignedContainer, unassignedContainerId } from "./unassigned-container";
 
 function withUpdatedItem(
   trip: Trip,
@@ -70,6 +71,15 @@ export function cycleTripItemOwnership(trip: Trip, containerId: string, itemId: 
     const next = order[(order.indexOf(item.ownership) + 1) % order.length];
     return { ...item, ownership: next };
   });
+}
+
+export function setTripItemOwnership(
+  trip: Trip,
+  containerId: string,
+  itemId: string,
+  ownership: Item["ownership"],
+): Trip {
+  return withUpdatedItem(trip, containerId, itemId, (item) => ({ ...item, ownership }));
 }
 
 export function addTripItem(trip: Trip, containerId: string, item: Omit<Item, "id">): Trip {
@@ -140,6 +150,9 @@ export function moveTripItem(
   const fromContainer = trip.containers.find((container) => container.id === fromContainerId);
   const item = fromContainer?.items.find((candidate) => candidate.id === itemId);
   if (!fromContainer || !item) return trip;
+  if (fromContainerId === toContainerId) return trip;
+
+  const fromIndex = fromContainer.items.findIndex((candidate) => candidate.id === itemId);
 
   return {
     ...trip,
@@ -151,7 +164,10 @@ export function moveTripItem(
         };
       }
       if (container.id === toContainerId) {
-        return { ...container, items: [...container.items, item] };
+        const items = [...container.items];
+        const insertAt = Math.min(fromIndex, items.length);
+        items.splice(insertAt, 0, item);
+        return { ...container, items };
       }
       return container;
     }),
@@ -163,11 +179,18 @@ export function cloneCommunityTemplateToTrip(
   template: CommunityTemplate,
   selectedIndexes: number[],
   targetContainerId: string,
+  ownership: Item["ownership"] = "owned",
 ): Trip {
+  const nextTrip = ensureUnassignedContainer(trip);
+  const destId =
+    targetContainerId === unassignedContainerId(trip.id)
+      ? unassignedContainerId(trip.id)
+      : targetContainerId;
+
   return {
-    ...trip,
-    containers: trip.containers.map((container) =>
-      container.id !== targetContainerId
+    ...nextTrip,
+    containers: nextTrip.containers.map((container) =>
+      container.id !== destId
         ? container
         : {
             ...container,
@@ -188,7 +211,7 @@ export function cloneCommunityTemplateToTrip(
                   status: "todo" as const,
                   verdict: null,
                   utility: null,
-                  ownership: "owned" as const,
+                  ownership,
                   note: item.why,
                 };
               }),

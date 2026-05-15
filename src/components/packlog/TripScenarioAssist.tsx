@@ -3,17 +3,9 @@ import { useI18n } from "@/lib/i18n";
 import type { Trip } from "@/lib/packlog-data";
 import { scenarioSuggestions } from "@/lib/packlog-data";
 import { tripScenarios } from "@/lib/trip-scenarios";
+import { packlogCategoryHex } from "@/lib/packlog-category-colors";
 
-const catColor: Record<string, string> = {
-  tech: "var(--info)",
-  apparel: "var(--signal)",
-  doc: "var(--warn)",
-  health: "var(--success)",
-  optic: "var(--signal)",
-  misc: "var(--muted-foreground)",
-};
-
-/** Scenario tags + “don’t forget” suggestions — for trip overview (not packing sidebar). */
+/** Scenario tags + “don’t forget” suggestions — lives under the packing surface (`/pack` + desktop overview workspace). */
 export function TripScenarioAssist({
   trip,
   onQuickAdd,
@@ -51,7 +43,9 @@ export function TripScenarioAssist({
         </div>
         <span className="tag-chip">N={suggestions.length}</span>
       </div>
-      <p className="mt-1 text-[11px] text-muted-foreground">{t("param.suggest.tip")}</p>
+      {t("param.suggest.tip").trim() ? (
+        <p className="mt-1 text-[11px] text-muted-foreground">{t("param.suggest.tip")}</p>
+      ) : null}
 
       {suggestions.length > 0 ? (
         <ul className="mt-3 divide-y divide-border border border-border">
@@ -61,7 +55,10 @@ export function TripScenarioAssist({
               className="flex items-center justify-between gap-2 bg-surface px-3 py-2 transition hover:bg-surface-2"
             >
               <div className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5" style={{ background: catColor[s.category] }} />
+                <span
+                  className="h-1.5 w-1.5"
+                  style={{ background: packlogCategoryHex(s.category) }}
+                />
                 <span className="text-xs">{s.name}</span>
               </div>
               <div className="flex items-center gap-2">
@@ -71,7 +68,7 @@ export function TripScenarioAssist({
                 <button
                   type="button"
                   onClick={() => onQuickAdd?.(s.name, s.weightG, s.category)}
-                  className="border border-border-strong px-2 py-0.5 font-mono text-[10px] tracking-[0.15em] hover:bg-signal hover:text-signal-foreground"
+                  className="border border-border-strong px-2 py-0.5 font-mono text-[10px] tracking-[0.15em] hover:bg-[#C8956C] hover:text-white"
                 >
                   {t("param.suggest.add")}
                 </button>

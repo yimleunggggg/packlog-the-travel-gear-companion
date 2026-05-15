@@ -11,6 +11,7 @@ export type PostAuthIntent =
       templateId: string;
       selectedIdx: number[];
       targetContainerId: string;
+      ownership: "owned" | "wishlist" | "borrowed" | "undecided";
     }
   | { v: 1; kind: "libraryAddGear"; gearId: string; tripId: string }
   | {

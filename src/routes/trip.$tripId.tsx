@@ -3,14 +3,15 @@ import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TopBar } from "@/components/packlog/TopBar";
 import { TripBriefing } from "@/components/packlog/TripBriefing";
+import { TripPackOverviewLite } from "@/components/packlog/TripPackOverviewLite";
 import { WeightDistributionPanel } from "@/components/packlog/WeightDistributionPanel";
-import { TripScenarioAssist } from "@/components/packlog/TripScenarioAssist";
 import { PostTripReview } from "@/components/packlog/PostTripReview";
 import { ContainerModule } from "@/components/packlog/ContainerModule";
 import { POST_AUTH_EVENT, type PostAuthIntent } from "@/lib/post-auth-intent";
 import { communityTemplates } from "@/lib/packlog-data";
 import { usePacklog } from "@/lib/packlog-store";
 import { useI18n } from "@/lib/i18n";
+import { SCROLL_TO_PACK_AFTER_CREATE_KEY } from "@/lib/pack-nav-flags";
 
 export const Route = createFileRoute("/trip/$tripId")({
   component: TripDetail,
@@ -29,7 +30,7 @@ function TripDetail() {
       const d = (e as CustomEvent<PostAuthIntent>).detail;
       if (d.kind === "communityClone" && d.tripId === tripId) {
         const tpl = communityTemplates.find((x) => x.id === d.templateId);
-        if (tpl) store.cloneCommunity(tripId, tpl, d.selectedIdx, d.targetContainerId);
+        if (tpl) store.cloneCommunity(tripId, tpl, d.selectedIdx, d.targetContainerId, d.ownership);
         return;
       }
       if (d.kind === "saveItemToLibrary" && d.tripId === tripId) {
@@ -46,6 +47,24 @@ function TripDetail() {
     window.addEventListener(POST_AUTH_EVENT, onResume as EventListener);
     return () => window.removeEventListener(POST_AUTH_EVENT, onResume as EventListener);
   }, [tripId, store]);
+
+  useEffect(() => {
+    const pending = sessionStorage.getItem(SCROLL_TO_PACK_AFTER_CREATE_KEY);
+    if (pending !== tripId) return;
+    const tr = store.getTrip(tripId);
+    if (!tr || tr.phase !== "PACK") return;
+    sessionStorage.removeItem(SCROLL_TO_PACK_AFTER_CREATE_KEY);
+    requestAnimationFrame(() => {
+      const el =
+        document.getElementById("pack-checklist") ??
+        document.getElementById("trip-pack-workspace") ??
+        document.getElementById("trip-overview-pack-cta");
+      el?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  }, [tripId, store, trip?.phase]);
 
   if (!trip) {
     return (
@@ -70,61 +89,63 @@ function TripDetail() {
     return <Outlet />;
   }
 
+  if (phase === "PACK") {
+    return (
+      <div className="min-h-dvh pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+        <TopBar showPhase={false} />
+        <main className="mx-auto max-w-[1480px] px-[var(--page-padding)] py-8 md:py-10">
+          <TripPackOverviewLite
+            trip={trip}
+            onBack={() => navigate({ to: "/", search: { tag: undefined } })}
+            onEnterReview={() => store.setPhase(trip.id, "REVIEW")}
+          />
+        </main>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-dvh pb-[calc(6rem+env(safe-area-inset-bottom))]">
+    <div className="min-h-dvh pb-[max(1.25rem,env(safe-area-inset-bottom))]">
       <TopBar showPhase={false} />
 
-      <main className="mx-auto max-w-[1480px] space-y-6 px-4 py-6 md:px-6">
+      <main className="mx-auto max-w-[1480px] space-y-6 px-[var(--page-padding)] py-6">
         <TripBriefing
           trip={trip}
           phase={phase}
           onPhase={(p) => store.setPhase(trip.id, p)}
-          onBack={() => navigate({ to: "/" })}
-          onOpenClone={() => navigate({ to: "/community" })}
+          onBack={() => navigate({ to: "/", search: { tag: undefined } })}
+          onOpenClone={() =>
+            navigate({ to: "/community", search: { tag: undefined, kind: undefined } })
+          }
           onSharingPatch={(patch) => store.patchTrip(trip.id, patch)}
         />
 
         <div className="grid grid-cols-12 gap-6">
           <div className="col-span-12 space-y-6 lg:col-span-8">
             <AnimatePresence mode="wait">
-              {phase !== "REVIEW" ? (
-                <motion.div
-                  key="overview-pack"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  className="space-y-6"
-                >
-                  <TripScenarioAssist
-                    trip={trip}
-                    onQuickAdd={(name, w, cat) => store.quickAdd(trip.id, name, w, cat)}
-                  />
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="review"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  className="space-y-6"
-                >
-                  <PostTripReview trip={trip} onSeal={() => store.sealReview(trip.id)} />
-                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                    {(trip.containers ?? []).map((c) => (
-                      <ContainerModule
-                        key={c.id}
-                        container={c}
-                        phase={phase}
-                        tripId={trip.id}
-                        onToggle={(cid, iid) => store.toggleItem(trip.id, cid, iid)}
-                        onVerdict={(cid, iid, v) => store.setVerdict(trip.id, cid, iid, v)}
-                        onUtility={(cid, iid, u) => store.setUtility(trip.id, cid, iid, u)}
-                        onUpdate={(cid, iid, patch) => store.updateItem(trip.id, cid, iid, patch)}
-                      />
-                    ))}
-                  </div>
-                </motion.div>
-              )}
+              <motion.div
+                key="review"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className="space-y-6"
+              >
+                <PostTripReview trip={trip} onSeal={() => store.sealReview(trip.id)} />
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  {(trip.containers ?? []).map((c) => (
+                    <ContainerModule
+                      key={c.id}
+                      container={c}
+                      phase={phase}
+                      tripId={trip.id}
+                      onToggle={(cid, iid) => store.toggleItem(trip.id, cid, iid)}
+                      onVerdict={(cid, iid, v) => store.setVerdict(trip.id, cid, iid, v)}
+                      onUtility={(cid, iid, u) => store.setUtility(trip.id, cid, iid, u)}
+                      onUpdate={(cid, iid, patch) => store.updateItem(trip.id, cid, iid, patch)}
+                    />
+                  ))}
+                </div>
+              </motion.div>
             </AnimatePresence>
           </div>
 

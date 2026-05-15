@@ -110,4 +110,6 @@ export const OFFLINE_CHINA_PLACE_ROWS: readonly OfflineChinaPlaceRow[] = ${JSON.
 `;
 
 writeFileSync(join(root, "src/lib/china-offline-places.generated.ts"), ts, "utf8");
-console.log(`Wrote ${filtered.length} offline China rows (${rows.length - filtered.length} skipped vs curated tree).`);
+console.log(
+  `Wrote ${filtered.length} offline China rows (${rows.length - filtered.length} skipped vs curated tree).`,
+);

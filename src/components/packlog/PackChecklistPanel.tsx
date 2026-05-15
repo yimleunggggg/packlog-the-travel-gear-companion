@@ -8,6 +8,19 @@ import { formatKgFromGrams } from "@/lib/weight-provenance";
 import { containerDisplayLabel } from "@/lib/container-label";
 import { preferredContainerIdForCategory } from "@/lib/preferred-container-for-category";
 import {
+  packlogItemName,
+  packlogItemWeight,
+  packlogSectionTitle,
+} from "@/lib/packlog-button-classes";
+import { cn } from "@/lib/utils";
+import {
+  defaultItemCategoryForPackDisplayGroup,
+  itemPackDisplayGroup,
+  i18nKeyForPackDisplayGroup,
+  packGroupOrder,
+  type PackDisplayGroup,
+} from "@/lib/pack-display-groups";
+import {
   POOL_SEED_MIME,
   filterSeedsNotInTrip,
   mergedScenarioSeedsForTrip,
@@ -16,15 +29,8 @@ import {
 import type { SeedItem } from "@/lib/scenario-templates";
 import type { PackViewFilter } from "@/lib/pack-view-filter";
 import { itemMatchesPackViewFilter } from "@/lib/pack-view-filter";
-
-const catColor: Record<Item["category"], string> = {
-  tech: "var(--info)",
-  apparel: "var(--signal)",
-  doc: "var(--warn)",
-  health: "var(--success)",
-  optic: "var(--signal)",
-  misc: "var(--muted-foreground)",
-};
+import { isUnassignedContainer, unassignedContainerId } from "@/lib/unassigned-container";
+import { PACKLOG_CATEGORY_HEX } from "@/lib/packlog-category-colors";
 
 const ownColor: Record<Item["ownership"], string> = {
   owned: "var(--success)",
@@ -33,15 +39,6 @@ const ownColor: Record<Item["ownership"], string> = {
   undecided: "var(--muted-foreground)",
 };
 
-const CATEGORY_SECTION_ORDER: Item["category"][] = [
-  "doc",
-  "health",
-  "apparel",
-  "tech",
-  "optic",
-  "misc",
-];
-
 type ItemWithCtx = Item & { _containerId: string };
 
 export function PackChecklistPanel({
@@ -49,7 +46,7 @@ export function PackChecklistPanel({
   phase,
   tripId,
   onToggle,
-  onCycleOwnership,
+  onSetOwnership,
   onRemove,
   onMoveItem,
   onUpdate,
@@ -62,7 +59,7 @@ export function PackChecklistPanel({
   phase: LifecyclePhase;
   tripId: string;
   onToggle: (containerId: string, itemId: string) => void;
-  onCycleOwnership: (containerId: string, itemId: string) => void;
+  onSetOwnership: (containerId: string, itemId: string, ownership: Item["ownership"]) => void;
   onRemove: (containerId: string, itemId: string) => void;
   onMoveItem: (fromContainerId: string, itemId: string, toContainerId: string) => void;
   onUpdate: (containerId: string, itemId: string, patch: Partial<Item>) => void;
@@ -74,50 +71,92 @@ export function PackChecklistPanel({
   const { t, lang } = useI18n();
   const { requestAuth } = useAuth();
   const [bagFilter, setBagFilter] = useState<string>("all");
+  const [expanded, setExpanded] = useState<{ cid: string; id: string } | null>(null);
   const [editing, setEditing] = useState<{ cid: string; item: Item } | null>(null);
   const [adding, setAdding] = useState<{
     containerId: string;
     category: Item["category"];
+    packDisplayGroup?: PackDisplayGroup;
     source: "section" | "footer";
   } | null>(null);
 
   /** Bag filter changes the target container; dismiss inline add to avoid a stale target. */
   useEffect(() => {
     setAdding(null);
+    setExpanded(null);
   }, [bagFilter]);
 
   const defaultContainerId = trip.containers[0]?.id ?? "";
 
-  const { itemsByCategory, seedsByCategory, unaddedCount } = useMemo(() => {
-    const itemsByCategory: Partial<Record<Item["category"], ItemWithCtx[]>> = {};
+  const {
+    itemsByPackGroup,
+    seedsByPackGroup,
+    unaddedCount,
+    unassignedItems,
+    groupStatsByPackGroup,
+  } = useMemo(() => {
+    const itemsByPackGroup: Partial<Record<PackDisplayGroup, ItemWithCtx[]>> = {};
+    const groupStatsByPackGroup: Partial<
+      Record<PackDisplayGroup, { n: number; totalG: number; packedG: number }>
+    > = {};
+    const bumpStats = (g: PackDisplayGroup, it: Item) => {
+      const line = it.weightG * it.qty;
+      const cur = groupStatsByPackGroup[g] ?? { n: 0, totalG: 0, packedG: 0 };
+      cur.n += 1;
+      cur.totalG += line;
+      if (it.status === "packed") cur.packedG += line;
+      groupStatsByPackGroup[g] = cur;
+    };
+    const unassignedId = unassignedContainerId(tripId);
+    const unassignedItems: ItemWithCtx[] = [];
     trip.containers.forEach((c) => {
+      if (isUnassignedContainer(c, tripId)) {
+        if (bagFilter === "all") {
+          c.items.forEach((it) => bumpStats(itemPackDisplayGroup(trip, it), it));
+          c.items.forEach((it) => {
+            if (!itemMatchesPackViewFilter(it, packViewFilter)) return;
+            unassignedItems.push({ ...it, _containerId: unassignedId });
+          });
+        }
+        return;
+      }
       if (bagFilter !== "all" && c.id !== bagFilter) return;
+      c.items.forEach((it) => bumpStats(itemPackDisplayGroup(trip, it), it));
       c.items.forEach((it) => {
         if (!itemMatchesPackViewFilter(it, packViewFilter)) return;
-        const list = itemsByCategory[it.category] ?? [];
+        const g = itemPackDisplayGroup(trip, it);
+        const list = itemsByPackGroup[g] ?? [];
         list.push({ ...it, _containerId: c.id });
-        itemsByCategory[it.category] = list;
+        itemsByPackGroup[g] = list;
       });
     });
 
     const merged = mergedScenarioSeedsForTrip(trip);
     const unadded = filterSeedsNotInTrip(trip, merged);
-    const seedsByCategory: Partial<Record<Item["category"], SeedItem[]>> = {};
+    const seedsByPackGroup: Partial<Record<PackDisplayGroup, SeedItem[]>> = {};
     const showSeeds = packViewFilter === "all" || packViewFilter === "todo";
     if (showSeeds) {
       for (const s of unadded) {
-        const list = seedsByCategory[s.category] ?? [];
+        const g = itemPackDisplayGroup(trip, {
+          name: s.en,
+          nameEn: s.en,
+          nameZh: s.zh,
+          category: s.category,
+        });
+        const list = seedsByPackGroup[g] ?? [];
         list.push(s);
-        seedsByCategory[s.category] = list;
+        seedsByPackGroup[g] = list;
       }
     }
 
     return {
-      itemsByCategory,
-      seedsByCategory,
+      itemsByPackGroup,
+      seedsByPackGroup,
       unaddedCount: showSeeds ? unadded.length : 0,
+      unassignedItems,
+      groupStatsByPackGroup,
     };
-  }, [trip, bagFilter, packViewFilter]);
+  }, [trip, tripId, bagFilter, packViewFilter]);
 
   if (phase === "REVIEW") return null;
 
@@ -128,8 +167,10 @@ export function PackChecklistPanel({
           <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
             {t("packChecklist.kicker")}
           </div>
-          <h2 className="mt-1 font-display text-xl leading-tight">{t("packChecklist.title")}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{t("packChecklist.subtitle")}</p>
+          <h2 className={cn("mt-1", packlogSectionTitle)}>{t("packChecklist.title")}</h2>
+          {t("packChecklist.subtitle").trim() ? (
+            <p className="mt-1 text-sm text-muted-foreground">{t("packChecklist.subtitle")}</p>
+          ) : null}
         </div>
         <div className="flex shrink-0 flex-col gap-1 sm:items-end">
           <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
@@ -141,11 +182,13 @@ export function PackChecklistPanel({
             className="max-w-full rounded-md border border-border-strong bg-background px-2 py-1.5 font-mono text-[11px]"
           >
             <option value="all">{t("categoryView.filterAll")}</option>
-            {trip.containers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {containerDisplayLabel(c, lang, t)}
-              </option>
-            ))}
+            {trip.containers
+              .filter((c) => !isUnassignedContainer(c, tripId))
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  {containerDisplayLabel(c, lang, t)}
+                </option>
+              ))}
           </select>
         </div>
       </div>
@@ -156,104 +199,246 @@ export function PackChecklistPanel({
         </p>
       ) : null}
 
-      <p className="mt-3 text-[11px] leading-snug text-muted-foreground">
-        {t("packChecklist.hint")}
-      </p>
+      {t("packChecklist.hint").trim() ? (
+        <p className="mt-3 text-[11px] leading-snug text-muted-foreground">
+          {t("packChecklist.hint")}
+        </p>
+      ) : null}
 
       <div className="mt-4 space-y-3">
-        {CATEGORY_SECTION_ORDER.map((cat) => {
-          const tripItems = itemsByCategory[cat] ?? [];
-          const seeds = seedsByCategory[cat] ?? [];
-          const tripG = tripItems.reduce((s, i) => s + i.weightG * i.qty, 0);
+        {packGroupOrder(trip).map((groupKey) => {
+          const tripItems = itemsByPackGroup[groupKey] ?? [];
+          const seeds = seedsByPackGroup[groupKey] ?? [];
+          if (tripItems.length + seeds.length === 0) return null;
+          const st = groupStatsByPackGroup[groupKey];
+          const packedG = st?.packedG ?? 0;
+          const listedTripG = st?.totalG ?? 0;
+          const nListed = (st?.n ?? 0) + seeds.length;
           const seedG = seeds.reduce((s, sd) => s + sd.weightG * (sd.qty ?? 1), 0);
-          const catKg = formatKgFromGrams(tripG + seedG);
+          const packedKg = formatKgFromGrams(packedG);
+          const listedKg = formatKgFromGrams(listedTripG + seedG);
+          const defaultCat = defaultItemCategoryForPackDisplayGroup(groupKey);
           const addTargetId =
             bagFilter !== "all"
               ? bagFilter
-              : (preferredContainerIdForCategory(trip, cat) ?? defaultContainerId);
+              : (preferredContainerIdForCategory(trip, defaultCat) ?? defaultContainerId);
           return (
-            <details key={cat} className="rounded-md border border-border bg-surface/40" open>
+            <details key={groupKey} className="rounded-md border border-border bg-surface/40" open>
               <summary className="cursor-pointer select-none px-3 py-2 font-mono text-[11px] tracking-[0.14em] text-signal hover:bg-surface-2">
-                {t(`cat.${cat}`)}
+                {t(i18nKeyForPackDisplayGroup(groupKey))}
                 <span className="ml-2 text-muted-foreground">
-                  ({tripItems.length + seeds.length}) · {catKg}kg
+                  {t("packChecklist.groupWeightSummary")
+                    .replace("{n}", String(nListed))
+                    .replace("{packed}", packedKg)
+                    .replace("{listed}", listedKg)}
                 </span>
               </summary>
               <ul className="space-y-1 border-t border-border px-2 py-2">
-                {tripItems.map((it) => (
-                  <li
-                    key={it.id}
-                    className="grid grid-cols-1 gap-2 rounded-sm border border-transparent px-2 py-1.5 hover:border-border hover:bg-surface-2 sm:grid-cols-[minmax(0,1fr)_minmax(17.5rem,17.5rem)] sm:items-center sm:gap-3"
-                  >
-                    <div className="flex min-w-0 items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => onToggle(it._containerId, it.id)}
-                        className={`h-4 w-4 shrink-0 rounded-sm border ${
-                          it.status === "packed"
-                            ? "border-signal bg-signal"
-                            : "border-border-strong bg-background"
-                        }`}
-                      >
-                        {it.status === "packed" && (
-                          <span className="block text-center font-mono text-[9px] text-signal-foreground">
-                            ✓
-                          </span>
-                        )}
-                      </button>
-                      <span
-                        className="h-2 w-2 shrink-0 rounded-[1px]"
-                        style={{ background: catColor[it.category] }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setEditing({ cid: it._containerId, item: it })}
-                        className="min-w-0 flex-1 truncate text-left font-mono text-[12px] hover:text-signal"
-                      >
-                        {pickName(lang, it)}
-                        <span className="ml-1 font-mono text-[9px] text-signal opacity-70">✎</span>
-                      </button>
-                      <span className="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground">
-                        ×{it.qty} <ItemWeightLabel item={it} className="inline text-[10px]" />
-                      </span>
-                    </div>
-                    <div className="flex w-full max-w-full shrink-0 flex-wrap items-center justify-start gap-2 justify-self-stretch pl-8 sm:flex-nowrap sm:justify-end sm:pl-0">
-                      <select
-                        value={it._containerId}
-                        onChange={(e) => {
-                          const to = e.target.value;
-                          if (to !== it._containerId) onMoveItem(it._containerId, it.id, to);
-                        }}
-                        className="w-full shrink-0 rounded border border-border-strong bg-background px-2 py-1 font-mono text-[10px] sm:w-[11rem] sm:min-w-[11rem] sm:flex-none"
-                        aria-label={t("categoryView.pickBag")}
-                      >
-                        {trip.containers.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {containerDisplayLabel(c, lang, t)}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => onCycleOwnership(it._containerId, it.id)}
-                        className="rounded border px-1.5 py-0.5 font-mono text-[9px]"
-                        style={{
-                          borderColor: ownColor[it.ownership],
-                          color: ownColor[it.ownership],
-                        }}
-                      >
-                        {t(`own.${it.ownership}`)}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onRemove(it._containerId, it.id)}
-                        className="font-mono text-[10px] text-muted-foreground hover:text-destructive"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </li>
-                ))}
+                {tripItems.map((it) => {
+                  const bagLabel = containerDisplayLabel(
+                    trip.containers.find((c) => c.id === it._containerId) ?? trip.containers[0]!,
+                    lang,
+                    t,
+                  );
+                  const isOpen = expanded?.cid === it._containerId && expanded?.id === it.id;
+                  const brandLine = [it.brand, it.model].filter(Boolean).join(" ").trim();
+                  return (
+                    <li
+                      key={it.id}
+                      className="rounded-sm border border-transparent hover:border-border/80 hover:bg-surface-2/20"
+                    >
+                      <div className="flex min-h-[48px] max-h-14 w-full items-stretch">
+                        <div
+                          className="flex w-11 shrink-0 items-center justify-center touch-manipulation"
+                          onClick={(e) => e.stopPropagation()}
+                          onPointerDown={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            aria-checked={it.status === "packed"}
+                            role="checkbox"
+                            onClick={() => onToggle(it._containerId, it.id)}
+                            className={cn(
+                              "flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border transition active:scale-[0.98]",
+                              it.status === "packed"
+                                ? "border-signal bg-signal"
+                                : "border-border-strong bg-background",
+                            )}
+                          >
+                            {it.status === "packed" && (
+                              <span className="font-mono text-[12px] leading-none text-signal-foreground">
+                                ✓
+                              </span>
+                            )}
+                          </button>
+                        </div>
+                        <div className="flex min-h-0 min-w-0 flex-1 flex-col justify-center pr-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpanded((cur) =>
+                                cur?.cid === it._containerId && cur?.id === it.id
+                                  ? null
+                                  : { cid: it._containerId, id: it.id },
+                              )
+                            }
+                            className={cn(
+                              "flex w-full min-h-[48px] max-h-14 cursor-pointer flex-nowrap items-center gap-1.5 overflow-hidden text-left outline-none",
+                              "rounded-sm py-0.5 hover:bg-surface-2/40 focus-visible:ring-2 focus-visible:ring-signal/40",
+                            )}
+                          >
+                            <span
+                              className="h-2 w-2 shrink-0 rounded-[1px]"
+                              style={{ background: PACKLOG_CATEGORY_HEX[it.category] }}
+                              aria-hidden
+                            />
+                            <span
+                              className={cn(
+                                packlogItemName,
+                                "max-w-[50%] min-w-0 shrink-0 truncate",
+                              )}
+                            >
+                              {pickName(lang, it)}
+                            </span>
+                            <span className="min-w-1 flex-1 shrink" aria-hidden />
+                            <span
+                              className={cn(
+                                packlogItemWeight,
+                                "flex shrink-0 items-baseline gap-1 whitespace-nowrap tabular-nums",
+                              )}
+                            >
+                              ×{it.qty}{" "}
+                              <ItemWeightLabel
+                                item={it}
+                                className="inline text-[11px] leading-none"
+                              />
+                            </span>
+                            <span className="max-w-[min(40%,10rem)] shrink truncate font-mono text-[10px] leading-tight text-muted-foreground">
+                              {bagLabel} · {t(`own.${it.ownership}`)}
+                            </span>
+                          </button>
+                          {isOpen ? (
+                            <div className="mb-2 mt-1 space-y-2 rounded-md border border-border bg-surface-2/70 px-3 py-2.5">
+                              <div>
+                                <div className="font-mono text-[9px] tracking-[0.12em] text-muted-foreground">
+                                  {t("packChecklist.row.place")}
+                                </div>
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                  {trip.containers.map((c) => {
+                                    const active = c.id === it._containerId;
+                                    const label = containerDisplayLabel(c, lang, t);
+                                    return (
+                                      <button
+                                        key={c.id}
+                                        type="button"
+                                        title={label}
+                                        onClick={() => {
+                                          if (!active) {
+                                            onMoveItem(it._containerId, it.id, c.id);
+                                            setExpanded((cur) =>
+                                              cur?.id === it.id ? { cid: c.id, id: it.id } : cur,
+                                            );
+                                          }
+                                        }}
+                                        className={cn(
+                                          "max-w-[9rem] truncate rounded border px-2 py-1 font-mono text-[9px] tracking-[0.06em] transition",
+                                          active
+                                            ? "border-signal bg-signal text-signal-foreground"
+                                            : "border-border-strong bg-transparent text-muted-foreground hover:border-foreground/30 hover:text-foreground",
+                                        )}
+                                      >
+                                        {active ? `${label} ✓` : label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                              <div className="border-t border-border pt-2">
+                                <div className="font-mono text-[9px] tracking-[0.12em] text-muted-foreground">
+                                  {t("packChecklist.row.status")}
+                                </div>
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                  {(["owned", "wishlist", "borrowed", "undecided"] as const).map(
+                                    (o) => {
+                                      const activeOwn = it.ownership === o;
+                                      return (
+                                        <button
+                                          key={o}
+                                          type="button"
+                                          onClick={() => {
+                                            if (!activeOwn)
+                                              onSetOwnership(it._containerId, it.id, o);
+                                          }}
+                                          className={cn(
+                                            "rounded border px-2 py-1 font-mono text-[9px]",
+                                            activeOwn &&
+                                              (o === "owned"
+                                                ? "border-success/90 bg-transparent text-[color:var(--success)]"
+                                                : "border-signal bg-signal-soft text-foreground"),
+                                            !activeOwn &&
+                                              "border-border-strong bg-transparent text-muted-foreground hover:text-foreground",
+                                          )}
+                                          style={
+                                            !activeOwn
+                                              ? { borderColor: ownColor[o], color: ownColor[o] }
+                                              : undefined
+                                          }
+                                        >
+                                          {activeOwn ? `${t(`own.${o}`)} ✓` : t(`own.${o}`)}
+                                        </button>
+                                      );
+                                    },
+                                  )}
+                                </div>
+                              </div>
+                              <div className="border-t border-border pt-2 font-mono text-[11px]">
+                                <span className="text-[9px] tracking-[0.1em] text-muted-foreground">
+                                  {t("packChecklist.row.brand")}
+                                </span>{" "}
+                                <span className="text-foreground">{brandLine || "—"}</span>
+                              </div>
+                              <div className="border-t border-border pt-2">
+                                <div className="font-mono text-[9px] tracking-[0.12em] text-muted-foreground">
+                                  {t("packChecklist.row.note")}
+                                </div>
+                                <input
+                                  key={`${it.id}-note-${it.note ?? ""}`}
+                                  defaultValue={it.note ?? ""}
+                                  placeholder={t("packChecklist.row.notePlaceholder")}
+                                  className="mt-1 w-full rounded border border-border-strong bg-background px-2 py-1.5 font-mono text-[11px] outline-none focus:border-[#C8956C]"
+                                  onClick={(e) => e.stopPropagation()}
+                                  onBlur={(e) => {
+                                    const v = e.currentTarget.value.trim();
+                                    const prev = (it.note ?? "").trim();
+                                    if (v !== prev) {
+                                      onUpdate(it._containerId, it.id, { note: v || undefined });
+                                    }
+                                  }}
+                                />
+                              </div>
+                              <div className="flex justify-end gap-2 border-t border-border pt-2">
+                                <button
+                                  type="button"
+                                  className="rounded border border-border-strong px-2 py-1 font-mono text-[10px] text-muted-foreground hover:border-foreground/25 hover:text-foreground"
+                                  onClick={() => setEditing({ cid: it._containerId, item: it })}
+                                >
+                                  {t("packChecklist.row.edit")}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="rounded border border-border-strong px-2 py-1 font-mono text-[10px] text-muted-foreground hover:border-destructive hover:text-destructive"
+                                  onClick={() => onRemove(it._containerId, it.id)}
+                                >
+                                  {t("item.edit.delete")}
+                                </button>
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
 
                 {seeds.map((seed) => (
                   <li
@@ -263,26 +448,30 @@ export function PackChecklistPanel({
                       e.dataTransfer.setData(POOL_SEED_MIME, JSON.stringify(seed));
                       e.dataTransfer.effectAllowed = "copy";
                     }}
-                    className="grid grid-cols-1 gap-2 rounded-sm border border-dashed border-border px-2 py-1.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-3"
+                    className="flex min-h-[48px] max-h-14 flex-nowrap items-center gap-2 overflow-x-auto rounded-sm border border-dashed border-border px-2 py-1"
                   >
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span
-                        className="h-2 w-2 shrink-0 rounded-[1px]"
-                        style={{ background: catColor[seed.category] }}
-                      />
-                      <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-muted-foreground">
-                        {pickName(lang, { nameEn: seed.en, nameZh: seed.zh, name: seed.en })}
-                      </span>
-                      <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
-                        {seed.weightG}g{seed.qty && seed.qty > 1 ? ` ×${seed.qty}` : ""}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-1 pl-8 sm:flex-nowrap sm:justify-end sm:pl-0">
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-[1px]"
+                      style={{ background: PACKLOG_CATEGORY_HEX[seed.category] }}
+                      aria-hidden
+                    />
+                    <span className="min-w-0 max-w-[50%] shrink-0 truncate font-mono text-[12px] text-muted-foreground">
+                      {pickName(lang, { nameEn: seed.en, nameZh: seed.zh, name: seed.en })}
+                    </span>
+                    <span className="min-w-1 flex-1 shrink" aria-hidden />
+                    <span className="shrink-0 whitespace-nowrap font-mono text-[11px] tabular-nums text-muted-foreground">
+                      {seed.weightG}g{seed.qty && seed.qty > 1 ? ` ×${seed.qty}` : ""}
+                    </span>
+                    <div
+                      className="flex max-w-[min(42%,11rem)] shrink-0 flex-wrap justify-end gap-1"
+                      onClick={(e) => e.stopPropagation()}
+                      role="presentation"
+                    >
                       {trip.containers.map((c) => (
                         <button
                           key={c.id}
                           type="button"
-                          className="rounded border border-border bg-background px-2 py-0.5 font-mono text-[10px] hover:border-signal hover:bg-signal-soft"
+                          className="max-w-[5.5rem] truncate rounded border border-border bg-background px-1.5 py-0.5 font-mono text-[9px] hover:border-foreground/25 hover:bg-surface-2"
                           onClick={() => onAddToContainer(c.id, poolSeedToItemDraft(seed))}
                         >
                           {containerDisplayLabel(c, lang, t)}
@@ -296,21 +485,26 @@ export function PackChecklistPanel({
                 <div className="border-t border-border px-2 py-2">
                   {!(
                     adding?.source === "section" &&
-                    adding.category === cat &&
+                    adding.packDisplayGroup === groupKey &&
                     adding.containerId === addTargetId
                   ) ? (
                     <button
                       type="button"
                       onClick={() =>
-                        setAdding({ containerId: addTargetId, category: cat, source: "section" })
+                        setAdding({
+                          containerId: addTargetId,
+                          category: defaultCat,
+                          packDisplayGroup: groupKey,
+                          source: "section",
+                        })
                       }
-                      className="w-full rounded-md border border-dashed border-border-strong py-2 font-mono text-[10px] tracking-[0.16em] text-muted-foreground hover:border-signal hover:bg-signal-soft hover:text-signal"
+                      className="w-full rounded-md border border-dashed border-border-strong py-2 font-mono text-[10px] tracking-[0.16em] text-muted-foreground hover:border-foreground/25 hover:bg-surface-2 hover:text-foreground"
                     >
                       {t("packChecklist.addInCategory")}
                     </button>
                   ) : null}
                   {adding?.source === "section" &&
-                  adding.category === cat &&
+                  adding.packDisplayGroup === groupKey &&
                   adding.containerId === addTargetId ? (
                     <div className="mt-2 rounded-md border border-signal/45 bg-surface-2/90 p-3">
                       <div className="mb-2 font-mono text-[10px] tracking-[0.18em] text-signal">
@@ -323,7 +517,7 @@ export function PackChecklistPanel({
                         )}
                         <span className="text-muted-foreground">
                           {" "}
-                          · {t(`cat.${adding.category}`)}
+                          · {t(i18nKeyForPackDisplayGroup(groupKey))}
                         </span>
                       </div>
                       <AddGearForm
@@ -356,7 +550,7 @@ export function PackChecklistPanel({
                   source: "footer",
                 })
               }
-              className="w-full rounded-md border border-dashed border-border-strong py-2.5 font-mono text-[11px] tracking-[0.18em] text-muted-foreground hover:border-signal hover:bg-signal-soft hover:text-signal"
+              className="w-full rounded-md border border-dashed border-border-strong py-2.5 font-mono text-[11px] tracking-[0.18em] text-muted-foreground hover:border-foreground/25 hover:bg-surface-2 hover:text-foreground"
             >
               {t("packChecklist.addCustom")}
             </button>

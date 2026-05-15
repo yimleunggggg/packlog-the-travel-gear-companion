@@ -15,6 +15,22 @@ import {
 import { ItemWeightLabel } from "@/components/packlog/ItemWeightLabel";
 import { POOL_SEED_MIME, poolSeedToItemDraft } from "@/lib/packing-pool";
 import type { SeedItem } from "@/lib/scenario-templates";
+import {
+  packlogBtnPrimary,
+  packlogBtnSecondary,
+  packlogBtnSm,
+  packlogBtnTertiary,
+  packlogSectionTitle,
+} from "@/lib/packlog-button-classes";
+import { cn } from "@/lib/utils";
+import { SheetDragHandle } from "@/components/ui/sheet-drag-handle";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import {
+  packlogModalBodyScroll,
+  packlogModalScrim,
+  packlogModalSurface,
+} from "@/lib/packlog-mobile-modal-shell";
+import { PACKLOG_CATEGORY_HEX } from "@/lib/packlog-category-colors";
 
 const typeKey: Record<Container["type"], string> = {
   checked: "container.type.checked",
@@ -41,15 +57,6 @@ const typeGlyph: Record<Container["type"], string> = {
   tech: "◈",
   clothing: "◇",
   custom: "◯",
-};
-
-const catColor: Record<Item["category"], string> = {
-  tech: "var(--info)",
-  apparel: "var(--signal)",
-  doc: "var(--warn)",
-  health: "var(--success)",
-  optic: "var(--signal)",
-  misc: "var(--muted-foreground)",
 };
 
 const ownColor: Record<Item["ownership"], string> = {
@@ -105,8 +112,6 @@ export function ContainerModule({
   const [adding, setAdding] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  /** PACKLOG-SPEC §3.4 — PACK 行默认折叠，展开后显示归属/分类等操作。 */
-  const [packOpenItemId, setPackOpenItemId] = useState<string | null>(null);
 
   const visiblePackItems = useMemo(() => {
     if (phase !== "PACK") return container.items;
@@ -119,12 +124,6 @@ export function ContainerModule({
   useEffect(() => {
     if (phase === "REVIEW") setExpanded(true);
   }, [phase]);
-
-  useEffect(() => {
-    if (packOpenItemId && !container.items.some((i) => i.id === packOpenItemId)) {
-      setPackOpenItemId(null);
-    }
-  }, [container.items, packOpenItemId]);
 
   const massItems =
     phase === "PACK" ? container.items.filter((i) => i.status === "packed") : container.items;
@@ -188,7 +187,7 @@ export function ContainerModule({
               {typeGlyph[container.type]}
             </div>
             <div>
-              <h3 className="font-display text-xl leading-tight">{containerTitle}</h3>
+              <h3 className={cn(packlogSectionTitle, "leading-tight")}>{containerTitle}</h3>
             </div>
           </div>
           <span className="pointer-events-none font-mono text-[10px] tracking-[0.18em] text-muted-foreground">
@@ -247,7 +246,7 @@ export function ContainerModule({
                         </span>
                         <span
                           className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-[1px]"
-                          style={{ background: catColor[it.category] }}
+                          style={{ background: PACKLOG_CATEGORY_HEX[it.category] }}
                         />
                         <div className="min-w-0 flex-1">
                           <div className="text-sm font-medium leading-snug">{displayName}</div>
@@ -268,7 +267,6 @@ export function ContainerModule({
                     </motion.li>
                   );
                 }
-                const isPackRowOpen = packOpenItemId === it.id;
                 return (
                   <motion.li
                     key={it.id}
@@ -277,16 +275,10 @@ export function ContainerModule({
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: idx * 0.02 }}
                     draggable={false}
-                    aria-expanded={isPackRowOpen}
-                    onClick={(e) => {
-                      const el = e.target as HTMLElement;
-                      if (el.closest("button, a, input, textarea, select")) return;
-                      setPackOpenItemId((cur) => (cur === it.id ? null : it.id));
-                    }}
-                    className="group flex cursor-pointer flex-col gap-2 px-4 py-2.5 hover:bg-surface-2 md:grid md:grid-cols-12 md:items-center md:gap-2"
+                    className="group flex flex-col gap-2 px-4 py-2.5 hover:bg-surface-2 md:grid md:grid-cols-12 md:items-center md:gap-2"
                   >
                     <div className="flex min-w-0 items-center gap-2 md:contents">
-                      <div className="shrink-0 md:col-span-1" onClick={(e) => e.stopPropagation()}>
+                      <div className="shrink-0 md:col-span-1">
                         <button
                           type="button"
                           onClick={() => onToggle(container.id, it.id)}
@@ -308,57 +300,37 @@ export function ContainerModule({
                       <div className="flex min-w-0 flex-1 items-start gap-2 md:col-span-5 md:items-center">
                         <span
                           className="mt-1.5 h-1.5 w-1.5 shrink-0 md:mt-0"
-                          style={{ background: catColor[it.category] }}
+                          style={{ background: PACKLOG_CATEGORY_HEX[it.category] }}
                         />
                         {onUpdate ? (
-                          isPackRowOpen ? (
-                            <button
-                              type="button"
-                              onClick={() => setEditingId(it.id)}
-                              title={t("item.edit")}
-                              className={`group/name flex min-w-0 flex-1 items-center gap-1 text-left text-sm hover:text-signal ${
-                                it.status === "packed"
-                                  ? "text-muted-foreground line-through decoration-signal/50"
-                                  : "text-foreground"
-                              }`}
-                            >
-                              <span className="min-w-0 truncate">{displayName}</span>
-                              {it.brand && (
-                                <span className="hidden shrink-0 font-mono text-[9px] text-muted-foreground sm:inline">
-                                  · {it.brand}
-                                </span>
-                              )}
-                              {it.gearId && (
-                                <span
-                                  className="shrink-0 font-mono text-[9px] text-signal"
-                                  title="from gear library"
-                                >
-                                  ⌬
-                                </span>
-                              )}
-                              <span className="shrink-0 font-mono text-[9px] text-signal opacity-0 transition group-hover/name:opacity-100">
-                                ✎
+                          <button
+                            type="button"
+                            onClick={() => setEditingId(it.id)}
+                            title={t("item.edit")}
+                            className={`group/name flex min-w-0 flex-1 items-center gap-1 text-left text-sm hover:text-[#6B5234] ${
+                              it.status === "packed"
+                                ? "text-muted-foreground line-through decoration-signal/50"
+                                : "text-foreground"
+                            }`}
+                          >
+                            <span className="min-w-0 truncate">{displayName}</span>
+                            {it.brand && (
+                              <span className="hidden shrink-0 font-mono text-[9px] text-muted-foreground sm:inline">
+                                · {it.brand}
                               </span>
-                            </button>
-                          ) : (
-                            <span
-                              className={`min-w-0 flex-1 truncate text-sm ${
-                                it.status === "packed"
-                                  ? "text-muted-foreground line-through decoration-signal/50"
-                                  : "text-foreground"
-                              }`}
-                            >
-                              {displayName}
-                              {it.gearId && (
-                                <span
-                                  className="ml-1.5 font-mono text-[9px] text-signal"
-                                  title="from gear library"
-                                >
-                                  ⌬
-                                </span>
-                              )}
+                            )}
+                            {it.gearId && (
+                              <span
+                                className="shrink-0 font-mono text-[9px] text-signal"
+                                title="from gear library"
+                              >
+                                ⌬
+                              </span>
+                            )}
+                            <span className="shrink-0 font-mono text-[9px] text-signal opacity-60">
+                              ✎
                             </span>
-                          )
+                          </button>
                         ) : (
                           <span
                             className={`min-w-0 flex-1 truncate text-sm ${
@@ -392,51 +364,35 @@ export function ContainerModule({
                           className="inline-block max-w-full text-right text-[10px] leading-snug sm:text-[11px]"
                         />
                       </div>
-                      {isPackRowOpen ? (
-                        <div
-                          className="flex max-w-full min-w-0 flex-wrap items-center justify-end gap-1 md:col-span-3"
-                          onClick={(e) => e.stopPropagation()}
+                      <div className="flex max-w-full min-w-0 flex-wrap items-center justify-end gap-1 md:col-span-3">
+                        <button
+                          type="button"
+                          onClick={() => onCycleOwnership?.(container.id, it.id)}
+                          title={t("own.toggle")}
+                          className="shrink-0 whitespace-nowrap rounded border px-1.5 py-0.5 font-mono text-[9px] tracking-[0.1em]"
+                          style={{
+                            borderColor: ownColor[it.ownership],
+                            color: ownColor[it.ownership],
+                            background:
+                              it.ownership === "wishlist" ? "var(--accent)" : "transparent",
+                          }}
                         >
+                          {t(`own.${it.ownership}`)}
+                        </button>
+                        <span className="tag-chip shrink-0 whitespace-nowrap">
+                          {t(`cat.${it.category}`)}
+                        </span>
+                        {onRemove && (
                           <button
                             type="button"
-                            onClick={() => onCycleOwnership?.(container.id, it.id)}
-                            title={t("own.toggle")}
-                            className="shrink-0 whitespace-nowrap rounded border px-1.5 py-0.5 font-mono text-[9px] tracking-[0.1em]"
-                            style={{
-                              borderColor: ownColor[it.ownership],
-                              color: ownColor[it.ownership],
-                              background:
-                                it.ownership === "wishlist" ? "var(--accent)" : "transparent",
-                            }}
+                            onClick={() => onRemove(container.id, it.id)}
+                            className="shrink-0 font-mono text-[10px] text-muted-foreground hover:text-destructive"
+                            aria-label="remove"
                           >
-                            {t(`own.${it.ownership}`)}
+                            ✕
                           </button>
-                          <span className="tag-chip shrink-0 whitespace-nowrap">
-                            {t(`cat.${it.category}`)}
-                          </span>
-                          {onUpdate && (
-                            <button
-                              type="button"
-                              onClick={() => setEditingId(it.id)}
-                              title={t("item.edit")}
-                              className="shrink-0 rounded border border-border-strong px-1.5 py-0.5 font-mono text-[9px] tracking-[0.1em] text-muted-foreground hover:border-signal hover:text-signal"
-                              aria-label="edit"
-                            >
-                              ✎
-                            </button>
-                          )}
-                          {onRemove && (
-                            <button
-                              type="button"
-                              onClick={() => onRemove(container.id, it.id)}
-                              className="shrink-0 font-mono text-[10px] text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:text-destructive"
-                              aria-label="remove"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                      ) : null}
+                        )}
+                      </div>
                     </div>
                   </motion.li>
                 );
@@ -457,14 +413,14 @@ export function ContainerModule({
                   <div className="flex gap-2">
                     <button
                       onClick={() => setAdding(true)}
-                      className="flex-1 rounded border border-dashed border-border-strong py-2 font-mono text-[11px] tracking-[0.18em] text-muted-foreground transition hover:border-signal hover:text-signal"
+                      className="flex-1 rounded border border-dashed border-border-strong py-2 font-mono text-[11px] tracking-[0.18em] text-muted-foreground transition hover:border-foreground/25 hover:text-foreground"
                     >
                       {t("container.add")}
                     </button>
                     {onOpenLibrary && (
                       <button
                         onClick={() => onOpenLibrary(container.id)}
-                        className="rounded border border-border-strong bg-surface px-3 py-2 font-mono text-[11px] tracking-[0.18em] text-foreground hover:border-signal hover:bg-signal-soft"
+                        className="rounded border border-border-strong bg-surface px-3 py-2 font-mono text-[11px] tracking-[0.18em] text-foreground hover:border-foreground/25 hover:bg-surface-2"
                       >
                         ⌬ {t("container.add.fromLib")}
                       </button>
@@ -534,6 +490,7 @@ export function AddGearForm({
   const [qty, setQty] = useState(1);
   const [weight, setWeight] = useState<number | "">("");
   const [category, setCategory] = useState<Item["category"]>(initialCategory);
+  const [miscLabel, setMiscLabel] = useState("");
   const [ownership, setOwnership] = useState<Item["ownership"]>("owned");
   // Whether user has manually overridden the weight/category since last suggestion apply.
   const [userTouchedWeight, setUserTouchedWeight] = useState(false);
@@ -627,6 +584,7 @@ export function AddGearForm({
       verdict: null,
       utility: null,
       ownership,
+      note: category === "misc" && miscLabel.trim() ? miscLabel.trim() : undefined,
     });
   };
 
@@ -658,7 +616,7 @@ export function AddGearForm({
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={t("container.add.name")}
-          className="col-span-6 rounded border border-border-strong bg-background px-2 py-1.5 text-sm placeholder:text-muted-foreground focus:border-signal focus:outline-none"
+          className="col-span-6 rounded border border-border-strong bg-background px-2 py-1.5 text-sm placeholder:text-muted-foreground focus:border-foreground/35 focus:outline-none"
         />
         <input
           type="number"
@@ -666,7 +624,7 @@ export function AddGearForm({
           value={qty}
           onChange={(e) => setQty(+e.target.value)}
           placeholder={t("container.add.qty")}
-          className="col-span-2 rounded border border-border-strong bg-background px-2 py-1.5 text-center font-mono text-sm focus:border-signal focus:outline-none"
+          className="col-span-2 rounded border border-border-strong bg-background px-2 py-1.5 text-center font-mono text-sm focus:border-foreground/35 focus:outline-none"
         />
         <input
           type="number"
@@ -680,7 +638,7 @@ export function AddGearForm({
             setAiHigh(null);
           }}
           placeholder={t("container.add.weight")}
-          className={`col-span-4 rounded border bg-background px-2 py-1.5 text-right font-mono text-sm focus:border-signal focus:outline-none ${
+          className={`col-span-4 rounded border bg-background px-2 py-1.5 text-right font-mono text-sm focus:border-foreground/35 focus:outline-none ${
             !userTouchedWeight && hint ? "border-signal/60 text-signal" : "border-border-strong"
           }`}
         />
@@ -691,7 +649,7 @@ export function AddGearForm({
           type="button"
           disabled={aiBusy}
           onClick={() => void applyAiEstimate()}
-          className="rounded border border-border-strong bg-surface px-2 py-1 font-mono text-[10px] tracking-[0.15em] text-muted-foreground hover:border-signal hover:text-signal disabled:opacity-40"
+          className="rounded border border-border-strong bg-surface px-2 py-1 font-mono text-[10px] tracking-[0.15em] text-muted-foreground hover:border-foreground/25 hover:text-foreground disabled:opacity-40"
         >
           {aiBusy ? "…" : t("weight.action.ai")}
         </button>
@@ -710,7 +668,9 @@ export function AddGearForm({
               · {hint.weightG}g · {t(`cat.${hint.category}`)}
             </span>
           </span>
-          <span className="ml-2 shrink-0 tracking-[0.15em] text-signal">USE ↵</span>
+          <span className="ml-2 shrink-0 tracking-[0.15em] text-signal">
+            {t("container.libraryHint.useEnter")}
+          </span>
         </button>
       )}
 
@@ -741,7 +701,7 @@ export function AddGearForm({
             onClick={() => setOwnership(o)}
             className={`rounded border px-2 py-0.5 font-mono text-[10px] tracking-[0.15em] ${
               ownership === o
-                ? "border-signal bg-signal-soft text-foreground"
+                ? "border-signal bg-signal text-signal-foreground"
                 : "border-border-strong text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -749,21 +709,20 @@ export function AddGearForm({
           </button>
         ))}
       </div>
-      <p className="font-mono text-[10px] leading-relaxed text-muted-foreground">
-        {t("container.add.suggest")}
-      </p>
+      {t("container.add.suggest").trim() ? (
+        <p className="font-mono text-[10px] leading-relaxed text-muted-foreground">
+          {t("container.add.suggest")}
+        </p>
+      ) : null}
       <div className="flex justify-end gap-2">
         <button
           type="button"
           onClick={onCancel}
-          className="rounded border border-border-strong px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-muted-foreground hover:text-foreground"
+          className={cn(packlogBtnTertiary, "px-2 py-1 text-[10px]")}
         >
           {t("container.add.cancel")}
         </button>
-        <button
-          type="submit"
-          className="rounded border border-signal bg-signal px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-signal-foreground hover:opacity-90"
-        >
+        <button type="submit" className={cn(packlogBtnPrimary, packlogBtnSm)}>
           {t("container.add.commit")}
         </button>
       </div>
@@ -897,7 +856,7 @@ function ReviewControls({
             onChange={(e) => onNote(e.target.value)}
             placeholder={t("review.notePlaceholder")}
             rows={2}
-            className="mt-2 w-full resize-y rounded-md border border-border-strong bg-background px-2 py-2 text-[13px] leading-snug text-foreground placeholder:text-muted-foreground focus:border-signal focus:outline-none"
+            className="mt-2 w-full resize-y rounded-md border border-border-strong bg-background px-2 py-2 text-[13px] leading-snug text-foreground placeholder:text-muted-foreground focus:border-foreground/35 focus:outline-none"
           />
         </div>
       ) : null}
@@ -918,8 +877,8 @@ export function LibraryPicker({
   onPick: (gear: GearSpec) => void;
 }) {
   const { t, lang } = useI18n();
+  const mdUp = useMediaQuery("(min-width: 768px)");
   const [q, setQ] = useState("");
-  if (!open) return null;
   const filtered = library.filter(
     (g) =>
       !q ||
@@ -929,51 +888,88 @@ export function LibraryPicker({
       g.category.includes(q.toLowerCase()),
   );
   return (
-    <div
-      className="scrim fixed inset-0 z-50 grid touch-none place-items-center overscroll-none p-3 sm:p-4"
-      onClick={onClose}
-    >
-      <div
-        className="module corner-tick relative flex max-h-[min(80dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] w-full max-w-2xl touch-pan-y flex-col overscroll-y-contain p-5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
-          ⌬ {t("container.add.fromLib")}
-        </div>
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder={t("library.search")}
-          className="mt-3 w-full rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-signal focus:outline-none"
-        />
-        <ul className="mt-3 flex-1 space-y-1 overflow-y-auto">
-          {filtered.map((g) => (
-            <li key={g.id}>
-              <button
-                onClick={() => onPick(g)}
-                className="flex w-full items-center justify-between gap-3 rounded border border-border bg-surface px-3 py-2 text-left transition hover:border-signal hover:bg-surface-2"
-              >
-                <div className="min-w-0">
-                  <div className="truncate text-sm">{pickName(lang, g)}</div>
-                  <div className="font-mono text-[10px] text-muted-foreground">
-                    {g.brand ?? "—"} · {t(`cat.${g.category}`)}
-                  </div>
-                </div>
-                <div className="shrink-0 text-right font-mono text-[11px] tabular-nums">
-                  {g.weightG}g
-                </div>
-              </button>
-            </li>
-          ))}
-        </ul>
-        <button
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className={cn("scrim", packlogModalScrim)}
           onClick={onClose}
-          className="mt-3 self-end rounded border border-border-strong px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-muted-foreground"
         >
-          {t("library.closePanel")}
-        </button>
-      </div>
-    </div>
+          <motion.div
+            initial={mdUp ? { y: 20, opacity: 0 } : { y: "100%", opacity: 1 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={mdUp ? { y: 20, opacity: 0 } : { y: "100%", opacity: 1 }}
+            transition={
+              mdUp
+                ? { duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }
+                : { type: "spring", damping: 30, stiffness: 320 }
+            }
+            onClick={(e) => e.stopPropagation()}
+            className={cn(
+              packlogModalSurface,
+              "flex w-full flex-col overflow-hidden",
+              "max-md:max-h-[90vh]",
+              "md:max-h-[min(80dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] md:max-w-2xl md:rounded-lg",
+            )}
+          >
+            <SheetDragHandle />
+            <div className="relative shrink-0 border-b border-border px-5 pb-3 pt-1 md:px-6 md:pt-3">
+              <div className="pr-10 font-mono text-[10px] tracking-[0.22em] text-signal">
+                ⌬ {t("container.add.fromLib")}
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="absolute right-4 top-2 font-mono text-sm text-muted-foreground hover:text-foreground md:top-3"
+                aria-label="close"
+              >
+                ✕
+              </button>
+            </div>
+            <div className={cn(packlogModalBodyScroll, "flex flex-col px-5 py-3 md:px-6")}>
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder={t("library.search")}
+                className="w-full rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-foreground/35 focus:outline-none"
+              />
+              <ul className="mt-3 min-h-0 flex-1 space-y-1 overflow-y-auto">
+                {filtered.map((g) => (
+                  <li key={g.id}>
+                    <button
+                      type="button"
+                      onClick={() => onPick(g)}
+                      className="flex w-full items-center justify-between gap-3 rounded border border-border bg-surface px-3 py-2 text-left transition hover:border-foreground/25 hover:bg-surface-2"
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate text-sm">{pickName(lang, g)}</div>
+                        <div className="font-mono text-[10px] text-muted-foreground">
+                          {g.brand ?? "—"} · {t(`cat.${g.category}`)}
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right font-mono text-[11px] tabular-nums">
+                        {g.weightG}g
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="flex shrink-0 justify-end border-t border-border px-5 py-3 md:px-6">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded border border-border-strong px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-muted-foreground"
+              >
+                {t("library.closePanel")}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -993,6 +989,7 @@ export function EditItemDialog({
   onSaveToLibrary?: () => void;
 }) {
   const { t, lang } = useI18n();
+  const mdUp = useMediaQuery("(min-width: 768px)");
   const { library, trips } = usePacklog();
   const brandListId = useId();
   const brandOptions = useMemo(() => {
@@ -1158,232 +1155,263 @@ export function EditItemDialog({
   };
 
   return (
-    <div
-      className="scrim fixed inset-0 z-50 grid touch-none place-items-center overscroll-none p-3 sm:p-4"
-      onClick={onClose}
-    >
-      <form
-        onSubmit={save}
-        onClick={(e) => e.stopPropagation()}
-        className="module corner-tick relative max-h-[min(90dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] w-full max-w-md touch-pan-y space-y-3 overflow-y-auto overscroll-y-contain p-5"
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className={cn("scrim", packlogModalScrim)}
+        onClick={onClose}
       >
-        <div className="flex items-center justify-between">
-          <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
-            ✎ {t("item.edit.title")}
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="font-mono text-[10px] text-muted-foreground hover:text-foreground"
-          >
-            ✕
-          </button>
-        </div>
-
-        <input
-          autoFocus
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={t("container.add.name")}
-          className="w-full rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-signal focus:outline-none"
-        />
-
-        <div className="grid grid-cols-2 gap-2">
-          <input
-            list={brandListId}
-            value={brand}
-            onChange={(e) => setBrand(e.target.value)}
-            placeholder={t("item.edit.brand")}
-            className="rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-signal focus:outline-none"
-          />
-          <input
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            placeholder={t("item.edit.model")}
-            className="rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-signal focus:outline-none"
-          />
-        </div>
-        <datalist id={brandListId}>
-          {brandOptions.map((b) => (
-            <option key={b} value={b} />
-          ))}
-        </datalist>
-
-        {(() => {
-          // Re-suggest from combined brand+model+name. If the suggested weight differs
-          // from the current weight, surface a one-click apply chip.
-          const probe = [brand, model, name].filter(Boolean).join(" ").trim();
-          const hint = probe.length > 1 ? suggestFromName(probe) : null;
-          if (!hint || hint.weightG === weight) return null;
-          return (
-            <button
-              type="button"
-              onClick={() => {
-                setWeight(hint.weightG);
-                setCategory(hint.category);
-                const canonical = lang === "zh" ? hint.nameZh : hint.nameEn;
-                if (canonical) setName(canonical);
-              }}
-              className="flex w-full items-center justify-between rounded border border-signal/40 bg-signal-soft/40 px-2 py-1.5 text-left font-mono text-[10px] hover:bg-signal-soft"
-            >
-              <span className="truncate text-foreground">
-                <span className="text-signal">↳</span>{" "}
-                {(lang === "zh" ? hint.nameZh : hint.nameEn) ?? probe}
-                <span className="ml-1.5 text-muted-foreground">
-                  · {hint.weightG}g · {t(`cat.${hint.category}`)}
-                </span>
-              </span>
-              <span className="ml-2 shrink-0 tracking-[0.15em] text-signal">USE ↵</span>
-            </button>
-          );
-        })()}
-
-        <div className="grid grid-cols-12 gap-2">
-          <input
-            type="number"
-            min={1}
-            value={qty}
-            onChange={(e) => setQty(+e.target.value)}
-            placeholder={t("container.add.qty")}
-            className="col-span-4 rounded border border-border-strong bg-background px-2 py-1.5 text-center font-mono text-sm focus:border-signal focus:outline-none"
-          />
-          <input
-            type="number"
-            min={1}
-            value={weight}
-            onChange={(e) => {
-              setWeight(+e.target.value);
-              setEstimateKind(null);
-              setAiBand(null);
-              setCommunityN(null);
-            }}
-            placeholder={t("container.add.weight")}
-            className="col-span-8 rounded border border-border-strong bg-background px-2 py-1.5 text-right font-mono text-sm focus:border-signal focus:outline-none"
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={aiBusy}
-            onClick={() => void applyAiEstimate()}
-            className="rounded border border-border-strong bg-surface px-2 py-1 font-mono text-[10px] tracking-[0.15em] text-muted-foreground hover:border-signal hover:text-signal disabled:opacity-40"
-          >
-            {aiBusy ? "…" : t("weight.action.ai")}
-          </button>
-          <button
-            type="button"
-            disabled={!brand.trim() || !model.trim() || !cmPreview}
-            onClick={applyCommunityMedian}
-            title={cmPreview ? t("weight.community.applyTitle") : t("weight.community.needSamples")}
-            className="rounded border border-border-strong bg-surface px-2 py-1 font-mono text-[10px] tracking-[0.15em] text-muted-foreground hover:border-signal hover:text-signal disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {t("weight.action.community")}
-          </button>
-        </div>
-        <p className="font-mono text-[10px] leading-relaxed text-muted-foreground">
-          {brand.trim() && model.trim()
-            ? cmPreview
-              ? t("weight.community.preview")
-                  .replace("{n}", String(cmPreview.n))
-                  .replace("{g}", String(cmPreview.medianG))
-              : t("weight.community.needSamples")
-            : t("weight.community.needBrandModel")}
-        </p>
-
-        <div className="flex flex-wrap items-center gap-1">
-          {cats.map((c) => (
-            <button
-              type="button"
-              key={c}
-              onClick={() => setCategory(c)}
-              className={`rounded border px-2 py-0.5 font-mono text-[10px] tracking-[0.15em] ${
-                category === c
-                  ? "border-signal bg-signal text-signal-foreground"
-                  : "border-border-strong text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t(`cat.${c}`)}
-            </button>
-          ))}
-        </div>
-
-        <textarea
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder={t("item.edit.note")}
-          rows={2}
-          className="w-full resize-none rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-signal focus:outline-none"
-        />
-
-        <div className="flex flex-col gap-2 rounded border border-border-strong bg-surface/40 px-2 py-2">
-          <label className="flex cursor-pointer items-center gap-2 text-xs">
-            <input
-              type="checkbox"
-              checked={isWorn}
-              onChange={(e) => setIsWorn(e.target.checked)}
-              className="h-4 w-4 accent-[var(--signal)]"
-            />
-            <span>{t("item.edit.worn")}</span>
-          </label>
-          <label className="flex cursor-pointer items-center gap-2 text-xs">
-            <input
-              type="checkbox"
-              checked={isConsumable}
-              onChange={(e) => setIsConsumable(e.target.checked)}
-              className="h-4 w-4 accent-[var(--signal)]"
-            />
-            <span>{t("item.edit.consumable")}</span>
-          </label>
-        </div>
-
-        {onSaveToLibrary && (
-          <button
-            type="button"
-            disabled={savedToLib}
-            onClick={() => {
-              onSaveToLibrary();
-              setSavedToLib(true);
-            }}
-            className={`flex w-full items-center justify-center rounded border px-2 py-1.5 font-mono text-[10px] tracking-[0.15em] transition ${
-              savedToLib
-                ? "border-success/50 bg-success/10 text-success"
-                : "border-signal/50 bg-signal-soft/40 text-signal hover:bg-signal-soft"
-            }`}
-          >
-            {savedToLib ? t("item.edit.inLib") : t("item.edit.toLib")}
-          </button>
-        )}
-
-        <div className="flex justify-between gap-2 pt-1">
-          {onDelete ? (
-            <button
-              type="button"
-              onClick={onDelete}
-              className="rounded border border-destructive/50 px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-destructive hover:bg-destructive/10"
-            >
-              {t("item.edit.delete")}
-            </button>
-          ) : (
-            <span />
+        <motion.form
+          onSubmit={save}
+          onClick={(e) => e.stopPropagation()}
+          initial={mdUp ? { y: 20, opacity: 0 } : { y: "100%", opacity: 1 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={mdUp ? { y: 20, opacity: 0 } : { y: "100%", opacity: 1 }}
+          transition={
+            mdUp
+              ? { duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }
+              : { type: "spring", damping: 30, stiffness: 320 }
+          }
+          className={cn(
+            packlogModalSurface,
+            "flex w-full flex-col overflow-hidden",
+            "max-md:max-h-[90vh]",
+            "md:max-h-[min(90dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] md:max-w-md md:rounded-lg",
           )}
-          <div className="flex gap-2">
+        >
+          <SheetDragHandle />
+          <div className="relative shrink-0 border-b border-border px-5 pb-3 pt-1 md:px-6 md:pt-3">
+            <div className="pr-10 font-mono text-[10px] tracking-[0.22em] text-signal">
+              ✎ {t("item.edit.title")}
+            </div>
             <button
               type="button"
               onClick={onClose}
-              className="rounded border border-border-strong px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-muted-foreground hover:text-foreground"
+              className="absolute right-4 top-2 font-mono text-sm text-muted-foreground hover:text-foreground md:top-3"
+              aria-label="close"
             >
-              {t("container.add.cancel")}
-            </button>
-            <button
-              type="submit"
-              className="rounded border border-signal bg-signal px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-signal-foreground hover:opacity-90"
-            >
-              {t("item.edit.save")}
+              ✕
             </button>
           </div>
-        </div>
-      </form>
-    </div>
+
+          <div className={cn(packlogModalBodyScroll, "space-y-3 px-5 py-3 md:px-6")}>
+            <input
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t("container.add.name")}
+              className="w-full rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-foreground/35 focus:outline-none"
+            />
+
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                list={brandListId}
+                value={brand}
+                onChange={(e) => setBrand(e.target.value)}
+                placeholder={t("item.edit.brand")}
+                className="rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-foreground/35 focus:outline-none"
+              />
+              <input
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                placeholder={t("item.edit.model")}
+                className="rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-foreground/35 focus:outline-none"
+              />
+            </div>
+            <datalist id={brandListId}>
+              {brandOptions.map((b) => (
+                <option key={b} value={b} />
+              ))}
+            </datalist>
+
+            {(() => {
+              // Re-suggest from combined brand+model+name. If the suggested weight differs
+              // from the current weight, surface a one-click apply chip.
+              const probe = [brand, model, name].filter(Boolean).join(" ").trim();
+              const hint = probe.length > 1 ? suggestFromName(probe) : null;
+              if (!hint || hint.weightG === weight) return null;
+              return (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWeight(hint.weightG);
+                    setCategory(hint.category);
+                    const canonical = lang === "zh" ? hint.nameZh : hint.nameEn;
+                    if (canonical) setName(canonical);
+                  }}
+                  className="flex w-full items-center justify-between rounded border border-signal/40 bg-signal-soft/40 px-2 py-1.5 text-left font-mono text-[10px] hover:bg-signal-soft"
+                >
+                  <span className="truncate text-foreground">
+                    <span className="text-signal">↳</span>{" "}
+                    {(lang === "zh" ? hint.nameZh : hint.nameEn) ?? probe}
+                    <span className="ml-1.5 text-muted-foreground">
+                      · {hint.weightG}g · {t(`cat.${hint.category}`)}
+                    </span>
+                  </span>
+                  <span className="ml-2 shrink-0 tracking-[0.15em] text-signal">
+                    {t("container.libraryHint.useEnter")}
+                  </span>
+                </button>
+              );
+            })()}
+
+            <div className="grid grid-cols-12 gap-2">
+              <input
+                type="number"
+                min={1}
+                value={qty}
+                onChange={(e) => setQty(+e.target.value)}
+                placeholder={t("container.add.qty")}
+                className="col-span-4 rounded border border-border-strong bg-background px-2 py-1.5 text-center font-mono text-sm focus:border-foreground/35 focus:outline-none"
+              />
+              <input
+                type="number"
+                min={1}
+                value={weight}
+                onChange={(e) => {
+                  setWeight(+e.target.value);
+                  setEstimateKind(null);
+                  setAiBand(null);
+                  setCommunityN(null);
+                }}
+                placeholder={t("container.add.weight")}
+                className="col-span-8 rounded border border-border-strong bg-background px-2 py-1.5 text-right font-mono text-sm focus:border-foreground/35 focus:outline-none"
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={aiBusy}
+                onClick={() => void applyAiEstimate()}
+                className="rounded border border-border-strong bg-surface px-2 py-1 font-mono text-[10px] tracking-[0.15em] text-muted-foreground hover:border-foreground/25 hover:text-foreground disabled:opacity-40"
+              >
+                {aiBusy ? "…" : t("weight.action.ai")}
+              </button>
+              <button
+                type="button"
+                disabled={!brand.trim() || !model.trim() || !cmPreview}
+                onClick={applyCommunityMedian}
+                title={
+                  cmPreview
+                    ? t("weight.community.applyTitle")
+                    : t("weight.community.needSamples").trim() || undefined
+                }
+                className="rounded border border-border-strong bg-surface px-2 py-1 font-mono text-[10px] tracking-[0.15em] text-muted-foreground hover:border-foreground/25 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {t("weight.action.community")}
+              </button>
+            </div>
+            {(() => {
+              const hint =
+                brand.trim() && model.trim()
+                  ? cmPreview
+                    ? t("weight.community.preview")
+                        .replace("{n}", String(cmPreview.n))
+                        .replace("{g}", String(cmPreview.medianG))
+                    : t("weight.community.needSamples").trim()
+                  : t("weight.community.needBrandModel").trim();
+              return hint ? (
+                <p className="font-mono text-[10px] leading-relaxed text-muted-foreground">
+                  {hint}
+                </p>
+              ) : null;
+            })()}
+
+            <div className="flex flex-wrap items-center gap-1">
+              {cats.map((c) => (
+                <button
+                  type="button"
+                  key={c}
+                  onClick={() => setCategory(c)}
+                  className={`rounded border px-2 py-0.5 font-mono text-[10px] tracking-[0.15em] ${
+                    category === c
+                      ? "border-signal bg-signal text-signal-foreground"
+                      : "border-border-strong text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {t(`cat.${c}`)}
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder={t("item.edit.note")}
+              rows={2}
+              className="w-full resize-none rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-foreground/35 focus:outline-none"
+            />
+
+            <div className="flex flex-col gap-2 rounded border border-border-strong bg-surface/40 px-2 py-2">
+              <label className="flex cursor-pointer items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={isWorn}
+                  onChange={(e) => setIsWorn(e.target.checked)}
+                  className="h-4 w-4 accent-[var(--signal)]"
+                />
+                <span>{t("item.edit.worn")}</span>
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={isConsumable}
+                  onChange={(e) => setIsConsumable(e.target.checked)}
+                  className="h-4 w-4 accent-[var(--signal)]"
+                />
+                <span>{t("item.edit.consumable")}</span>
+              </label>
+            </div>
+
+            {onSaveToLibrary && (
+              <button
+                type="button"
+                disabled={savedToLib}
+                onClick={() => {
+                  onSaveToLibrary();
+                  setSavedToLib(true);
+                }}
+                className={`flex w-full items-center justify-center rounded border px-2 py-1.5 font-mono text-[10px] tracking-[0.15em] transition ${
+                  savedToLib
+                    ? "border-success/50 bg-success/10 text-success"
+                    : "border-border-strong bg-surface text-foreground hover:bg-surface-2"
+                }`}
+              >
+                {savedToLib ? t("item.edit.inLib") : t("item.edit.toLib")}
+              </button>
+            )}
+          </div>
+
+          <div className="flex shrink-0 justify-between gap-2 border-t border-border px-5 py-3 md:px-6">
+            {onDelete ? (
+              <button
+                type="button"
+                onClick={onDelete}
+                className="rounded border border-destructive/50 px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-destructive hover:bg-destructive/10"
+              >
+                {t("item.edit.delete")}
+              </button>
+            ) : (
+              <span />
+            )}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded border-0 bg-transparent px-2 py-1 font-mono text-[10px] tracking-[0.18em] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              >
+                {t("container.add.cancel")}
+              </button>
+              <button type="submit" className={cn(packlogBtnPrimary, packlogBtnSm)}>
+                {t("item.edit.save")}
+              </button>
+            </div>
+          </div>
+        </motion.form>
+      </motion.div>
+    </AnimatePresence>
   );
 }

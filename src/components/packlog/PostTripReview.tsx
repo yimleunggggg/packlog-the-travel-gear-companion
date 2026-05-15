@@ -1,7 +1,16 @@
 import { motion } from "framer-motion";
 import { useRef, useState } from "react";
 import type { Trip } from "@/lib/packlog-data";
-import { useI18n, pickName } from "@/lib/i18n";
+import { pickName, useI18n } from "@/lib/i18n";
+import {
+  packlogBtnPrimary,
+  packlogBtnSecondary,
+  packlogBtnSm,
+  packlogBtnTertiary,
+  packlogSectionTitle,
+} from "@/lib/packlog-button-classes";
+import { tripTitleDisplay } from "@/lib/trip-list-label";
+import { cn } from "@/lib/utils";
 
 export function PostTripReview({ trip, onSeal }: { trip: Trip; onSeal?: () => void }) {
   const { t, lang } = useI18n();
@@ -42,8 +51,13 @@ export function PostTripReview({ trip, onSeal }: { trip: Trip; onSeal?: () => vo
           <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
             {t("review.head")}
           </div>
-          <h3 className="mt-1 max-w-full break-words font-display text-lg leading-snug sm:text-xl md:text-2xl [overflow-wrap:anywhere]">
-            {trip.title}
+          <h3
+            className={cn(
+              packlogSectionTitle,
+              "mt-1 max-w-full break-words [overflow-wrap:anywhere]",
+            )}
+          >
+            {tripTitleDisplay(trip, lang)}
           </h3>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             {t("review.editHint")}
@@ -69,7 +83,7 @@ export function PostTripReview({ trip, onSeal }: { trip: Trip; onSeal?: () => vo
               logRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
             );
           }}
-          className="border border-border-strong bg-surface px-3 py-1.5 font-mono text-[10px] tracking-[0.18em] hover:border-signal hover:bg-signal-soft"
+          className={cn(packlogBtnSecondary, packlogBtnSm)}
         >
           {t("review.openLog")}
         </button>
@@ -187,14 +201,11 @@ export function PostTripReview({ trip, onSeal }: { trip: Trip; onSeal?: () => vo
           <button
             onClick={() => setSavedTpl(true)}
             disabled={savedTpl}
-            className="border border-border-strong bg-surface px-3 py-2 font-mono text-[10px] tracking-[0.2em] text-foreground hover:border-signal disabled:opacity-50"
+            className={cn(packlogBtnSecondary, packlogBtnSm, "py-2 disabled:opacity-50")}
           >
             {t("review.saveTemplate")}
           </button>
-          <button
-            onClick={onSeal}
-            className="border border-signal bg-signal px-4 py-2 font-mono text-[10px] tracking-[0.2em] text-signal-foreground hover:opacity-90"
-          >
+          <button onClick={onSeal} className={cn(packlogBtnPrimary, packlogBtnSm, "px-4 py-2")}>
             {t("review.seal")}
           </button>
         </div>

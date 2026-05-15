@@ -9,6 +9,8 @@ import type { Item } from "./packlog-data";
 export type ScenarioKey =
   | "winter-city"
   | "summer-beach"
+  | "camping"
+  | "hiking"
   | "trail-run"
   | "alpine"
   | "desert"
@@ -74,6 +76,32 @@ export const scenarioTemplates: Record<ScenarioKey, SeedItem[]> = {
       pref: "checked",
     },
     { en: "Passport", zh: "护照", weightG: 60, category: "doc", pref: "personal" },
+  ],
+  camping: [
+    { en: "2P Tent", zh: "双人帐篷", weightG: 2100, category: "misc", pref: "checked" },
+    { en: "Sleeping Bag -5°C", zh: "睡袋 -5°C", weightG: 1100, category: "misc", pref: "checked" },
+    { en: "Sleeping Pad R4", zh: "充气睡垫 R4", weightG: 520, category: "misc", pref: "checked" },
+    { en: "Inflatable Pillow", zh: "充气枕头", weightG: 85, category: "misc", pref: "checked" },
+    { en: "Groundsheet", zh: "地布", weightG: 120, category: "misc", pref: "checked" },
+    { en: "Canister Stove", zh: "炉头 + 挡风", weightG: 110, category: "misc", pref: "checked" },
+    { en: "Gas 230g", zh: "扁气罐 230g", weightG: 370, category: "misc", qty: 2, pref: "checked" },
+    { en: "Cook Pot 1L", zh: "钛锅 1L", weightG: 155, category: "misc", pref: "checked" },
+    { en: "Headlamp", zh: "头灯", weightG: 78, category: "tech", pref: "personal" },
+  ],
+  hiking: [
+    { en: "Daypack 30L", zh: "徒步背包 30L", weightG: 920, category: "misc", pref: "checked" },
+    { en: "Trekking Poles", zh: "登山杖", weightG: 480, category: "misc", pref: "checked" },
+    { en: "Rain Jacket", zh: "雨衣", weightG: 340, category: "apparel", pref: "checked" },
+    { en: "First Aid Kit", zh: "急救包", weightG: 240, category: "health", pref: "personal" },
+    {
+      en: "Soft Flask 500ml",
+      zh: "软水壶 500ml",
+      weightG: 28,
+      category: "misc",
+      qty: 2,
+      pref: "personal",
+    },
+    { en: "Map / Compass", zh: "地图 / 指南针", weightG: 95, category: "tech", pref: "personal" },
   ],
   "trail-run": [
     { en: "Trail Vest 12L", zh: "越野跑包 12L", weightG: 320, category: "misc", pref: "personal" },

@@ -12,15 +12,24 @@ import {
   summarizeLibraryInsights,
   verdictCountsForGear,
 } from "@/lib/library-category-stats";
-
-const catColor: Record<string, string> = {
-  tech: "var(--info)",
-  apparel: "var(--signal)",
-  doc: "var(--warn)",
-  health: "var(--success)",
-  optic: "var(--signal)",
-  misc: "var(--muted-foreground)",
-};
+import { formatLibraryGearCardStats } from "@/lib/library-card-stats";
+import {
+  packlogBtnPrimary,
+  packlogBtnSecondary,
+  packlogBtnSm,
+  packlogBtnTertiary,
+  packlogSectionTitle,
+} from "@/lib/packlog-button-classes";
+import { tripShortSelectLabel } from "@/lib/trip-list-label";
+import { cn } from "@/lib/utils";
+import { SheetDragHandle } from "@/components/ui/sheet-drag-handle";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import {
+  packlogModalBodyScroll,
+  packlogModalScrim,
+  packlogModalSurface,
+} from "@/lib/packlog-mobile-modal-shell";
+import { PACKLOG_CATEGORY_HEX, packlogCategoryHex } from "@/lib/packlog-category-colors";
 
 const verdictColor: Record<string, string> = {
   keep: "var(--success)",
@@ -40,6 +49,7 @@ export function GearLibraryPanel({
   onAddToTrip: (tripId: string, gear: GearSpec) => void;
 }) {
   const { t, lang } = useI18n();
+  const mdUp = useMediaQuery("(min-width: 768px)");
   const [open, setOpen] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [catFilter, setCatFilter] = useState<CatFilter>("all");
@@ -72,21 +82,12 @@ export function GearLibraryPanel({
 
   return (
     <section className="module corner-tick corner-tick-br relative p-5">
-      <div className="flex items-start justify-between border-b border-border pb-3">
-        <div>
-          <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
-            {t("library.head")}
-          </div>
-          <h3 className="mt-1 font-display text-xl">{t("library.title")}</h3>
-          <p className="mt-1 font-mono text-[10px] text-muted-foreground">
-            {t("library.subtitle")}
-          </p>
-        </div>
+      <div className="flex items-center justify-end border-b border-border pb-3">
         <span className="tag-chip">N={library.length}</span>
       </div>
 
-      <div className="mt-4 rounded-md border border-border bg-surface-2/70 p-4">
-        <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
+      <div className="rounded-md border border-border bg-surface-2/70 p-4 mt-0">
+        <div className="font-mono text-[10px] tracking-[0.22em] text-foreground">
           {t("library.insights.head")}
         </div>
         {insights.totalReviews === 0 ? (
@@ -164,14 +165,17 @@ export function GearLibraryPanel({
               }}
               className={`rounded-md border p-3 text-left transition ${
                 active
-                  ? "border-signal bg-signal-soft/35 shadow-sm"
-                  : "border-border bg-surface/50 hover:border-border-strong"
+                  ? "border-signal bg-signal text-signal-foreground shadow-none"
+                  : "border-border bg-surface/50 hover:border-foreground/20"
               }`}
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 shrink-0" style={{ background: catColor[cat] }} />
-                  <span className="font-mono text-[10px] tracking-[0.18em] text-signal">
+                  <span
+                    className="h-2 w-2 shrink-0"
+                    style={{ background: packlogCategoryHex(cat) }}
+                  />
+                  <span className="font-mono text-[10px] tracking-[0.18em] text-foreground">
                     {t(`cat.${cat}`)}
                   </span>
                 </div>
@@ -220,7 +224,7 @@ export function GearLibraryPanel({
       </div>
 
       <div ref={detailRef} className="mt-6 border-t border-border pt-5">
-        <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
+        <div className="font-mono text-[10px] tracking-[0.22em] text-foreground">
           {t("library.detail.section")}
         </div>
 
@@ -245,7 +249,7 @@ export function GearLibraryPanel({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={t("library.search")}
-          className="mt-3 w-full rounded-md border border-border-strong bg-background px-2 py-1.5 text-sm placeholder:text-muted-foreground focus:border-signal focus:outline-none"
+          className="mt-3 w-full rounded-md border border-border-strong bg-background px-2 py-1.5 text-sm placeholder:text-muted-foreground focus:border-foreground/30 focus:outline-none"
         />
 
         <ul className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
@@ -261,8 +265,8 @@ export function GearLibraryPanel({
               <motion.li
                 layout
                 key={g.id}
-                className={`relative border bg-surface p-3 transition ${
-                  isOpen ? "border-signal shadow-lg" : "border-border hover:border-border-strong"
+                className={`relative module p-3 transition ${
+                  isOpen ? "ring-2 ring-signal/40" : ""
                 }`}
               >
                 <button onClick={() => setOpen(isOpen ? null : g.id)} className="w-full text-left">
@@ -271,10 +275,10 @@ export function GearLibraryPanel({
                       <div className="flex items-center gap-1.5">
                         <span
                           className="h-1.5 w-1.5"
-                          style={{ background: catColor[g.category] }}
+                          style={{ background: PACKLOG_CATEGORY_HEX[g.category] }}
                         />
                         <span className="font-mono text-[9px] tracking-[0.18em] text-muted-foreground">
-                          {g.category.toUpperCase()}
+                          {t(`cat.${g.category}`)}
                         </span>
                       </div>
                       <div className="mt-1 truncate text-sm font-medium">{pickName(lang, g)}</div>
@@ -285,19 +289,17 @@ export function GearLibraryPanel({
                     <div className="text-right">
                       <div className="font-mono text-xs tabular-nums">{g.weightG}g</div>
                       {avg !== null && (
-                        <div className="font-mono text-[10px] text-signal">★ {avg.toFixed(1)}</div>
+                        <div className="font-mono text-[10px] text-[#6B5234]">
+                          ★ {avg.toFixed(1)}
+                        </div>
                       )}
                     </div>
                   </div>
                   <div className="mt-2 font-mono text-[9px] leading-snug text-muted-foreground">
                     {g.history.length > 0 ? (
                       <span>
-                        {t("library.card.line")
-                          .replace("{reviews}", String(g.history.length))
-                          .replace("{trips}", String(tripTouchCount))
-                          .replace("{k}", String(vc.keep))
-                          .replace("{u}", String(vc.upgrade))
-                          .replace("{d}", String(vc.drop))}
+                        {t("library.card.reviewsPrefix").replace("{n}", String(g.history.length))}{" "}
+                        {formatLibraryGearCardStats(lang, tripTouchCount, vc)}
                       </span>
                     ) : (
                       <span>— {t("library.history.empty")}</span>
@@ -322,7 +324,7 @@ export function GearLibraryPanel({
                         </div>
 
                         <div className="mt-3">
-                          <div className="font-mono text-[9px] tracking-[0.18em] text-signal">
+                          <div className="font-mono text-[9px] tracking-[0.18em] text-foreground">
                             {t("library.history")}
                           </div>
                           {g.history.length === 0 ? (
@@ -342,7 +344,7 @@ export function GearLibraryPanel({
                                       {h.date} · {h.tripTitle}
                                     </span>
                                     <span style={{ color: verdictColor[h.verdict] }}>
-                                      {h.verdict.toUpperCase()} · ★{h.utility}
+                                      {t(`review.verdict.${h.verdict}`)} · ★{h.utility}
                                     </span>
                                   </div>
                                   {h.note && (
@@ -359,7 +361,10 @@ export function GearLibraryPanel({
                         <button
                           type="button"
                           onClick={() => openPicker(g)}
-                          className="mt-3 w-full border border-signal bg-signal py-1.5 font-mono text-[10px] tracking-[0.18em] text-signal-foreground hover:opacity-90"
+                          className={cn(
+                            packlogBtnSecondary,
+                            "mt-3 w-full py-1.5 text-[10px] tracking-[0.18em]",
+                          )}
                         >
                           {t("library.add")}
                         </button>
@@ -379,52 +384,76 @@ export function GearLibraryPanel({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="scrim fixed inset-0 z-50 grid touch-none place-items-center overscroll-none p-3 sm:p-4"
+            className={cn("scrim", packlogModalScrim)}
             onClick={() => setPickGear(null)}
           >
             <motion.div
-              initial={{ y: 16, opacity: 0 }}
+              initial={mdUp ? { y: 20, opacity: 0 } : { y: "100%", opacity: 1 }}
               animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 16, opacity: 0 }}
+              exit={mdUp ? { y: 20, opacity: 0 } : { y: "100%", opacity: 1 }}
+              transition={
+                mdUp
+                  ? { duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }
+                  : { type: "spring", damping: 30, stiffness: 320 }
+              }
               onClick={(e) => e.stopPropagation()}
-              className="module corner-tick relative w-full max-w-md p-5"
-            >
-              <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
-                {t("library.pickTrip.title")}
-              </div>
-              <p className="mt-1 font-mono text-[10px] text-muted-foreground">
-                {pickName(lang, pickGear)} · {pickGear.weightG}g
-              </p>
-              <p className="mt-2 text-xs text-muted-foreground">{t("library.pickTrip.subtitle")}</p>
-
-              {packTrips.length === 0 ? (
-                <p className="mt-4 font-mono text-[11px] text-muted-foreground">
-                  {t("library.pickTrip.empty")}
-                </p>
-              ) : (
-                <ul className="mt-4 max-h-48 space-y-1 overflow-y-auto rounded border border-border">
-                  {packTrips.map((tr) => (
-                    <li key={tr.id}>
-                      <button
-                        type="button"
-                        onClick={() => setPickTripId(tr.id)}
-                        className={`flex w-full flex-col items-start px-3 py-2 text-left text-xs transition ${
-                          pickTripId === tr.id ? "bg-signal-soft/70" : "hover:bg-surface-2"
-                        }`}
-                      >
-                        <span className="font-medium">{tr.title}</span>
-                        <span className="font-mono text-[10px] text-muted-foreground">{tr.id}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+              className={cn(
+                packlogModalSurface,
+                "flex w-full flex-col overflow-hidden",
+                "max-md:max-h-[90vh]",
+                "md:max-w-md md:rounded-lg",
               )}
-
-              <div className="mt-4 flex justify-end gap-2">
+            >
+              <SheetDragHandle />
+              <div className="relative shrink-0 border-b border-border px-5 pb-3 pt-1 md:px-6 md:pt-3">
+                <div className="pr-10 font-mono text-[10px] tracking-[0.22em] text-foreground">
+                  {t("library.pickTrip.title")}
+                </div>
                 <button
                   type="button"
                   onClick={() => setPickGear(null)}
-                  className="rounded border border-border-strong px-3 py-1.5 font-mono text-[10px] tracking-[0.18em] text-muted-foreground hover:text-foreground"
+                  className="absolute right-4 top-2 font-mono text-sm text-muted-foreground hover:text-foreground md:top-3"
+                  aria-label="close"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className={cn(packlogModalBodyScroll, "px-5 py-3 md:px-6")}>
+                <p className="font-mono text-[10px] text-muted-foreground">
+                  {pickName(lang, pickGear)} · {pickGear.weightG}g
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {t("library.pickTrip.subtitle")}
+                </p>
+
+                {packTrips.length === 0 ? (
+                  <p className="mt-4 font-mono text-[11px] text-muted-foreground">
+                    {t("library.pickTrip.empty")}
+                  </p>
+                ) : (
+                  <ul className="mt-4 max-h-48 space-y-1 overflow-y-auto rounded border border-border">
+                    {packTrips.map((tr) => (
+                      <li key={tr.id}>
+                        <button
+                          type="button"
+                          onClick={() => setPickTripId(tr.id)}
+                          className={`flex w-full flex-col items-start px-3 py-2 text-left text-xs transition ${
+                            pickTripId === tr.id ? "bg-signal-soft/70" : "hover:bg-surface-2"
+                          }`}
+                        >
+                          <span className="font-medium">{tripShortSelectLabel(tr, lang)}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="flex shrink-0 justify-end gap-2 border-t border-border px-5 py-3 md:px-6">
+                <button
+                  type="button"
+                  onClick={() => setPickGear(null)}
+                  className="rounded border-0 bg-transparent px-2 py-1.5 font-mono text-[10px] tracking-[0.18em] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
                 >
                   {t("trips.create.cancel")}
                 </button>
@@ -445,7 +474,11 @@ export function GearLibraryPanel({
                     <button
                       type="button"
                       disabled={!pickTripId || packTrips.length === 0}
-                      className="rounded border border-signal bg-signal px-3 py-1.5 font-mono text-[10px] tracking-[0.18em] text-signal-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                      className={cn(
+                        packlogBtnPrimary,
+                        packlogBtnSm,
+                        "disabled:cursor-not-allowed disabled:opacity-40",
+                      )}
                     >
                       {t("library.pickTrip.confirm")}
                     </button>

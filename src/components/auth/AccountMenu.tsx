@@ -24,7 +24,7 @@ export function AccountMenu() {
       <button
         type="button"
         onClick={openLoginUi}
-        className="rounded border border-border-strong bg-surface px-2.5 py-1.5 font-mono text-[10px] tracking-[0.15em] text-muted-foreground hover:border-signal hover:text-foreground"
+        className="rounded border border-border-strong bg-surface px-2.5 py-1.5 font-mono text-[10px] tracking-[0.15em] text-muted-foreground hover:border-foreground/25 hover:text-foreground"
       >
         {t("nav.signIn")}
       </button>
@@ -39,7 +39,7 @@ export function AccountMenu() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex max-w-[min(52vw,11rem)] items-center gap-1.5 rounded border border-border-strong bg-surface px-2 py-1.5 font-mono text-[10px] tracking-[0.12em] text-foreground hover:border-signal"
+        className="flex max-w-[min(52vw,11rem)] items-center gap-1.5 rounded border border-border-strong bg-surface px-2 py-1.5 font-mono text-[10px] tracking-[0.12em] text-foreground hover:border-foreground/25"
         aria-expanded={open}
         aria-haspopup="menu"
       >

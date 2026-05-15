@@ -26,6 +26,7 @@ import {
   cloneCommunityTemplateToTrip,
   collectReviewEntries,
   cycleTripItemOwnership,
+  setTripItemOwnership,
   mergeLibrarySpec,
   moveTripItem,
   removeTripContainer,
@@ -37,6 +38,7 @@ import {
   updateTripItem,
 } from "./packlog-commands";
 import { preferredContainerForCategory } from "./preferred-container-for-category";
+import { ensureUnassignedContainer, unassignedContainerId } from "./unassigned-container";
 import { useAuth } from "./auth-context";
 import { createPacklogRepository } from "./packlog-repository";
 
@@ -53,6 +55,12 @@ type Ctx = {
   setVerdict: (tripId: string, containerId: string, itemId: string, v: Item["verdict"]) => void;
   setUtility: (tripId: string, containerId: string, itemId: string, u: number) => void;
   cycleOwnership: (tripId: string, containerId: string, itemId: string) => void;
+  setOwnership: (
+    tripId: string,
+    containerId: string,
+    itemId: string,
+    ownership: Item["ownership"],
+  ) => void;
   addItem: (tripId: string, containerId: string, item: Omit<Item, "id">) => void;
   updateItem: (tripId: string, containerId: string, itemId: string, patch: Partial<Item>) => void;
   removeItem: (tripId: string, containerId: string, itemId: string) => void;
@@ -70,6 +78,7 @@ type Ctx = {
     tpl: CommunityTemplate,
     selectedIdx: number[],
     targetContainerId: string,
+    ownership?: Item["ownership"],
   ) => void;
   addContainer: (tripId: string, draft: Omit<Container, "id" | "code" | "items">) => void;
   removeContainer: (tripId: string, containerId: string) => void;
@@ -157,8 +166,15 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
   const cycleOwnership: Ctx["cycleOwnership"] = (tripId, containerId, itemId) =>
     updateTrip(tripId, (trip) => cycleTripItemOwnership(trip, containerId, itemId));
 
+  const setOwnership: Ctx["setOwnership"] = (tripId, containerId, itemId, ownership) =>
+    updateTrip(tripId, (trip) => setTripItemOwnership(trip, containerId, itemId, ownership));
+
   const addItem: Ctx["addItem"] = (tripId, containerId, item) =>
-    updateTrip(tripId, (trip) => addTripItem(trip, containerId, item));
+    updateTrip(tripId, (trip) => {
+      const t =
+        containerId === unassignedContainerId(trip.id) ? ensureUnassignedContainer(trip) : trip;
+      return addTripItem(t, containerId, item);
+    });
 
   const updateItem: Ctx["updateItem"] = (tripId, containerId, itemId, patch) =>
     updateTrip(tripId, (trip) => updateTripItem(trip, containerId, itemId, patch));
@@ -170,21 +186,20 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
     updateTrip(tripId, (trip) => moveTripItem(trip, fromId, itemId, toId));
 
   const quickAdd: Ctx["quickAdd"] = (tripId, name, weightG, category) => {
-    const t = trips.find((x) => x.id === tripId);
-    if (!t) return;
-    const target = t.containers.find((c) => c.type === "personal") ?? t.containers[0];
-    if (!target) return;
-    addItem(tripId, target.id, {
-      gearId: null,
-      name,
-      qty: 1,
-      weightG,
-      weightSource: "user",
-      category: category as Item["category"],
-      status: "todo",
-      verdict: null,
-      utility: null,
-      ownership: "owned",
+    updateTrip(tripId, (trip) => {
+      const withUn = ensureUnassignedContainer(trip);
+      return addTripItem(withUn, unassignedContainerId(trip.id), {
+        gearId: null,
+        name,
+        qty: 1,
+        weightG,
+        weightSource: "user",
+        category: category as Item["category"],
+        status: "todo",
+        verdict: null,
+        utility: null,
+        ownership: "owned",
+      });
     });
   };
 
@@ -215,9 +230,15 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
     return spec;
   };
 
-  const cloneCommunity: Ctx["cloneCommunity"] = (tripId, tpl, selectedIdx, targetContainerId) =>
+  const cloneCommunity: Ctx["cloneCommunity"] = (
+    tripId,
+    tpl,
+    selectedIdx,
+    targetContainerId,
+    ownership = "owned",
+  ) =>
     updateTrip(tripId, (trip) =>
-      cloneCommunityTemplateToTrip(trip, tpl, selectedIdx, targetContainerId),
+      cloneCommunityTemplateToTrip(trip, tpl, selectedIdx, targetContainerId, ownership),
     );
 
   const sealReview: Ctx["sealReview"] = (tripId) => {
@@ -245,6 +266,7 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
       setVerdict,
       setUtility,
       cycleOwnership,
+      setOwnership,
       addItem,
       updateItem,
       removeItem,

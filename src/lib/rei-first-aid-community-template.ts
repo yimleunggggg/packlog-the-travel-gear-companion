@@ -11,16 +11,20 @@ import type { CommunityTemplate } from "./packlog-data";
 export const reiFirstAidCommunityTemplate: CommunityTemplate = {
   id: "rei-first-aid-checklist",
   author: "REI Expert Advice",
+  authorZh: "REI 专家推荐",
   rating: 4.92,
   cloned: 3120,
   title: "First Aid Kit Checklist",
   titleZh: "急救包清单（REI）",
   scenario: "alpine",
   climate: "Outdoor · any season",
+  climateZh: "户外 · 四季适用",
   totalWeight: "~1.7kg if every line checked",
+  totalWeightZh: "全部勾选约 1.7kg",
   tags: ["first-aid", "rei", "wilderness", "health", "emergency"],
   sourceUrl: "https://www.rei.com/learn/expert-advice/first-aid-checklist.html",
   sourceTitle: "First Aid Kit Checklist · REI",
+  sourceTitleZh: "REI 急救包清单",
   intro:
     "From REI’s first-aid kit checklist: carry a store-bought kit or build your own using these rows. Using the kit correctly matters as much as packing it—REI suggests taking a training course. This is a starting point; add prescription meds for your group and extra supplies for where you’re going and how long you’ll be out. Some “emergency essentials” may live outside the kit in your pack.",
   introZh:

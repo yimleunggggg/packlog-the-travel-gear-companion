@@ -1,5 +1,4 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
-import { MobileTabBar } from "@/components/packlog/MobileTabBar";
 import { AuthProvider } from "@/lib/auth-context";
 import { I18nProvider } from "@/lib/i18n";
 import { PacklogProvider } from "@/lib/packlog-store";
@@ -18,6 +17,7 @@ function NotFoundComponent() {
         <div className="mt-6">
           <Link
             to="/"
+            search={{ tag: undefined }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Go home
@@ -83,7 +83,6 @@ function RootComponent() {
       <AuthProvider>
         <PacklogProvider>
           <Outlet />
-          <MobileTabBar />
         </PacklogProvider>
       </AuthProvider>
     </I18nProvider>

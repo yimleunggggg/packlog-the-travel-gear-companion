@@ -1,5 +1,6 @@
 import type { Item, Trip } from "./packlog-data";
 import { effectiveSystemGroup, isBig3Group } from "./packlog-system-groups";
+import { tripScenariosIncludeOutdoorPacking } from "./outdoor-packing-scenarios";
 
 export function itemLineGrams(item: Item): number {
   return item.weightG * item.qty;
@@ -31,16 +32,18 @@ export function tripBaseGrams(trip: Trip): number {
   return Math.max(0, tripTotalGrams(trip) - tripWornGrams(trip) - tripConsumableGrams(trip));
 }
 
-/** Big3（庇护 + 睡眠系统 + 主包）在「启发式/显式 systemGroup」下的合计克数。 */
+/** Big3 仅在有户外类场景的行程中统计（与系统分组视图一致）。 */
 export function tripBig3Grams(trip: Trip): number {
+  if (!tripScenariosIncludeOutdoorPacking(trip)) return 0;
   return tripAllItems(trip).reduce((sum, it) => {
     const g = effectiveSystemGroup(it);
     return sum + (isBig3Group(g) ? itemLineGrams(it) : 0);
   }, 0);
 }
 
-/** Big3 占基础重量比例 0–100；基础重量为 0 时返回 null。 */
+/** Big3 占基础重量比例 0–100；非户外行程或基础重量为 0 时返回 null。 */
 export function tripBig3PctOfBase(trip: Trip): number | null {
+  if (!tripScenariosIncludeOutdoorPacking(trip)) return null;
   const base = tripBaseGrams(trip);
   if (base <= 0) return null;
   return Math.min(100, Math.round((tripBig3Grams(trip) / base) * 100));

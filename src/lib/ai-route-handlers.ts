@@ -6,6 +6,7 @@
  * Local/dev without billing: set `PACKLOG_AI_ALLOW_PARSE_TRIP=1` to allow **parse-trip only**
  * without Pro (still requires API key).
  * `PACKLOG_AI_ALLOW_VISION_IMPORT=1` — same for **import-screenshot** (Pro 或该开关 + API key)。
+ * `PACKLOG_AI_ALLOW_IMPORT_URL=1` — **import-url**（从链接抓取正文 + 提取清单）。
  */
 
 import {
@@ -14,11 +15,14 @@ import {
   parseJsonArrayFromModelText,
   parseJsonObjectFromModelText,
 } from "@/lib/anthropic-messages";
+import { htmlToPlainText } from "@/lib/html-to-text";
+import type { Item } from "@/lib/packlog-data";
 
 export type AiAction =
   | "parse-trip"
   | "generate-checklist"
   | "import-screenshot"
+  | "import-url"
   | "suggest-gear"
   | "post-trip-review"
   | "estimate-weight";
@@ -27,6 +31,7 @@ const ALLOWED: Set<string> = new Set([
   "parse-trip",
   "generate-checklist",
   "import-screenshot",
+  "import-url",
   "suggest-gear",
   "post-trip-review",
   "estimate-weight",
@@ -78,10 +83,19 @@ function visionImportBypassPro(): boolean {
   );
 }
 
+function importUrlBypassPro(): boolean {
+  return (
+    typeof process !== "undefined" &&
+    (process.env.PACKLOG_AI_ALLOW_IMPORT_URL === "1" ||
+      process.env.PACKLOG_AI_ALLOW_IMPORT_URL === "true")
+  );
+}
+
 function tierAllowsAction(action: string, body: unknown): boolean {
   if (isPro(body)) return true;
   if (action === "parse-trip" && parseTripBypassPro()) return true;
   if (action === "import-screenshot" && visionImportBypassPro()) return true;
+  if (action === "import-url" && importUrlBypassPro()) return true;
   return false;
 }
 
@@ -108,7 +122,7 @@ async function handleParseTrip(body: unknown): Promise<Response> {
     return json({
       ok: false,
       code: "AI_NOT_CONFIGURED",
-      message: "服务器未配置 ANTHROPIC_API_KEY。",
+      message: "AI is not configured on this server.",
     });
   }
 
@@ -150,6 +164,179 @@ const IMPORT_SCREENSHOT_SYSTEM = `你是装备清单 OCR。用户上传一张装
 }
 只返回 JSON 数组，不要其他文字。若不是装备清单则返回 []。`;
 
+function assertFetchableHttpUrl(raw: string): URL {
+  let u: URL;
+  try {
+    u = new URL(raw.trim());
+  } catch {
+    throw new Error("INVALID_URL");
+  }
+  if (u.protocol !== "http:" && u.protocol !== "https:") throw new Error("INVALID_URL");
+  const host = u.hostname.toLowerCase();
+  if (
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "0.0.0.0" ||
+    host === "[::1]" ||
+    host.endsWith(".local")
+  ) {
+    throw new Error("BLOCKED_HOST");
+  }
+  return u;
+}
+
+function normalizeImportItemCategory(raw: unknown): Item["category"] {
+  const s = String(raw ?? "misc").toLowerCase();
+  if (s.includes("foot") || s.includes("鞋")) return "apparel";
+  if (s === "tech" || s.includes("digital") || s.includes("电子")) return "tech";
+  if (s === "optic" || s.includes("photo") || s.includes("相机") || s.includes("镜头"))
+    return "optic";
+  if (
+    s === "health" ||
+    s.includes("toilet") ||
+    s.includes("洗") ||
+    s.includes("护") ||
+    s.includes("药")
+  )
+    return "health";
+  if (s === "doc" || s.includes("visa") || s.includes("证") || s.includes("护照")) return "doc";
+  if (s === "apparel" || s.includes("cloth") || s.includes("衣")) return "apparel";
+  return "misc";
+}
+
+const IMPORT_URL_SYSTEM = `你是装备清单提取器。用户给了一段从网页抓取的纯文本（可能含噪声）。
+请识别其中的装备/物品清单，只输出 **JSON 数组**（不要 Markdown、不要解释）。
+
+每项对象字段：
+- "name": string 主名称（中文页面优先中文；英文页面可用英文）
+- "name_zh": string|null 若 name 为英文且能推断中文则填写，否则 null
+- "brand": string|null
+- "weight_g": number|null 单件克重；无法估计填 null
+- "quantity": number 默认 1
+- "category": 必须是 "tech"|"apparel"|"doc"|"health"|"optic"|"misc" 之一（鞋类归 apparel）
+- "note": string|null 推荐理由、使用场景或原文要点摘要；没有则 null
+
+若不是装备/购物清单，返回 []。`;
+
+async function handleImportUrl(body: unknown): Promise<Response> {
+  const o = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  const urlRaw = typeof o.url === "string" ? o.url.trim() : "";
+  if (!urlRaw) {
+    return json({ ok: false, code: "MISSING_URL", message: "缺少 url 字段。" }, 400);
+  }
+
+  let u: URL;
+  try {
+    u = assertFetchableHttpUrl(urlRaw);
+  } catch {
+    return json(
+      { ok: false, code: "INVALID_URL", message: "仅支持 http(s) 公网链接，且禁止 localhost。" },
+      400,
+    );
+  }
+
+  const key = anthropicKey();
+  if (!key) {
+    return json({
+      ok: false,
+      code: "AI_NOT_CONFIGURED",
+      message: "AI is not configured on this server.",
+    });
+  }
+
+  let html: string;
+  const ac = new AbortController();
+  const tid = setTimeout(() => ac.abort(), 25_000);
+  try {
+    const res = await fetch(u.href, {
+      redirect: "follow",
+      headers: {
+        "user-agent": "PACKLOG/1.0 (gear-list import; +https://packlog.app)",
+        accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+      },
+      signal: ac.signal,
+    });
+    if (!res.ok) {
+      return json(
+        { ok: false, code: "FETCH_FAILED", message: `抓取失败 HTTP ${res.status}` },
+        res.status >= 500 ? 502 : 400,
+      );
+    }
+    html = await res.text();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return json({ ok: false, code: "FETCH_FAILED", message: msg }, 502);
+  } finally {
+    clearTimeout(tid);
+  }
+
+  if (html.length > 2_000_000) {
+    return json({ ok: false, code: "PAGE_TOO_LARGE", message: "页面过大。" }, 413);
+  }
+
+  const plain = htmlToPlainText(html, 200_000);
+  const clipped = plain.slice(0, 100_000);
+  if (!clipped.trim()) {
+    return json({ ok: false, code: "EMPTY_PAGE", message: "未能从页面提取到正文。" }, 400);
+  }
+
+  const model = defaultModel();
+  try {
+    const raw = await anthropicMessagesText({
+      apiKey: key,
+      model,
+      system: IMPORT_URL_SYSTEM,
+      user: `页面 URL：${u.href}\n\n正文如下：\n\n${clipped}`,
+      maxTokens: 8192,
+      temperature: 0.2,
+    });
+    const arr = parseJsonArrayFromModelText(raw);
+    type OutRow = {
+      name: string;
+      name_zh: string | null;
+      brand: string | null;
+      weight_g: number | null;
+      quantity: number;
+      category: Item["category"];
+      note: string | null;
+    };
+    const items = arr
+      .map((row): OutRow | null => {
+        if (!row || typeof row !== "object") return null;
+        const r = row as Record<string, unknown>;
+        const name = String(r.name ?? "").trim();
+        if (!name) return null;
+        const nameZh = typeof r.name_zh === "string" ? r.name_zh.trim() : "";
+        const brand = typeof r.brand === "string" ? r.brand.trim() : "";
+        const qty =
+          typeof r.quantity === "number" && Number.isFinite(r.quantity)
+            ? Math.max(1, Math.round(r.quantity))
+            : 1;
+        let weightG =
+          typeof r.weight_g === "number" && Number.isFinite(r.weight_g)
+            ? Math.round(r.weight_g)
+            : null;
+        if (weightG !== null && (weightG < 0 || weightG > 500_000)) weightG = null;
+        const category = normalizeImportItemCategory(r.category);
+        const note = typeof r.note === "string" ? r.note.trim() : "";
+        return {
+          name,
+          name_zh: nameZh || null,
+          brand: brand || null,
+          weight_g: weightG,
+          quantity: qty,
+          category,
+          note: note || null,
+        };
+      })
+      .filter((x): x is OutRow => x !== null);
+    return json({ ok: true, items, model });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return json({ ok: false, code: "PARSE_FAILED", message: msg }, 502);
+  }
+}
+
 async function handleImportScreenshot(body: unknown): Promise<Response> {
   const o = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
   const b64 = typeof o.imageBase64 === "string" ? o.imageBase64.trim() : "";
@@ -171,7 +358,7 @@ async function handleImportScreenshot(body: unknown): Promise<Response> {
     return json({
       ok: false,
       code: "AI_NOT_CONFIGURED",
-      message: "服务器未配置 ANTHROPIC_API_KEY。",
+      message: "AI is not configured on this server.",
     });
   }
 
@@ -211,8 +398,7 @@ export async function handleAiAction(action: string, body: unknown): Promise<Res
     return json({
       ok: false,
       code: "PRO_REQUIRED",
-      message:
-        "这是 Pro 功能。升级后可用 AI 解析行程、识别截图等。本地可设 PACKLOG_AI_ALLOW_PARSE_TRIP=1（行程解析）或 PACKLOG_AI_ALLOW_VISION_IMPORT=1（截图导入）。",
+      message: "Pro subscription required.",
     });
   }
 
@@ -221,7 +407,7 @@ export async function handleAiAction(action: string, body: unknown): Promise<Res
     return json({
       ok: false,
       code: "AI_NOT_CONFIGURED",
-      message: "AI 路由已接通，但服务器未配置 ANTHROPIC_API_KEY。请在部署环境设置密钥后重试。",
+      message: "AI is not configured on this server.",
       action,
     });
   }
@@ -232,6 +418,10 @@ export async function handleAiAction(action: string, body: unknown): Promise<Res
 
   if (action === "import-screenshot") {
     return handleImportScreenshot(body);
+  }
+
+  if (action === "import-url") {
+    return handleImportUrl(body);
   }
 
   void key;

@@ -21,14 +21,14 @@
 
 ### 字段映射（SQL → 本地类型）
 
-| PostgreSQL / 规格 | 本地 `Item` / `GearSpec` |
-|-------------------|-------------------------|
-| `trip_items.is_consumable` | `Item.isConsumable?: boolean` |
-| `trip_items.system_group` | `Item.systemGroup?: PackSystemGroup`（可空；与 `packlog-schema` / `packlog-system-groups` 枚举一致） |
-| 穿着不计入基础重量 | `Item.isWorn?: boolean`（与 SQL 中 `container = 'worn'` 意图一致；本地仍用箱包结构 + 标记） |
-| `gear_library.weight_source` | `Item.weightSource` / `GearSpec` 无该字段时沿用 `weightSource` 枚举（`user` ≈ `user_measured`） |
-| `gear_library.kits`, `photos` | `GearSpec.kits?`, `GearSpec.photos?`（预留） |
-| `gear_kits` 表 | 尚未有独立 UI；迁移已就位供后续接入 |
+| PostgreSQL / 规格             | 本地 `Item` / `GearSpec`                                                                             |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `trip_items.is_consumable`    | `Item.isConsumable?: boolean`                                                                        |
+| `trip_items.system_group`     | `Item.systemGroup?: PackSystemGroup`（可空；与 `packlog-schema` / `packlog-system-groups` 枚举一致） |
+| 穿着不计入基础重量            | `Item.isWorn?: boolean`（与 SQL 中 `container = 'worn'` 意图一致；本地仍用箱包结构 + 标记）          |
+| `gear_library.weight_source`  | `Item.weightSource` / `GearSpec` 无该字段时沿用 `weightSource` 枚举（`user` ≈ `user_measured`）      |
+| `gear_library.kits`, `photos` | `GearSpec.kits?`, `GearSpec.photos?`（预留）                                                         |
+| `gear_kits` 表                | 尚未有独立 UI；迁移已就位供后续接入                                                                  |
 
 ### RLS 说明
 
@@ -56,7 +56,7 @@
 
 1. 仍在 **SQL Editor** → **New query**。
 2. 粘贴 `supabase/migrations/003_ai_usage_log_rls_lockdown.sql` 全文，**Run**。
-3. 确认写入路径：**仅**在服务端（Edge Function、自建 API、Cron）使用 **`SUPABASE_SERVICE_ROLE_KEY`** 调用 `insert`；**永远不要把 service_role 密钥放进前端或 `VITE_*`**。
+3. 确认写入路径：**仅**在服务端（Edge Function、自建 API、Cron）使用 **`SUPABASE_SERVICE_ROLE_KEY`** 调用 `insert`；**永远不要把 service*role 密钥放进前端或 `VITE*\*`**。
 
 **写入后如何验证：**
 

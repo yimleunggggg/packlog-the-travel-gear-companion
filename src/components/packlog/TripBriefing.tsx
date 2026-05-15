@@ -1,11 +1,10 @@
-import { motion } from "framer-motion";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { Trip } from "@/lib/packlog-data";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/i18n";
 import { tripScenarios } from "@/lib/trip-scenarios";
-import { buildTripManifestText, downloadManifestFile } from "@/lib/export-trip-manifest";
+import { buildTripManifestCsvForExcel, downloadManifestFile } from "@/lib/export-trip-manifest";
 import { formatKgFromGrams } from "@/lib/weight-provenance";
 import { containerDisplayLabel } from "@/lib/container-label";
 import {
@@ -15,6 +14,18 @@ import {
   tripTotalGrams,
   tripWornGrams,
 } from "@/lib/trip-weight-stats";
+import {
+  packlogBtnBlock,
+  packlogBtnPrimary,
+  packlogBtnSecondary,
+  packlogBtnTertiary,
+  packlogPageTitle,
+} from "@/lib/packlog-button-classes";
+import { tripTitleDisplay } from "@/lib/trip-list-label";
+import { calendarDaysUntilTripStart } from "@/lib/trip-date";
+import { cn } from "@/lib/utils";
+import { TripTagPicker } from "@/components/packlog/TripTagPicker";
+import { BriefingStatsAndProgress } from "@/components/packlog/trip-briefing-stats";
 
 export function TripBriefing({
   trip,
@@ -23,6 +34,7 @@ export function TripBriefing({
   onBack,
   onOpenClone,
   onSharingPatch,
+  className,
 }: {
   trip: Trip;
   phase?: "PACK" | "REVIEW";
@@ -30,14 +42,31 @@ export function TripBriefing({
   onBack: () => void;
   onOpenClone: () => void;
   onSharingPatch?: (patch: Partial<Pick<Trip, "isPublic" | "tags">>) => void;
+  className?: string;
 }) {
   const { t, lang } = useI18n();
   const { requestAuth } = useAuth();
-  const [tagStr, setTagStr] = useState(() => (trip.tags ?? []).join(", "));
+  const tagSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scheduleTagSave = (tags: string[]) => {
+    if (!onSharingPatch) return;
+    if (tagSaveTimer.current) clearTimeout(tagSaveTimer.current);
+    tagSaveTimer.current = setTimeout(() => {
+      tagSaveTimer.current = null;
+      requestAuth(() => onSharingPatch({ tags }), {
+        v: 1,
+        kind: "tripSharing",
+        tripId: trip.id,
+        patch: { tags },
+      });
+    }, 450);
+  };
 
   useEffect(() => {
-    setTagStr((trip.tags ?? []).join(", "));
-  }, [trip.id, trip.tags]);
+    return () => {
+      if (tagSaveTimer.current) clearTimeout(tagSaveTimer.current);
+    };
+  }, []);
 
   const totalItems = trip.containers.reduce((s, c) => s + c.items.length, 0);
   const packedItems = trip.containers.reduce(
@@ -52,16 +81,21 @@ export function TripBriefing({
   const pct = totalItems ? (packedItems / totalItems) * 100 : 0;
 
   const today = new Date();
-  const todayCal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const [y, m, d] = trip.startDate.split(".").map(Number);
-  const depCal = new Date(y, (m ?? 1) - 1, d ?? 1);
-  const depDiffDays = Math.round((depCal.getTime() - todayCal.getTime()) / 86400000);
+  const rawDep = calendarDaysUntilTripStart(trip.startDate, today);
+  const depLabel =
+    rawDep == null
+      ? t("brief.stat.dep")
+      : rawDep < 0
+        ? t("brief.stat.dep.since")
+        : t("brief.stat.dep");
   const depStatValue =
-    depDiffDays > 0
-      ? `${depDiffDays}D`
-      : depDiffDays === 0
-        ? t("brief.stat.dep.go")
-        : t("brief.stat.dep.past").replace("{n}", String(-depDiffDays));
+    rawDep == null
+      ? "—"
+      : rawDep > 0
+        ? t("brief.stat.dep.future").replace("{n}", String(rawDep))
+        : rawDep === 0
+          ? t("brief.stat.dep.go")
+          : t("brief.stat.dep.pastDays").replace("{n}", String(-rawDep));
 
   const scenTags = tripScenarios(trip);
 
@@ -70,13 +104,15 @@ export function TripBriefing({
   const unpackCount = totalItems - packedItems;
 
   return (
-    <section className="module corner-tick corner-tick-br relative overflow-hidden border border-[rgba(0,0,0,0.06)] shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-      <div className="px-5 pt-6 md:px-8 md:pt-8">
+    <section
+      className={cn("module corner-tick corner-tick-br relative overflow-hidden", className)}
+    >
+      <div className="p-[var(--card-padding)] md:p-8 md:pt-8">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <button
             type="button"
             onClick={onBack}
-            className="font-mono text-[10px] tracking-[0.2em] text-[#6B5234] hover:underline"
+            className="min-h-[var(--touch-target)] min-w-[var(--touch-target)] px-1 text-left font-mono text-[10px] tracking-[0.2em] text-[#6B5234] hover:underline"
           >
             {t("trip.overview.backTrips")}
           </button>
@@ -84,7 +120,7 @@ export function TripBriefing({
             <button
               type="button"
               onClick={() => onPhase(phase === "PACK" ? "REVIEW" : "PACK")}
-              className="font-mono text-[10px] tracking-[0.18em] text-[#6B5234] underline decoration-[#6B5234]/50 underline-offset-2 hover:text-foreground"
+              className="min-h-[var(--touch-target)] shrink-0 font-mono text-[10px] tracking-[0.18em] text-[#6B5234] underline decoration-[#6B5234]/50 underline-offset-2 hover:text-foreground"
             >
               {phase === "PACK" ? t("trip.cta.enterReview") : t("trip.cta.backToPacking")}
             </button>
@@ -92,8 +128,37 @@ export function TripBriefing({
         </div>
 
         <div className="grid grid-cols-12 gap-4 pb-2 md:gap-6">
-          <div className="col-span-12 lg:col-span-7">
-            <div className="flex flex-wrap gap-1">
+          <div className="col-span-12 md:col-span-7">
+            <h1
+              className={cn(
+                packlogPageTitle,
+                "min-w-0 max-w-full break-words [overflow-wrap:anywhere]",
+              )}
+            >
+              {tripTitleDisplay(trip, lang)}
+            </h1>
+            <div
+              className={cn(
+                "mt-2 flex flex-wrap items-center gap-2 text-[var(--text-secondary)]",
+                "[font-size:var(--font-item-meta-size)] [font-weight:var(--font-item-meta-weight)] [line-height:var(--font-item-meta-leading)]",
+              )}
+            >
+              {trip.destinations.map((d) => (
+                <span
+                  key={d.id}
+                  className="flex items-center gap-1.5 rounded-md border border-border-strong bg-surface px-2 py-0.5"
+                >
+                  <span>{d.countryFlag}</span>
+                  <span>{lang === "zh" ? d.cityZh : d.cityEn}</span>
+                </span>
+              ))}
+              <span className="font-mono tabular-nums">
+                · {trip.startDate} · {trip.days}
+                {t("brief.days")} · {trip.climate}
+              </span>
+            </div>
+
+            <div className="mt-2 flex flex-wrap gap-1">
               {scenTags.map((s) => (
                 <span
                   key={s}
@@ -103,26 +168,25 @@ export function TripBriefing({
                 </span>
               ))}
             </div>
-            <h1 className="mt-2 min-w-0 max-w-full break-words font-display text-[clamp(1.125rem,4.2vw,2.65rem)] leading-snug tracking-tight [overflow-wrap:anywhere] md:text-[clamp(1.35rem,3.4vw,3.15rem)] lg:text-[clamp(1.5rem,2.75vw,3.35rem)]">
-              {trip.title}
-            </h1>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              {trip.destinations.map((d) => (
-                <span
-                  key={d.id}
-                  className="flex items-center gap-1.5 rounded-md border border-border-strong bg-surface px-2 py-0.5 text-xs"
-                >
-                  <span>{d.countryFlag}</span>
-                  <span>{lang === "zh" ? d.cityZh : d.cityEn}</span>
-                </span>
-              ))}
-              <span className="font-mono text-xs text-muted-foreground">
-                · {trip.startDate} · {trip.days}
-                {t("brief.days")} · {trip.climate}
-              </span>
+
+            <div className="md:hidden">
+              <div className="mt-4">
+                <BriefingStatsAndProgress
+                  layout="mobile"
+                  t={t}
+                  packedItems={packedItems}
+                  totalItems={totalItems}
+                  totalKg={totalKg}
+                  baseG={baseG}
+                  pct={pct}
+                  trip={trip}
+                  depLabel={depLabel}
+                  depStatValue={depStatValue}
+                />
+              </div>
             </div>
 
-            <p className="mt-3 font-mono text-sm tabular-nums text-foreground">
+            <p className="mt-3 hidden font-mono text-sm tabular-nums text-foreground md:block">
               <span className="text-signal">{packedItems}</span>
               <span className="text-muted-foreground">/{totalItems}</span>{" "}
               <span className="text-muted-foreground">{t("brief.packedProgressSuffix")}</span>
@@ -142,14 +206,15 @@ export function TripBriefing({
             </p>
 
             {trip.phase === "PACK" &&
-            (wishlistCount > 0 || (depDiffDays < 0 && unpackCount > 0 && totalItems > 0)) ? (
-              <div className="mt-2 space-y-1 font-mono text-[11px] leading-snug">
+            (wishlistCount > 0 ||
+              (rawDep != null && rawDep < 0 && unpackCount > 0 && totalItems > 0)) ? (
+              <div className="mt-2 max-md:hidden space-y-1 font-mono text-[11px] leading-snug">
                 {wishlistCount > 0 ? (
                   <p className="text-signal">
                     {t("brief.hint.wishlist").replace("{n}", String(wishlistCount))}
                   </p>
                 ) : null}
-                {depDiffDays < 0 && unpackCount > 0 && totalItems > 0 ? (
+                {rawDep != null && rawDep < 0 && unpackCount > 0 && totalItems > 0 ? (
                   <p className="text-muted-foreground">
                     {t("brief.hint.stillUnpack").replace("{n}", String(unpackCount))}
                   </p>
@@ -157,29 +222,37 @@ export function TripBriefing({
               </div>
             ) : null}
 
-            <div className="mt-5 w-full max-w-lg space-y-3">
+            <div className="mt-5 w-full max-w-lg space-y-3 md:mt-6">
               <Link
+                id="trip-overview-pack-cta"
                 to="/trip/$tripId/pack"
                 params={{ tripId: trip.id }}
-                className="flex min-h-11 w-full items-center justify-center rounded-md border border-signal bg-signal px-5 py-3 text-center font-mono text-[11px] font-semibold tracking-[0.2em] text-signal-foreground shadow-sm transition hover:opacity-95"
+                className={cn(packlogBtnPrimary, packlogBtnBlock)}
               >
                 {t("brief.cta.continue")}
               </Link>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-stretch gap-2">
                 <button
                   type="button"
                   onClick={onOpenClone}
-                  className="inline-flex min-h-11 flex-1 items-center justify-center rounded-md border-[1.5px] border-signal bg-transparent px-4 py-2 font-mono text-[11px] tracking-[0.18em] text-signal transition hover:bg-signal-soft/60 sm:flex-none"
+                  className={cn(
+                    packlogBtnSecondary,
+                    packlogBtnBlock,
+                    "min-h-[var(--touch-target)] flex-1 sm:flex-none",
+                  )}
                 >
                   {t("brief.cta.clone")}
                 </button>
                 <button
                   type="button"
                   onClick={() => {
-                    const body = buildTripManifestText(trip, lang, t);
-                    downloadManifestFile(trip.id, trip.title, body);
+                    const body = buildTripManifestCsvForExcel(trip, lang, t);
+                    downloadManifestFile(trip.id, tripTitleDisplay(trip, lang), body, "csv");
                   }}
-                  className="inline-flex min-h-11 flex-1 items-center justify-center bg-transparent px-3 py-2 font-mono text-[11px] tracking-[0.12em] text-[#6B5234] underline decoration-[#6B5234]/50 underline-offset-2 hover:text-foreground sm:flex-none"
+                  className={cn(
+                    packlogBtnTertiary,
+                    "flex min-h-[var(--touch-target)] flex-1 items-center justify-center px-3 py-2 text-[11px] sm:flex-none",
+                  )}
                 >
                   {t("brief.cta.export")}
                 </button>
@@ -196,16 +269,21 @@ export function TripBriefing({
                   const label = containerDisplayLabel(c, lang, t);
                   const limit = c.type === "checked" ? ` / ${c.maxKg}kg` : "";
                   return (
-                    <li key={c.id} className="flex justify-between gap-3 tabular-nums">
-                      <span className="min-w-0 truncate text-foreground">{label}</span>
-                      <span className="shrink-0 text-muted-foreground">
+                    <li
+                      key={c.id}
+                      className="flex min-h-[var(--item-row-height)] items-center justify-between gap-3 tabular-nums"
+                    >
+                      <span className="min-w-0 truncate text-foreground [font-size:var(--font-item-name-size)] [font-weight:var(--font-item-name-weight)]">
+                        {label}
+                      </span>
+                      <span className="shrink-0 text-muted-foreground [font-family:var(--font-weight-number-family)] [font-size:var(--font-weight-number-size)]">
                         {formatKgFromGrams(g)}kg{limit}
                       </span>
                     </li>
                   );
                 })}
                 {wornG > 0 ? (
-                  <li className="flex justify-between gap-3 tabular-nums text-muted-foreground">
+                  <li className="flex min-h-[var(--item-row-height)] items-center justify-between gap-3 tabular-nums text-muted-foreground">
                     <span>{t("container.type.worn")}</span>
                     <span>
                       {formatKgFromGrams(wornG)}kg（{t("trip.bags.wornHint")}）
@@ -220,7 +298,7 @@ export function TripBriefing({
                 <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
                   {t("trip.sharing.title")}
                 </div>
-                <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs">
+                <label className="mt-2 flex min-h-[var(--touch-target)] cursor-pointer items-center gap-2 text-xs">
                   <input
                     type="checkbox"
                     checked={trip.isPublic ?? false}
@@ -233,86 +311,43 @@ export function TripBriefing({
                         patch: { isPublic: checked },
                       });
                     }}
-                    className="h-3.5 w-3.5 accent-[var(--signal)]"
+                    className="h-4 w-4 shrink-0 accent-[var(--signal)]"
                   />
                   <span className="text-muted-foreground">{t("trip.sharing.public")}</span>
                 </label>
-                <label className="mt-2 block">
-                  <span className="mb-1 block font-mono text-[9px] tracking-[0.15em] text-muted-foreground">
+                <div className="mt-2">
+                  <div className="mb-1 block font-mono text-[9px] tracking-[0.15em] text-muted-foreground">
                     {t("trip.sharing.tags")}
-                  </span>
-                  <input
-                    value={tagStr}
-                    onChange={(e) => setTagStr(e.target.value)}
-                    onBlur={() => {
-                      const tags = tagStr
-                        .split(/[,，]/)
-                        .map((s) => s.trim())
-                        .filter(Boolean);
-                      requestAuth(() => onSharingPatch({ tags }), {
-                        v: 1,
-                        kind: "tripSharing",
-                        tripId: trip.id,
-                        patch: { tags },
-                      });
-                    }}
-                    placeholder={t("trip.sharing.tags.placeholder")}
-                    className="w-full rounded border border-border-strong bg-background px-2 py-1.5 font-mono text-[11px] outline-none focus:border-signal"
+                  </div>
+                  <p className="mb-1.5 text-[10px] leading-snug text-muted-foreground">
+                    {t("trip.sharing.tagsPlaceholder")}
+                  </p>
+                  <TripTagPicker
+                    value={trip.tags ?? []}
+                    onChange={scheduleTagSave}
+                    disabled={false}
                   />
-                </label>
+                </div>
               </div>
             )}
           </div>
 
-          <div className="col-span-12 lg:col-span-5">
-            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border md:grid-cols-4">
-              <Stat label={t("brief.stat.items")} value={`${packedItems}/${totalItems}`} accent />
-              <Stat label={t("brief.stat.mass")} value={`${totalKg.toFixed(2)}KG`} />
-              <Stat
-                label={t("brief.stat.bags")}
-                value={String(trip.containers.length).padStart(2, "0")}
-              />
-              <Stat label={t("brief.stat.dep")} value={depStatValue} />
-            </div>
-
-            <div className="mt-3 flex items-center gap-3">
-              <span className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground">
-                {t("brief.load")}
-              </span>
-              <div className="relative h-2 flex-1 overflow-hidden rounded bg-surface-3">
-                <motion.div
-                  className={`absolute inset-y-0 left-0 ${pct >= 100 ? "bg-success" : "bg-signal"}`}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${pct}%` }}
-                  transition={{ duration: 1, ease: [0.2, 0.8, 0.2, 1] }}
-                />
-              </div>
-              <div className="font-mono text-sm tabular-nums">
-                <span className={pct >= 100 ? "text-success" : "text-signal"}>
-                  {Math.round(pct)}
-                </span>
-                <span className="text-muted-foreground">%</span>
-              </div>
-            </div>
-            {pct >= 100 && totalItems > 0 ? (
-              <p className="mt-2 font-mono text-xs text-success">{t("brief.readyToGo")}</p>
-            ) : null}
+          <div className="hidden md:col-span-5 md:block">
+            <BriefingStatsAndProgress
+              layout="sidebar"
+              t={t}
+              packedItems={packedItems}
+              totalItems={totalItems}
+              totalKg={totalKg}
+              baseG={baseG}
+              pct={pct}
+              trip={trip}
+              depLabel={depLabel}
+              depStatValue={depStatValue}
+            />
           </div>
         </div>
       </div>
     </section>
-  );
-}
-
-function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
-  return (
-    <div className="bg-surface px-3 py-3 md:px-4 md:py-4">
-      <div className="font-mono text-[9px] tracking-[0.22em] text-muted-foreground">{label}</div>
-      <div
-        className={`mt-1 font-mono text-xl tabular-nums md:text-2xl ${accent ? "text-signal" : "text-foreground"}`}
-      >
-        {value}
-      </div>
-    </div>
   );
 }

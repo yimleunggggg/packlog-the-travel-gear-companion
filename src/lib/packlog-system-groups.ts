@@ -5,7 +5,10 @@
 
 import type { Item, PackSystemGroup, Trip } from "@/lib/packlog-data";
 import type { ScenarioKey } from "@/lib/scenario-templates";
-import { tripScenarios } from "@/lib/trip-scenarios";
+import {
+  OUTDOOR_SCENARIO_KEYS_LIST,
+  tripScenariosIncludeOutdoorPacking,
+} from "@/lib/outdoor-packing-scenarios";
 
 export type { PackSystemGroup };
 
@@ -15,8 +18,8 @@ export const PACK_SYSTEM_GROUP_ORDER: readonly PackSystemGroup[] = [
   "sleep_system",
   "cooking",
   "nav_safety",
-  "movement",
   "main_pack",
+  "movement",
   "resupply",
   "apparel_layer",
 ];
@@ -41,49 +44,88 @@ export const SYSTEM_GROUP_CHART_COLOR: Record<PackSystemGroup, string> = {
   uncategorized: "var(--muted-foreground)",
 };
 
-/** 出现任一此类场景时，重量分布 UI 可切换为「系统分组」视角。 */
-export const OUTDOOR_PACK_SCENARIOS: readonly ScenarioKey[] = [
-  "trail-run",
-  "alpine",
-  "ski",
-  "dive",
-  "desert",
-];
+/** @deprecated 与 `outdoor-packing-scenarios` 同步；请优先使用 `OUTDOOR_SCENARIO_KEYS_LIST`。 */
+export const OUTDOOR_PACK_SCENARIOS: readonly ScenarioKey[] = OUTDOOR_SCENARIO_KEYS_LIST;
 
 const KEYWORDS: Record<PackSystemGroup, readonly string[]> = {
-  shelter: ["tent", "tarptent", "tarp", "shelter", "帐", "帐篷", "天幕", "庇护"],
+  shelter: [
+    "tent",
+    "tarptent",
+    "tarp",
+    "shelter",
+    "帐",
+    "帐篷",
+    "天幕",
+    "庇护",
+    "内外帐",
+    "hammock",
+    "吊床",
+  ],
   sleep_system: [
-    "sleep",
     "sleeping bag",
+    "sleeping pad",
+    "sleeping mat",
     "quilt",
-    "pad",
-    "mat",
     "bivy",
     "睡袋",
     "睡垫",
     "充气垫",
+    "防潮垫",
     "蛋巢",
     "枕头",
+    "充气枕",
+    "pillow",
+    "地布",
+    "防潮布",
+    "groundsheet",
+    "footprint",
+    "r值",
+    "温标",
   ],
-  cooking: ["stove", "pot", "fuel", "canister", "炉", "气罐", "锅", "餐具", "挡风"],
+  cooking: [
+    "stove",
+    "canister",
+    "fuel",
+    "cookset",
+    "炉头",
+    "炉具",
+    "炉",
+    "气罐",
+    "扁气罐",
+    "燃料",
+    "挡风",
+    "钛杯",
+    "餐具",
+    "套锅",
+    "钛锅",
+    "雪拉碗",
+    "spork",
+    "mug",
+  ],
   nav_safety: [
     "gps",
-    "headlamp",
-    "first aid",
-    "whistle",
+    "inreach",
+    "plb",
     "beacon",
     "compass",
     "map",
+    "headlamp",
+    "first aid",
+    "whistle",
+    "地图",
+    "指南针",
     "头灯",
     "急救",
-    "指南针",
-    "地图",
+    "求生",
+    "哨子",
+    "卫星",
+    "导航",
   ],
-  movement: ["pole", "trekking", "杖", "登山杖", "gaiter", "雪套"],
   main_pack: [
     "backpack",
-    "pack ",
-    " rucksack",
+    "rucksack",
+    "daypack",
+    "hydration",
     "osprey",
     "gregory",
     "ula",
@@ -91,8 +133,45 @@ const KEYWORDS: Record<PackSystemGroup, readonly string[]> = {
     "背包",
     "登山包",
     "越野包",
+    "双肩包",
+    "攻顶包",
+    "水袋包",
+    "trail vest",
+    "vest 12",
+    "vest 5",
+    "pack 12",
+    "pack 18",
   ],
-  resupply: ["water", "food", "gel", "electrolyte", "水", "食物", "能量胶", "盐丸", "电解质"],
+  movement: [
+    "pole",
+    "trekking",
+    "登山杖",
+    "越野杖",
+    "折叠杖",
+    "手杖",
+    "杖",
+    "gaiter",
+    "雪套",
+    "crampon",
+    "冰爪",
+    "micro spike",
+  ],
+  resupply: [
+    "water",
+    "food",
+    "gel",
+    "electrolyte",
+    "filter",
+    "purifier",
+    "水",
+    "食物",
+    "能量胶",
+    "盐丸",
+    "电解质",
+    "补给",
+    "净水",
+    "路餐",
+  ],
   apparel_layer: [
     "shell",
     "jacket",
@@ -107,6 +186,26 @@ const KEYWORDS: Record<PackSystemGroup, readonly string[]> = {
     "雨衣",
     "gore-tex",
     "gtx",
+    "baselayer",
+    "base layer",
+    "mid layer",
+    "merino",
+    "打底",
+    "保暖",
+    "中层",
+    "速干",
+    "裤",
+    "袜",
+    "帽",
+    "手套",
+    "鞋",
+    "靴",
+    "boot",
+    "sneaker",
+    "跑鞋",
+    "凉鞋",
+    "拖鞋",
+    "trail runner",
   ],
   uncategorized: [],
 };
@@ -125,8 +224,8 @@ export function effectiveSystemGroup(it: Item): PackSystemGroup {
     "sleep_system",
     "cooking",
     "nav_safety",
-    "movement",
     "main_pack",
+    "movement",
     "resupply",
     "apparel_layer",
   ];
@@ -140,8 +239,7 @@ export function effectiveSystemGroup(it: Item): PackSystemGroup {
 }
 
 export function tripUsesOutdoorSystemView(trip: Trip): boolean {
-  const tags = tripScenarios(trip);
-  return tags.some((s) => OUTDOOR_PACK_SCENARIOS.includes(s));
+  return tripScenariosIncludeOutdoorPacking(trip);
 }
 
 export function isBig3Group(g: PackSystemGroup): boolean {

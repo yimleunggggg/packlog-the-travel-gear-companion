@@ -7,6 +7,7 @@
 ## 一、AI 架构
 
 ### 1.1 统一 API 层
+
 所有 AI 功能通过服务端 API Route 调用，前端不直接调用 Claude。
 
 ```
@@ -20,6 +21,7 @@
 ```
 
 ### 1.2 调用规范
+
 ```typescript
 // 所有 AI route 的统一结构
 export async function POST(request: Request) {
@@ -33,13 +35,14 @@ export async function POST(request: Request) {
 
 // Claude 调用配置
 const config = {
-  model: 'claude-sonnet-4-20250514',
+  model: "claude-sonnet-4-20250514",
   max_tokens: 2000,
   temperature: 0.3, // 低温度确保结构化输出稳定
-}
+};
 ```
 
 ### 1.3 免费 vs Pro
+
 - **免费用户：** 手动输入、场景模板自动生成、浏览社区。不触发任何 AI 调用。
 - **Pro 用户：** 对话式创建、截图导入、智能建议、行后复盘、重量估算。
 
@@ -58,6 +61,7 @@ const config = {
 用户输入自然语言 → 调用 AI → 返回结构化数据 → 自动填充表单字段
 
 **System Prompt：**
+
 ```
 你是一个出行规划解析器。用户会用自然语言描述一次出行计划。
 请从中提取以下信息，以 JSON 格式返回：
@@ -77,6 +81,7 @@ const config = {
 ```
 
 **前端交互：**
+
 1. 用户在输入框打字 → 点击"AI 解析"按钮或按回车
 2. 显示 loading 状态（"正在分析你的行程..."）
 3. 收到结果后自动填充表单：目的地、标题、日期、场景标签
@@ -88,6 +93,7 @@ const config = {
 **触发时机：** 用户通过 AI 解析创建行程后，自动调用。也可在行程概览页手动触发"AI 补充建议"。
 
 **输入数据：**
+
 ```typescript
 {
   trip: { destination, duration_days, scenes, climate_note },
@@ -102,6 +108,7 @@ const config = {
 ```
 
 **System Prompt：**
+
 ```
 你是一个专业的出行装备顾问。根据以下行程信息和用户已有装备，生成推荐装备清单。
 
@@ -134,9 +141,17 @@ const config = {
 }
 ```
 
+### 2.3a 链接导入 (`/api/ai/import-url`)
+
+- **Pro**（或服务器设置 `PACKLOG_AI_ALLOW_IMPORT_URL=1` 用于本地调试）。
+- 请求体：`{ "url": "https://...", "subscriptionTier": "pro"|"free" }`。
+- 服务端 `fetch` 拉取 HTML → 去标签成纯文本 → Claude 抽取 JSON 数组（`name`, `name_zh`, `brand`, `weight_g`, `quantity`, `category`, `note`）。
+- 部分站点（登录墙、反爬、小红书等）会返回空或失败，需提示用户改用截图或手动添加。
+
 ### 2.3 截图导入 (`/api/ai/import-screenshot`)
 
 **用户体验：**
+
 - 入口：行程打包页面和装备库页面的"从截图导入"按钮
 - 点击 → 打开上传界面（支持相册选取、拍照、粘贴）
 - 上传后显示 loading（"正在识别装备..."）
@@ -144,25 +159,27 @@ const config = {
 - 用户确认 → 批量添加到清单或装备库
 
 **实现：**
+
 ```typescript
 // /api/ai/import-screenshot
 // 接收 base64 图片，发送给 Claude Vision
-const response = await fetch('https://api.anthropic.com/v1/messages', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+const response = await fetch("https://api.anthropic.com/v1/messages", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
-    model: 'claude-sonnet-4-20250514',
+    model: "claude-sonnet-4-20250514",
     max_tokens: 2000,
-    messages: [{
-      role: 'user',
-      content: [
-        {
-          type: 'image',
-          source: { type: 'base64', media_type: imageType, data: base64Data }
-        },
-        {
-          type: 'text',
-          text: `识别这张图片中的装备/物品清单。提取每件物品的信息，返回 JSON 数组：
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "image",
+            source: { type: "base64", media_type: imageType, data: base64Data },
+          },
+          {
+            type: "text",
+            text: `识别这张图片中的装备/物品清单。提取每件物品的信息，返回 JSON 数组：
 [
   {
     "name": "物品名称（中文优先）",
@@ -174,12 +191,13 @@ const response = await fetch('https://api.anthropic.com/v1/messages', {
     "note": "图片中关于这个物品的其他信息"
   }
 ]
-只返回 JSON 数组，不要其他文字。如果图片不是装备清单，返回空数组 []。`
-        }
-      ]
-    }]
-  })
-})
+只返回 JSON 数组，不要其他文字。如果图片不是装备清单，返回空数组 []。`,
+          },
+        ],
+      },
+    ],
+  }),
+});
 ```
 
 ### 2.4 智能装备建议 (`/api/ai/suggest-gear`)
@@ -203,6 +221,7 @@ const response = await fetch('https://api.anthropic.com/v1/messages', {
 
 **前端展示：**
 在行程概览页"开始打包"按钮下方，以卡片形式展示 1-3 条建议。每条建议有：
+
 - 图标（🌧️天气 / 👥社区 / ⚖️重量）
 - 一句话建议
 - [采纳] [忽略] 按钮
@@ -213,6 +232,7 @@ const response = await fetch('https://api.anthropic.com/v1/messages', {
 **触发时机：** 用户添加物品时只填了名称/品类，没填重量
 
 **System Prompt：**
+
 ```
 用户正在记录一件户外装备的重量。根据物品名称和品类，给出一个合理的重量估算。
 
@@ -231,6 +251,7 @@ const response = await fetch('https://api.anthropic.com/v1/messages', {
 ```
 
 **前端展示：**
+
 - 重量输入框旁边显示灰色斜体估算值："~540g (450-650g)"
 - 标注"AI 估算"标签
 - 用户可随时覆盖为实测值
@@ -242,14 +263,11 @@ const response = await fetch('https://api.anthropic.com/v1/messages', {
 **输入数据：** 完整的行程清单 + 每个物品的 is_checked 状态 + 用户的 gear_reviews
 
 **输出：**
+
 ```json
 {
-  "unused_items": [
-    { "name": "商务衬衫", "weight_g": 960, "reason": "3件×320g，户外行程中未穿着" }
-  ],
-  "mvp_items": [
-    { "name": "Gore-Tex 硬壳", "reason": "多雨环境下使用频率最高" }
-  ],
+  "unused_items": [{ "name": "商务衬衫", "weight_g": 960, "reason": "3件×320g，户外行程中未穿着" }],
+  "mvp_items": [{ "name": "Gore-Tex 硬壳", "reason": "多雨环境下使用频率最高" }],
   "optimization_suggestions": [
     "下次类似行程可减掉商务衬衫，减重960g",
     "考虑用速干T恤替代棉质T恤，单件减重约80g"
@@ -266,14 +284,14 @@ const response = await fetch('https://api.anthropic.com/v1/messages', {
 
 ## 三、AI 功能的前端入口位置
 
-| 功能 | 入口位置 | 触发方式 |
-|------|---------|---------|
-| 对话式创建 | 新建行程弹窗顶部 | 输入框 + "AI 解析"按钮 |
-| AI 生成清单 | 创建行程后自动 + 概览页"AI 补充" | 自动 / 按钮 |
-| 截图导入 | 打包页"+"菜单 + 装备库页 | 按钮 → 上传界面 |
-| 智能建议 | 行程概览页"开始打包"下方 | 自动加载，卡片展示 |
-| 重量估算 | 添加/编辑物品弹窗的重量输入旁 | 自动（未填重量时） |
-| 行后复盘 | 行程状态改为"已完成"后 | 按钮"查看 AI 复盘" |
+| 功能        | 入口位置                         | 触发方式               |
+| ----------- | -------------------------------- | ---------------------- |
+| 对话式创建  | 新建行程弹窗顶部                 | 输入框 + "AI 解析"按钮 |
+| AI 生成清单 | 创建行程后自动 + 概览页"AI 补充" | 自动 / 按钮            |
+| 截图导入    | 打包页"+"菜单 + 装备库页         | 按钮 → 上传界面        |
+| 智能建议    | 行程概览页"开始打包"下方         | 自动加载，卡片展示     |
+| 重量估算    | 添加/编辑物品弹窗的重量输入旁    | 自动（未填重量时）     |
+| 行后复盘    | 行程状态改为"已完成"后           | 按钮"查看 AI 复盘"     |
 
 ---
 
@@ -283,7 +301,7 @@ const response = await fetch('https://api.anthropic.com/v1/messages', {
 用户创建行程（目的地=屋久岛，场景=徒步+露营）
   ↓
 查询社区数据：
-  SELECT items, weights FROM community_lists 
+  SELECT items, weights FROM community_lists
   WHERE tags && ['屋久岛', '徒步', '露营']
   ↓
 聚合统计：
@@ -302,6 +320,7 @@ Claude 结合用户个人装备库 + 社区数据 → 生成个性化清单
 ## 五、成本控制
 
 ### Claude API 调用成本估算
+
 - 对话式创建：~500 input + 500 output tokens = ~$0.003/次
 - 清单生成：~2000 input + 1500 output tokens = ~$0.01/次
 - 截图导入：~1000 input (含图片) + 800 output = ~$0.008/次
@@ -312,6 +331,7 @@ Claude 结合用户个人装备库 + 社区数据 → 生成个性化清单
 **Pro 订阅 $8/月，AI 成本占比 1%——利润空间充足。**
 
 ### 速率限制
+
 - 免费用户：0 次 AI 调用
 - Pro 用户：每分钟 10 次，每天 100 次，每月 500 次
 - 超出限制：提示"今日 AI 额度已用完，明天再试"

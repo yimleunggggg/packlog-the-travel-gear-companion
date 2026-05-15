@@ -14,6 +14,7 @@ import { Route as CommunityRouteImport } from './routes/community'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CommunityIndexRouteImport } from './routes/community.index'
 import { Route as TripTripIdRouteImport } from './routes/trip.$tripId'
+import { Route as TagTagNameRouteImport } from './routes/tag.$tagName'
 import { Route as CommunityTemplateIdRouteImport } from './routes/community.$templateId'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as TripTripIdPackRouteImport } from './routes/trip.$tripId.pack'
@@ -44,6 +45,11 @@ const TripTripIdRoute = TripTripIdRouteImport.update({
   path: '/trip/$tripId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TagTagNameRoute = TagTagNameRouteImport.update({
+  id: '/tag/$tagName',
+  path: '/tag/$tagName',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CommunityTemplateIdRoute = CommunityTemplateIdRouteImport.update({
   id: '/$templateId',
   path: '/$templateId',
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/library': typeof LibraryRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/community/$templateId': typeof CommunityTemplateIdRoute
+  '/tag/$tagName': typeof TagTagNameRoute
   '/trip/$tripId': typeof TripTripIdRouteWithChildren
   '/community/': typeof CommunityIndexRoute
   '/api/ai/$action': typeof ApiAiActionRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/library': typeof LibraryRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/community/$templateId': typeof CommunityTemplateIdRoute
+  '/tag/$tagName': typeof TagTagNameRoute
   '/trip/$tripId': typeof TripTripIdRouteWithChildren
   '/community': typeof CommunityIndexRoute
   '/api/ai/$action': typeof ApiAiActionRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/library': typeof LibraryRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/community/$templateId': typeof CommunityTemplateIdRoute
+  '/tag/$tagName': typeof TagTagNameRoute
   '/trip/$tripId': typeof TripTripIdRouteWithChildren
   '/community/': typeof CommunityIndexRoute
   '/api/ai/$action': typeof ApiAiActionRoute
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
     | '/library'
     | '/auth/callback'
     | '/community/$templateId'
+    | '/tag/$tagName'
     | '/trip/$tripId'
     | '/community/'
     | '/api/ai/$action'
@@ -116,6 +126,7 @@ export interface FileRouteTypes {
     | '/library'
     | '/auth/callback'
     | '/community/$templateId'
+    | '/tag/$tagName'
     | '/trip/$tripId'
     | '/community'
     | '/api/ai/$action'
@@ -127,6 +138,7 @@ export interface FileRouteTypes {
     | '/library'
     | '/auth/callback'
     | '/community/$templateId'
+    | '/tag/$tagName'
     | '/trip/$tripId'
     | '/community/'
     | '/api/ai/$action'
@@ -138,6 +150,7 @@ export interface RootRouteChildren {
   CommunityRoute: typeof CommunityRouteWithChildren
   LibraryRoute: typeof LibraryRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
+  TagTagNameRoute: typeof TagTagNameRoute
   TripTripIdRoute: typeof TripTripIdRouteWithChildren
   ApiAiActionRoute: typeof ApiAiActionRoute
 }
@@ -177,6 +190,13 @@ declare module '@tanstack/react-router' {
       path: '/trip/$tripId'
       fullPath: '/trip/$tripId'
       preLoaderRoute: typeof TripTripIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tag/$tagName': {
+      id: '/tag/$tagName'
+      path: '/tag/$tagName'
+      fullPath: '/tag/$tagName'
+      preLoaderRoute: typeof TagTagNameRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/community/$templateId': {
@@ -241,6 +261,7 @@ const rootRouteChildren: RootRouteChildren = {
   CommunityRoute: CommunityRouteWithChildren,
   LibraryRoute: LibraryRoute,
   AuthCallbackRoute: AuthCallbackRoute,
+  TagTagNameRoute: TagTagNameRoute,
   TripTripIdRoute: TripTripIdRouteWithChildren,
   ApiAiActionRoute: ApiAiActionRoute,
 }
