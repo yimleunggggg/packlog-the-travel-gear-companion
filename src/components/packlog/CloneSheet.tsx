@@ -29,13 +29,16 @@ export function CloneSheet({
 
   useEffect(() => {
     if (template) setSelected(template.items.map((_, i) => i));
-    if (containers[0]) setTarget(containers[0].id);
+    setTarget(containers[0]?.id ?? "");
   }, [template, containers]);
 
   const totalKg = useMemo(() => {
     if (!template) return 0;
     return (
-      selected.reduce((s, i) => s + template.items[i].weightG * template.items[i].qty, 0) / 1000
+      selected.reduce((s, i) => {
+        const item = template.items[i];
+        return item ? s + item.weightG * item.qty : s;
+      }, 0) / 1000
     );
   }, [selected, template]);
 
@@ -43,6 +46,7 @@ export function CloneSheet({
 
   const toggle = (i: number) =>
     setSelected((cur) => (cur.includes(i) ? cur.filter((x) => x !== i) : [...cur, i]));
+  const hasValidTarget = containers.some((c) => c.id === target);
 
   return (
     <AnimatePresence>
@@ -124,12 +128,19 @@ export function CloneSheet({
                       }`}
                       aria-label="select"
                     >
-                      {on && <span className="block text-center text-[10px] leading-3 text-signal-foreground">✕</span>}
+                      {on && (
+                        <span className="block text-center text-[10px] leading-3 text-signal-foreground">
+                          ✕
+                        </span>
+                      )}
                     </button>
 
                     <div className="col-span-5">
                       <div className="flex items-center gap-1.5">
-                        <span className="h-1.5 w-1.5" style={{ background: catColor[it.category] }} />
+                        <span
+                          className="h-1.5 w-1.5"
+                          style={{ background: catColor[it.category] }}
+                        />
                         <span className="text-sm">{pickName(lang, it)}</span>
                       </div>
                       <div className="mt-0.5 font-mono text-[10px] leading-relaxed text-muted-foreground">
@@ -190,8 +201,9 @@ export function CloneSheet({
                 {t("community.merge.cancel")}
               </button>
               <button
-                disabled={selected.length === 0}
+                disabled={selected.length === 0 || !hasValidTarget}
                 onClick={() => {
+                  if (!hasValidTarget) return;
                   onCommit(selected, target);
                   onClose();
                 }}

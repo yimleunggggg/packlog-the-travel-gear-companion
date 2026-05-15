@@ -7,6 +7,7 @@ import {
   type Item,
   type Container,
   type GearSpec,
+  type GearReview,
   type LifecyclePhase,
   type CommunityTemplate,
 } from "./packlog-data";
@@ -26,11 +27,21 @@ type Ctx = {
   addItem: (tripId: string, containerId: string, item: Omit<Item, "id">) => void;
   updateItem: (tripId: string, containerId: string, itemId: string, patch: Partial<Item>) => void;
   removeItem: (tripId: string, containerId: string, itemId: string) => void;
-  moveItem: (tripId: string, fromContainerId: string, itemId: string, toContainerId: string) => void;
+  moveItem: (
+    tripId: string,
+    fromContainerId: string,
+    itemId: string,
+    toContainerId: string,
+  ) => void;
   quickAdd: (tripId: string, name: string, weightG: number, category: string) => void;
   addFromLibrary: (tripId: string, gear: GearSpec) => void;
   addToLibrary: (item: Item) => GearSpec;
-  cloneCommunity: (tripId: string, tpl: CommunityTemplate, selectedIdx: number[], targetContainerId: string) => void;
+  cloneCommunity: (
+    tripId: string,
+    tpl: CommunityTemplate,
+    selectedIdx: number[],
+    targetContainerId: string,
+  ) => void;
   addContainer: (tripId: string, draft: Omit<Container, "id" | "code" | "items">) => void;
   removeContainer: (tripId: string, containerId: string) => void;
 
@@ -38,6 +49,11 @@ type Ctx = {
 };
 
 const StoreCtx = createContext<Ctx | null>(null);
+
+const makeClientId = (prefix: string) => {
+  const random = globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
+  return `${prefix}-${Date.now().toString(36)}-${random}`;
+};
 
 export function PacklogProvider({ children }: { children: ReactNode }) {
   const [trips, setTrips] = useState<Trip[]>(seedTrips);
@@ -55,8 +71,7 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
     return fresh;
   }, []);
 
-  const setPhase: Ctx["setPhase"] = (tripId, p) =>
-    updateTrip(tripId, (t) => ({ ...t, phase: p }));
+  const setPhase: Ctx["setPhase"] = (tripId, p) => updateTrip(tripId, (t) => ({ ...t, phase: p }));
 
   const toggleItem: Ctx["toggleItem"] = (tripId, containerId, itemId) =>
     updateTrip(tripId, (t) => ({
@@ -91,7 +106,9 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
           ? c
           : {
               ...c,
-              items: c.items.map((i) => (i.id !== itemId ? i : { ...i, utility: u === 0 ? null : u })),
+              items: c.items.map((i) =>
+                i.id !== itemId ? i : { ...i, utility: u === 0 ? null : u },
+              ),
             },
       ),
     }));
@@ -122,10 +139,7 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
           ? c
           : {
               ...c,
-              items: [
-                ...c.items,
-                { ...item, id: `usr-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` },
-              ],
+              items: [...c.items, { ...item, id: makeClientId("usr") }],
             },
       ),
     }));
@@ -151,8 +165,9 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
   const moveItem: Ctx["moveItem"] = (tripId, fromId, itemId, toId) =>
     updateTrip(tripId, (t) => {
       const from = t.containers.find((c) => c.id === fromId);
+      const to = t.containers.find((c) => c.id === toId);
       const it = from?.items.find((i) => i.id === itemId);
-      if (!from || !it) return t;
+      if (!from || !to || !it || fromId === toId) return t;
       return {
         ...t,
         containers: t.containers.map((c) => {
@@ -186,12 +201,12 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
     if (!t) return;
     const target =
       g.category === "optic"
-        ? t.containers.find((c) => c.type === "camera") ??
+        ? (t.containers.find((c) => c.type === "camera") ??
           t.containers.find((c) => c.type === "personal") ??
-          t.containers[0]
+          t.containers[0])
         : g.category === "doc" || g.category === "tech"
-          ? t.containers.find((c) => c.type === "personal") ?? t.containers[0]
-          : t.containers.find((c) => c.type === "checked") ?? t.containers[0];
+          ? (t.containers.find((c) => c.type === "personal") ?? t.containers[0])
+          : (t.containers.find((c) => c.type === "checked") ?? t.containers[0]);
     if (!target) return;
     addItem(tripId, target.id, {
       gearId: g.id,
@@ -225,49 +240,54 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
       history: [],
     };
     setLibrary((lib) =>
-      lib.some((g) => g.name === spec.name && (g.brand ?? "") === (spec.brand ?? "")) ? lib : [spec, ...lib],
+      lib.some((g) => g.name === spec.name && (g.brand ?? "") === (spec.brand ?? ""))
+        ? lib
+        : [spec, ...lib],
     );
     return spec;
   };
 
   const cloneCommunity: Ctx["cloneCommunity"] = (tripId, tpl, selectedIdx, targetContainerId) =>
-    updateTrip(tripId, (t) => ({
-      ...t,
-      containers: t.containers.map((c) =>
-        c.id !== targetContainerId
-          ? c
-          : {
-              ...c,
-              items: [
-                ...c.items,
-                ...selectedIdx.map((i) => {
-                  const it = tpl.items[i];
-                  return {
-                    id: `cp-${Date.now()}-${i}`,
-                    gearId: null,
-                    name: it.name,
-                    nameEn: it.name,
-                    nameZh: it.nameZh,
-                    qty: it.qty,
-                    weightG: it.weightG,
-                    weightSource: "library" as const,
-                    category: it.category,
-                    status: "todo" as const,
-                    verdict: null,
-                    utility: null,
-                    ownership: "owned" as const,
-                    note: it.why,
-                  };
-                }),
-              ],
-            },
-      ),
-    }));
+    updateTrip(tripId, (t) => {
+      if (!t.containers.some((c) => c.id === targetContainerId)) return t;
+
+      const clonedItems = selectedIdx.flatMap((i) => {
+        const it = tpl.items[i];
+        if (!it) return [];
+        return [
+          {
+            id: makeClientId("cp"),
+            gearId: null,
+            name: it.name,
+            nameEn: it.name,
+            nameZh: it.nameZh,
+            qty: it.qty,
+            weightG: it.weightG,
+            weightSource: "library" as const,
+            category: it.category,
+            status: "todo" as const,
+            verdict: null,
+            utility: null,
+            ownership: "owned" as const,
+            note: it.why,
+          },
+        ];
+      });
+
+      if (!clonedItems.length) return t;
+
+      return {
+        ...t,
+        containers: t.containers.map((c) =>
+          c.id === targetContainerId ? { ...c, items: [...c.items, ...clonedItems] } : c,
+        ),
+      };
+    });
 
   const sealReview: Ctx["sealReview"] = (tripId) => {
     const t = trips.find((x) => x.id === tripId);
     if (!t) return;
-    const newHistory: { gearId: string; entry: Parameters<typeof Object>[0] }[] = [];
+    const newHistory: { gearId: string; entry: GearReview }[] = [];
     t.containers.forEach((c) =>
       c.items.forEach((i) => {
         if (i.gearId && i.verdict) {
@@ -288,9 +308,9 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
     if (!newHistory.length) return;
     setLibrary((lib) =>
       lib.map((g) => {
-        const matches = newHistory.filter((h) => h.gearId === g.id).map((h) => h.entry as never);
+        const matches = newHistory.filter((h) => h.gearId === g.id).map((h) => h.entry);
         if (!matches.length) return g;
-        return { ...g, history: [...matches, ...g.history] };
+        return { ...g, history: [...matches, ...g.history.filter((h) => h.tripId !== t.id)] };
       }),
     );
   };
@@ -309,16 +329,33 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
     });
 
   const removeContainer: Ctx["removeContainer"] = (tripId, containerId) =>
-    updateTrip(tripId, (t) => ({ ...t, containers: t.containers.filter((c) => c.id !== containerId) }));
+    updateTrip(tripId, (t) => ({
+      ...t,
+      containers: t.containers.filter((c) => c.id !== containerId),
+    }));
 
   const value = useMemo<Ctx>(
     () => ({
-      trips, library, getTrip,
-      createTrip, setPhase,
-      toggleItem, setVerdict, setUtility, cycleOwnership,
-      addItem, updateItem, removeItem, moveItem,
-      quickAdd, addFromLibrary, addToLibrary, cloneCommunity,
-      addContainer, removeContainer, sealReview,
+      trips,
+      library,
+      getTrip,
+      createTrip,
+      setPhase,
+      toggleItem,
+      setVerdict,
+      setUtility,
+      cycleOwnership,
+      addItem,
+      updateItem,
+      removeItem,
+      moveItem,
+      quickAdd,
+      addFromLibrary,
+      addToLibrary,
+      cloneCommunity,
+      addContainer,
+      removeContainer,
+      sealReview,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [trips, library],
