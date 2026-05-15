@@ -128,12 +128,19 @@ export function CloneSheet({
                       }`}
                       aria-label="select"
                     >
-                      {on && <span className="block text-center text-[10px] leading-3 text-signal-foreground">✕</span>}
+                      {on && (
+                        <span className="block text-center text-[10px] leading-3 text-signal-foreground">
+                          ✕
+                        </span>
+                      )}
                     </button>
 
                     <div className="col-span-5">
                       <div className="flex items-center gap-1.5">
-                        <span className="h-1.5 w-1.5" style={{ background: catColor[it.category] }} />
+                        <span
+                          className="h-1.5 w-1.5"
+                          style={{ background: catColor[it.category] }}
+                        />
                         <span className="text-sm">{pickName(lang, it)}</span>
                       </div>
                       <div className="mt-0.5 font-mono text-[10px] leading-relaxed text-muted-foreground">
