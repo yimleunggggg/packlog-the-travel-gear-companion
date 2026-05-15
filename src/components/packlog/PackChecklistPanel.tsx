@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import {
   defaultItemCategoryForPackDisplayGroup,
   itemPackDisplayGroup,
-  i18nKeyForPackDisplayGroup,
+  packDisplayGroupLabel,
   packGroupOrder,
   type PackDisplayGroup,
 } from "@/lib/pack-display-groups";
@@ -85,6 +85,16 @@ export function PackChecklistPanel({
     setAdding(null);
     setExpanded(null);
   }, [bagFilter]);
+
+  /** 打开「添加装备」时滚到表单附近，减少键盘弹出后版面半截不可见 */
+  useEffect(() => {
+    if (!adding) return;
+    const sel = adding.source === "section" ? "[data-pack-inline-add]" : "[data-pack-footer-add]";
+    const id = requestAnimationFrame(() => {
+      document.querySelector(sel)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [adding]);
 
   const defaultContainerId = trip.containers[0]?.id ?? "";
 
@@ -161,25 +171,27 @@ export function PackChecklistPanel({
   if (phase === "REVIEW") return null;
 
   return (
-    <section id="pack-checklist" className="module corner-tick relative scroll-mt-28 p-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <section id="pack-checklist" className="module corner-tick relative scroll-mt-28 p-4 md:p-5">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
         <div className="min-w-0">
           <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
             {t("packChecklist.kicker")}
           </div>
           <h2 className={cn("mt-1", packlogSectionTitle)}>{t("packChecklist.title")}</h2>
           {t("packChecklist.subtitle").trim() ? (
-            <p className="mt-1 text-sm text-muted-foreground">{t("packChecklist.subtitle")}</p>
+            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground md:text-sm">
+              {t("packChecklist.subtitle")}
+            </p>
           ) : null}
         </div>
-        <div className="flex shrink-0 flex-col gap-1 sm:items-end">
-          <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
+        <div className="flex w-full shrink-0 flex-col gap-1.5 md:w-auto md:items-end">
+          <span className="text-xs font-medium text-foreground/80 md:font-mono md:text-[9px] md:uppercase md:tracking-[0.18em] md:text-muted-foreground">
             {t("categoryView.filterLabel")}
           </span>
           <select
             value={bagFilter}
             onChange={(e) => setBagFilter(e.target.value)}
-            className="max-w-full rounded-md border border-border-strong bg-background px-2 py-1.5 font-mono text-[11px]"
+            className="min-h-11 w-full max-w-full rounded-md border border-border-strong bg-background px-3 py-2.5 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/35 md:min-h-0 md:min-w-[12rem] md:py-1.5 md:font-mono md:text-[11px]"
           >
             <option value="all">{t("categoryView.filterAll")}</option>
             {trip.containers
@@ -194,13 +206,13 @@ export function PackChecklistPanel({
       </div>
 
       {unaddedCount > 0 ? (
-        <p className="mt-2 font-mono text-[10px] text-muted-foreground">
+        <p className="mt-3 text-xs leading-snug text-muted-foreground md:font-mono md:text-[10px]">
           {t("pool.unaddedBadge").replace("{n}", String(unaddedCount))}
         </p>
       ) : null}
 
       {t("packChecklist.hint").trim() ? (
-        <p className="mt-3 text-[11px] leading-snug text-muted-foreground">
+        <p className="mt-3 text-xs leading-relaxed text-muted-foreground md:text-[11px]">
           {t("packChecklist.hint")}
         </p>
       ) : null}
@@ -224,16 +236,18 @@ export function PackChecklistPanel({
               : (preferredContainerIdForCategory(trip, defaultCat) ?? defaultContainerId);
           return (
             <details key={groupKey} className="rounded-md border border-border bg-surface/40" open>
-              <summary className="cursor-pointer select-none px-3 py-2 font-mono text-[11px] tracking-[0.14em] text-signal hover:bg-surface-2">
-                {t(i18nKeyForPackDisplayGroup(groupKey))}
-                <span className="ml-2 text-muted-foreground">
+              <summary className="cursor-pointer select-none px-3 py-3 hover:bg-surface-2 md:py-2 [&::-webkit-details-marker]:hidden">
+                <span className="block text-[0.9375rem] font-semibold leading-snug text-foreground md:inline md:font-mono md:text-[11px] md:font-normal md:tracking-[0.14em] md:text-signal">
+                  {packDisplayGroupLabel(t, groupKey)}
+                </span>
+                <span className="mt-1 block text-xs leading-snug text-muted-foreground md:mt-0 md:ml-2 md:inline md:font-mono md:text-[11px] md:tracking-[0.1em]">
                   {t("packChecklist.groupWeightSummary")
                     .replace("{n}", String(nListed))
                     .replace("{packed}", packedKg)
                     .replace("{listed}", listedKg)}
                 </span>
               </summary>
-              <ul className="space-y-1 border-t border-border px-2 py-2">
+              <ul className="space-y-1.5 border-t border-border px-2 py-2 md:space-y-1">
                 {tripItems.map((it) => {
                   const bagLabel = containerDisplayLabel(
                     trip.containers.find((c) => c.id === it._containerId) ?? trip.containers[0]!,
@@ -245,11 +259,11 @@ export function PackChecklistPanel({
                   return (
                     <li
                       key={it.id}
-                      className="rounded-sm border border-transparent hover:border-border/80 hover:bg-surface-2/20"
+                      className="rounded-md border border-transparent hover:border-border/80 hover:bg-surface-2/25"
                     >
-                      <div className="flex min-h-[48px] max-h-14 w-full items-stretch">
+                      <div className="flex w-full items-stretch max-md:min-h-[3.25rem] md:max-h-14">
                         <div
-                          className="flex w-11 shrink-0 items-center justify-center touch-manipulation"
+                          className="flex w-[3rem] shrink-0 items-center justify-center touch-manipulation sm:w-11"
                           onClick={(e) => e.stopPropagation()}
                           onPointerDown={(e) => e.stopPropagation()}
                         >
@@ -259,20 +273,20 @@ export function PackChecklistPanel({
                             role="checkbox"
                             onClick={() => onToggle(it._containerId, it.id)}
                             className={cn(
-                              "flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border transition active:scale-[0.98]",
+                              "flex h-12 w-12 shrink-0 items-center justify-center rounded-md border transition active:scale-[0.98] sm:h-11 sm:w-11",
                               it.status === "packed"
                                 ? "border-signal bg-signal"
                                 : "border-border-strong bg-background",
                             )}
                           >
                             {it.status === "packed" && (
-                              <span className="font-mono text-[12px] leading-none text-signal-foreground">
+                              <span className="font-mono text-[13px] leading-none text-signal-foreground">
                                 ✓
                               </span>
                             )}
                           </button>
                         </div>
-                        <div className="flex min-h-0 min-w-0 flex-1 flex-col justify-center pr-1">
+                        <div className="flex min-h-0 min-w-0 flex-1 flex-col justify-center py-1.5 pr-2 md:py-0 md:pr-1">
                           <button
                             type="button"
                             onClick={() =>
@@ -283,47 +297,50 @@ export function PackChecklistPanel({
                               )
                             }
                             className={cn(
-                              "flex w-full min-h-[48px] max-h-14 cursor-pointer flex-nowrap items-center gap-1.5 overflow-hidden text-left outline-none",
-                              "rounded-sm py-0.5 hover:bg-surface-2/40 focus-visible:ring-2 focus-visible:ring-signal/40",
+                              "flex w-full min-w-0 flex-col gap-1.5 text-left outline-none",
+                              "rounded-md py-1 hover:bg-surface-2/40 focus-visible:ring-2 focus-visible:ring-signal/40",
+                              "md:flex-row md:flex-nowrap md:items-center md:gap-2 md:py-0.5 md:max-h-14 md:overflow-hidden",
                             )}
                           >
-                            <span
-                              className="h-2 w-2 shrink-0 rounded-[1px]"
-                              style={{ background: PACKLOG_CATEGORY_HEX[it.category] }}
-                              aria-hidden
-                            />
-                            <span
-                              className={cn(
-                                packlogItemName,
-                                "max-w-[50%] min-w-0 shrink-0 truncate",
-                              )}
-                            >
-                              {pickName(lang, it)}
-                            </span>
-                            <span className="min-w-1 flex-1 shrink" aria-hidden />
-                            <span
-                              className={cn(
-                                packlogItemWeight,
-                                "flex shrink-0 items-baseline gap-1 whitespace-nowrap tabular-nums",
-                              )}
-                            >
-                              ×{it.qty}{" "}
-                              <ItemWeightLabel
-                                item={it}
-                                className="inline text-[11px] leading-none"
+                            <span className="flex min-w-0 items-center gap-2 md:max-w-[50%] md:shrink-0">
+                              <span
+                                className="h-2 w-2 shrink-0 rounded-[1px]"
+                                style={{ background: PACKLOG_CATEGORY_HEX[it.category] }}
+                                aria-hidden
                               />
+                              <span className={cn(packlogItemName, "min-w-0 truncate")}>
+                                {pickName(lang, it)}
+                              </span>
                             </span>
-                            <span className="max-w-[min(40%,10rem)] shrink truncate font-mono text-[10px] leading-tight text-muted-foreground">
-                              {bagLabel} · {t(`own.${it.ownership}`)}
-                            </span>
+                            <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 pl-0 md:ml-auto md:flex-nowrap md:justify-end md:pl-0">
+                              <span
+                                className={cn(
+                                  packlogItemWeight,
+                                  "inline-flex shrink-0 items-baseline gap-1 whitespace-nowrap tabular-nums",
+                                )}
+                              >
+                                ×{it.qty}{" "}
+                                <ItemWeightLabel
+                                  item={it}
+                                  className="inline text-[0.8125rem] leading-none md:text-[11px]"
+                                />
+                              </span>
+                              <span className="min-w-0 text-xs leading-snug text-muted-foreground md:max-w-[10rem] md:truncate md:font-mono md:text-[10px] md:leading-tight">
+                                <span className="text-foreground/75">{bagLabel}</span>
+                                <span className="mx-1 text-border-strong" aria-hidden>
+                                  ·
+                                </span>
+                                <span>{t(`own.${it.ownership}`)}</span>
+                              </span>
+                            </div>
                           </button>
                           {isOpen ? (
                             <div className="mb-2 mt-1 space-y-2 rounded-md border border-border bg-surface-2/70 px-3 py-2.5">
                               <div>
-                                <div className="font-mono text-[9px] tracking-[0.12em] text-muted-foreground">
+                                <div className="text-[11px] font-medium tracking-wide text-muted-foreground md:font-mono md:text-[9px] md:tracking-[0.12em]">
                                   {t("packChecklist.row.place")}
                                 </div>
-                                <div className="mt-1 flex flex-wrap gap-1">
+                                <div className="mt-1.5 flex flex-wrap gap-1.5">
                                   {trip.containers.map((c) => {
                                     const active = c.id === it._containerId;
                                     const label = containerDisplayLabel(c, lang, t);
@@ -341,7 +358,7 @@ export function PackChecklistPanel({
                                           }
                                         }}
                                         className={cn(
-                                          "max-w-[9rem] truncate rounded border px-2 py-1 font-mono text-[9px] tracking-[0.06em] transition",
+                                          "min-h-10 max-w-[11rem] truncate rounded-md border px-3 py-2 text-xs transition md:min-h-0 md:max-w-[9rem] md:px-2 md:py-1 md:font-mono md:text-[9px] md:tracking-[0.06em]",
                                           active
                                             ? "border-signal bg-signal text-signal-foreground"
                                             : "border-border-strong bg-transparent text-muted-foreground hover:border-foreground/30 hover:text-foreground",
@@ -354,10 +371,10 @@ export function PackChecklistPanel({
                                 </div>
                               </div>
                               <div className="border-t border-border pt-2">
-                                <div className="font-mono text-[9px] tracking-[0.12em] text-muted-foreground">
+                                <div className="text-[11px] font-medium tracking-wide text-muted-foreground md:font-mono md:text-[9px] md:tracking-[0.12em]">
                                   {t("packChecklist.row.status")}
                                 </div>
-                                <div className="mt-1 flex flex-wrap gap-1">
+                                <div className="mt-1.5 flex flex-wrap gap-1.5">
                                   {(["owned", "wishlist", "borrowed", "undecided"] as const).map(
                                     (o) => {
                                       const activeOwn = it.ownership === o;
@@ -370,7 +387,7 @@ export function PackChecklistPanel({
                                               onSetOwnership(it._containerId, it.id, o);
                                           }}
                                           className={cn(
-                                            "rounded border px-2 py-1 font-mono text-[9px]",
+                                            "min-h-10 rounded-md border px-3 py-2 text-xs md:min-h-0 md:px-2 md:py-1 md:font-mono md:text-[9px]",
                                             activeOwn &&
                                               (o === "owned"
                                                 ? "border-success/90 bg-transparent text-[color:var(--success)]"
@@ -416,17 +433,17 @@ export function PackChecklistPanel({
                                   }}
                                 />
                               </div>
-                              <div className="flex justify-end gap-2 border-t border-border pt-2">
+                              <div className="flex flex-col gap-2 border-t border-border pt-2 sm:flex-row sm:justify-end">
                                 <button
                                   type="button"
-                                  className="rounded border border-border-strong px-2 py-1 font-mono text-[10px] text-muted-foreground hover:border-foreground/25 hover:text-foreground"
+                                  className="min-h-10 rounded-md border border-border-strong px-3 py-2 text-sm text-muted-foreground hover:border-foreground/25 hover:text-foreground md:min-h-0 md:px-2 md:py-1 md:font-mono md:text-[10px]"
                                   onClick={() => setEditing({ cid: it._containerId, item: it })}
                                 >
                                   {t("packChecklist.row.edit")}
                                 </button>
                                 <button
                                   type="button"
-                                  className="rounded border border-border-strong px-2 py-1 font-mono text-[10px] text-muted-foreground hover:border-destructive hover:text-destructive"
+                                  className="min-h-10 rounded-md border border-border-strong px-3 py-2 text-sm text-muted-foreground hover:border-destructive hover:text-destructive md:min-h-0 md:px-2 md:py-1 md:font-mono md:text-[10px]"
                                   onClick={() => onRemove(it._containerId, it.id)}
                                 >
                                   {t("item.edit.delete")}
@@ -448,35 +465,38 @@ export function PackChecklistPanel({
                       e.dataTransfer.setData(POOL_SEED_MIME, JSON.stringify(seed));
                       e.dataTransfer.effectAllowed = "copy";
                     }}
-                    className="flex min-h-[48px] max-h-14 flex-nowrap items-center gap-2 overflow-x-auto rounded-sm border border-dashed border-border px-2 py-1"
+                    className="flex flex-col gap-2 rounded-md border border-dashed border-border px-2 py-3 md:flex-row md:items-center md:gap-2 md:overflow-x-auto md:py-1.5 md:max-h-16"
                   >
-                    <span
-                      className="h-2 w-2 shrink-0 rounded-[1px]"
-                      style={{ background: PACKLOG_CATEGORY_HEX[seed.category] }}
-                      aria-hidden
-                    />
-                    <span className="min-w-0 max-w-[50%] shrink-0 truncate font-mono text-[12px] text-muted-foreground">
-                      {pickName(lang, { nameEn: seed.en, nameZh: seed.zh, name: seed.en })}
-                    </span>
-                    <span className="min-w-1 flex-1 shrink" aria-hidden />
-                    <span className="shrink-0 whitespace-nowrap font-mono text-[11px] tabular-nums text-muted-foreground">
-                      {seed.weightG}g{seed.qty && seed.qty > 1 ? ` ×${seed.qty}` : ""}
-                    </span>
-                    <div
-                      className="flex max-w-[min(42%,11rem)] shrink-0 flex-wrap justify-end gap-1"
-                      onClick={(e) => e.stopPropagation()}
-                      role="presentation"
-                    >
-                      {trip.containers.map((c) => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          className="max-w-[5.5rem] truncate rounded border border-border bg-background px-1.5 py-0.5 font-mono text-[9px] hover:border-foreground/25 hover:bg-surface-2"
-                          onClick={() => onAddToContainer(c.id, poolSeedToItemDraft(seed))}
-                        >
-                          {containerDisplayLabel(c, lang, t)}
-                        </button>
-                      ))}
+                    <div className="flex min-h-[44px] min-w-0 items-center gap-2 md:min-h-0">
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-[1px]"
+                        style={{ background: PACKLOG_CATEGORY_HEX[seed.category] }}
+                        aria-hidden
+                      />
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground md:max-w-[50%] md:shrink-0 md:font-mono md:text-[12px] md:font-normal md:text-muted-foreground">
+                        {pickName(lang, { nameEn: seed.en, nameZh: seed.zh, name: seed.en })}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-2 border-t border-border/70 pt-2 md:flex-1 md:flex-row md:items-center md:justify-end md:gap-2 md:border-t-0 md:pt-0">
+                      <span className="shrink-0 whitespace-nowrap font-mono text-sm tabular-nums text-muted-foreground md:text-[11px]">
+                        {seed.weightG}g{seed.qty && seed.qty > 1 ? ` ×${seed.qty}` : ""}
+                      </span>
+                      <div
+                        className="flex flex-wrap justify-stretch gap-1.5 md:max-w-[min(42%,11rem)] md:shrink-0 md:justify-end"
+                        onClick={(e) => e.stopPropagation()}
+                        role="presentation"
+                      >
+                        {trip.containers.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            className="min-h-10 min-w-[5.5rem] flex-1 truncate rounded-md border border-border bg-background px-2 py-2 text-xs font-medium text-foreground hover:border-foreground/25 hover:bg-surface-2 sm:flex-none md:min-h-0 md:min-w-0 md:max-w-[5.5rem] md:px-1.5 md:py-1 md:font-mono md:text-[9px] md:font-normal"
+                            onClick={() => onAddToContainer(c.id, poolSeedToItemDraft(seed))}
+                          >
+                            {containerDisplayLabel(c, lang, t)}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </li>
                 ))}
@@ -498,7 +518,7 @@ export function PackChecklistPanel({
                           source: "section",
                         })
                       }
-                      className="w-full rounded-md border border-dashed border-border-strong py-2 font-mono text-[10px] tracking-[0.16em] text-muted-foreground hover:border-foreground/25 hover:bg-surface-2 hover:text-foreground"
+                      className="min-h-12 w-full rounded-md border border-dashed border-border-strong px-3 py-3 text-sm font-medium text-muted-foreground hover:border-foreground/25 hover:bg-surface-2 hover:text-foreground md:min-h-0 md:py-2 md:font-mono md:text-[10px] md:font-normal md:tracking-[0.16em]"
                     >
                       {t("packChecklist.addInCategory")}
                     </button>
@@ -506,18 +526,27 @@ export function PackChecklistPanel({
                   {adding?.source === "section" &&
                   adding.packDisplayGroup === groupKey &&
                   adding.containerId === addTargetId ? (
-                    <div className="mt-2 rounded-md border border-signal/45 bg-surface-2/90 p-3">
-                      <div className="mb-2 font-mono text-[10px] tracking-[0.18em] text-signal">
-                        {t("container.add")} →{" "}
-                        {containerDisplayLabel(
-                          trip.containers.find((c) => c.id === adding.containerId) ??
-                            trip.containers[0]!,
-                          lang,
-                          t,
-                        )}
+                    <div
+                      className="mt-2 rounded-lg border border-signal/40 bg-surface p-4 shadow-sm md:rounded-md md:border-signal/45 md:bg-surface-2/90 md:p-3 md:shadow-none"
+                      data-pack-inline-add
+                    >
+                      <div className="mb-4 flex flex-col gap-1.5 border-b border-border/70 pb-3 text-sm leading-snug text-foreground md:mb-2 md:border-0 md:pb-0 md:font-mono md:text-[10px] md:leading-normal md:tracking-[0.18em] md:text-signal">
+                        <span className="font-medium text-signal md:font-normal">
+                          {t("container.add")}
+                        </span>
                         <span className="text-muted-foreground">
-                          {" "}
-                          · {t(i18nKeyForPackDisplayGroup(groupKey))}
+                          <span className="text-foreground/90">
+                            {containerDisplayLabel(
+                              trip.containers.find((c) => c.id === adding.containerId) ??
+                                trip.containers[0]!,
+                              lang,
+                              t,
+                            )}
+                          </span>
+                          <span className="mx-1.5 text-border-strong" aria-hidden>
+                            ·
+                          </span>
+                          <span>{packDisplayGroupLabel(t, groupKey)}</span>
                         </span>
                       </div>
                       <AddGearForm
@@ -550,21 +579,32 @@ export function PackChecklistPanel({
                   source: "footer",
                 })
               }
-              className="w-full rounded-md border border-dashed border-border-strong py-2.5 font-mono text-[11px] tracking-[0.18em] text-muted-foreground hover:border-foreground/25 hover:bg-surface-2 hover:text-foreground"
+              className="min-h-12 w-full rounded-md border border-dashed border-border-strong px-3 py-3 text-sm font-medium text-muted-foreground hover:border-foreground/25 hover:bg-surface-2 hover:text-foreground md:min-h-0 md:py-2.5 md:font-mono md:text-[11px] md:font-normal md:tracking-[0.18em]"
             >
               {t("packChecklist.addCustom")}
             </button>
           ) : null}
           {adding?.source === "footer" ? (
-            <div className="mt-2 rounded-md border border-signal/45 bg-surface-2/90 p-3">
-              <div className="mb-2 font-mono text-[10px] tracking-[0.18em] text-signal">
-                {t("container.add")} →{" "}
-                {containerDisplayLabel(
-                  trip.containers.find((c) => c.id === adding.containerId) ?? trip.containers[0]!,
-                  lang,
-                  t,
-                )}
-                <span className="text-muted-foreground"> · {t(`cat.${adding.category}`)}</span>
+            <div
+              className="mt-2 rounded-lg border border-signal/40 bg-surface p-4 shadow-sm md:rounded-md md:border-signal/45 md:bg-surface-2/90 md:p-3 md:shadow-none"
+              data-pack-footer-add
+            >
+              <div className="mb-4 flex flex-col gap-1.5 border-b border-border/70 pb-3 text-sm leading-snug text-foreground md:mb-2 md:border-0 md:pb-0 md:font-mono md:text-[10px] md:leading-normal md:tracking-[0.18em] md:text-signal">
+                <span className="font-medium text-signal md:font-normal">{t("container.add")}</span>
+                <span className="text-muted-foreground">
+                  <span className="text-foreground/90">
+                    {containerDisplayLabel(
+                      trip.containers.find((c) => c.id === adding.containerId) ??
+                        trip.containers[0]!,
+                      lang,
+                      t,
+                    )}
+                  </span>
+                  <span className="mx-1.5 text-border-strong" aria-hidden>
+                    ·
+                  </span>
+                  <span>{t(`cat.${adding.category}`)}</span>
+                </span>
               </div>
               <AddGearForm
                 key={`${adding.containerId}-${adding.category}-footer`}

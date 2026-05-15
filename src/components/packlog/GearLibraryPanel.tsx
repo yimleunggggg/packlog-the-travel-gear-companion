@@ -17,7 +17,12 @@ import {
   packlogBtnPrimary,
   packlogBtnSecondary,
   packlogBtnSm,
-  packlogBtnTertiary,
+  packlogCardMono,
+  packlogCatTitle,
+  packlogHint,
+  packlogItemName,
+  packlogKicker,
+  packlogProseCompact,
   packlogSectionTitle,
 } from "@/lib/packlog-button-classes";
 import { tripShortSelectLabel } from "@/lib/trip-list-label";
@@ -81,22 +86,18 @@ export function GearLibraryPanel({
   };
 
   return (
-    <section className="module corner-tick corner-tick-br relative p-5">
+    <section className="module corner-tick corner-tick-br relative p-5 md:p-6">
       <div className="flex items-center justify-end border-b border-border pb-3">
-        <span className="tag-chip">N={library.length}</span>
+        <span className="tag-chip">{`N=${library.length}`}</span>
       </div>
 
-      <div className="rounded-md border border-border bg-surface-2/70 p-4 mt-0">
-        <div className="font-mono text-[10px] tracking-[0.22em] text-foreground">
-          {t("library.insights.head")}
-        </div>
+      <div className="mt-0 rounded-md border border-border bg-surface-2/70 p-4 md:p-5">
+        <div className={cn(packlogKicker, "text-signal")}>{t("library.insights.head")}</div>
         {insights.totalReviews === 0 ? (
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {t("library.insights.empty")}
-          </p>
+          <p className={cn(packlogHint, "mt-3")}>{t("library.insights.empty")}</p>
         ) : (
           <>
-            <p className="mt-2 text-sm leading-relaxed text-foreground/90">
+            <p className={cn(packlogProseCompact, "mt-3 max-w-prose")}>
               <span>
                 {t("library.insights.lead")
                   .replace("{reviews}", String(insights.totalReviews))
@@ -147,7 +148,7 @@ export function GearLibraryPanel({
         )}
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-2 lg:grid-cols-3 lg:gap-3">
         {LIBRARY_CATEGORY_ORDER.map((cat) => {
           const agg = statsByCat.get(cat)!;
           const avg = avgUtilityForCategory(agg);
@@ -163,36 +164,47 @@ export function GearLibraryPanel({
                   detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
                 );
               }}
-              className={`rounded-md border p-3 text-left transition ${
+              className={`rounded-lg border p-4 text-left transition ${
                 active
                   ? "border-signal bg-signal text-signal-foreground shadow-none"
                   : "border-border bg-surface/50 hover:border-foreground/20"
               }`}
             >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
                   <span
-                    className="h-2 w-2 shrink-0"
+                    className="mt-1 h-2 w-2 shrink-0 rounded-[1px]"
                     style={{ background: packlogCategoryHex(cat) }}
                   />
-                  <span className="font-mono text-[10px] tracking-[0.18em] text-foreground">
+                  <span className={cn(packlogCatTitle, active ? "text-signal-foreground" : "")}>
                     {t(`cat.${cat}`)}
                   </span>
                 </div>
                 {avg !== null && (
-                  <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+                  <span
+                    className={cn(
+                      "shrink-0 font-mono tabular-nums [font-size:var(--font-weight-number-size)] [font-weight:var(--font-weight-number-weight)]",
+                      active ? "text-signal-foreground/90" : "text-muted-foreground",
+                    )}
+                  >
                     ★ {avg.toFixed(1)}
                   </span>
                 )}
               </div>
-              <p className="mt-2 font-mono text-[9px] leading-snug text-muted-foreground">
+              <p
+                className={cn(
+                  packlogCardMono,
+                  "mt-2 text-pretty",
+                  active ? "text-signal-foreground/85" : "",
+                )}
+              >
                 {t("library.cat.summary")
                   .replace("{gear}", String(agg.gearCount))
                   .replace("{reviews}", String(agg.reviewCount))
                   .replace("{trips}", String(agg.uniqueTripIds.size))}
               </p>
               {agg.reviewCount > 0 ? (
-                <div className="mt-2 flex h-1.5 overflow-hidden border border-border">
+                <div className="mt-3 flex h-2 overflow-hidden rounded border border-border/80">
                   <div
                     style={{
                       width: `${(agg.verdicts.keep / denom) * 100}%`,
@@ -213,9 +225,30 @@ export function GearLibraryPanel({
                   />
                 </div>
               ) : (
-                <div className="mt-2 h-1.5 border border-dashed border-border bg-surface-3/60" />
+                <div
+                  className={cn(
+                    "mt-3 flex min-h-9 items-center justify-center rounded border border-dashed border-border/90 bg-surface-3/40 px-2",
+                    active ? "border-signal-foreground/25 bg-signal-foreground/10" : "",
+                  )}
+                  aria-hidden
+                >
+                  <span
+                    className={cn(
+                      packlogCardMono,
+                      active ? "text-signal-foreground/80" : "opacity-75",
+                    )}
+                  >
+                    — {t("library.history.empty")}
+                  </span>
+                </div>
               )}
-              <div className="mt-2 font-mono text-[9px] tracking-[0.14em] text-muted-foreground">
+              <div
+                className={cn(
+                  packlogCardMono,
+                  "mt-3 flex min-h-[var(--touch-target)] items-center font-medium tracking-wide",
+                  active ? "text-signal-foreground" : "text-link",
+                )}
+              >
                 {t("library.cat.cta")} →
               </div>
             </button>
@@ -223,18 +256,18 @@ export function GearLibraryPanel({
         })}
       </div>
 
-      <div ref={detailRef} className="mt-6 border-t border-border pt-5">
-        <div className="font-mono text-[10px] tracking-[0.22em] text-foreground">
+      <div ref={detailRef} className="mt-8 border-t border-border pt-6">
+        <h2 className={cn(packlogSectionTitle, "max-w-prose text-pretty")}>
           {t("library.detail.section")}
-        </div>
+        </h2>
 
-        <div className="mt-2 flex flex-wrap gap-1">
+        <div className="mt-3 flex flex-wrap gap-2">
           {cats.map((c) => (
             <button
               type="button"
               key={c}
               onClick={() => setCatFilter(c)}
-              className={`rounded border px-2 py-0.5 font-mono text-[9px] tracking-[0.12em] ${
+              className={`min-h-[var(--touch-target)] rounded-md border px-3 py-2 text-xs font-medium transition md:min-h-0 md:rounded md:px-2.5 md:py-1.5 md:font-mono md:[font-size:var(--font-card-mono-size)] md:font-normal md:leading-[var(--font-card-mono-leading)] md:tracking-[0.12em] ${
                 catFilter === c
                   ? "border-signal bg-signal text-signal-foreground"
                   : "border-border-strong text-muted-foreground hover:text-foreground"
@@ -249,7 +282,7 @@ export function GearLibraryPanel({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={t("library.search")}
-          className="mt-3 w-full rounded-md border border-border-strong bg-background px-2 py-1.5 text-sm placeholder:text-muted-foreground focus:border-foreground/30 focus:outline-none"
+          className="mt-3 min-h-11 w-full rounded-md border border-border-strong bg-background px-3 py-2.5 text-base placeholder:text-muted-foreground focus:border-foreground/30 focus:outline-none md:min-h-0 md:px-2 md:py-1.5 md:text-sm"
         />
 
         <ul className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
@@ -265,7 +298,7 @@ export function GearLibraryPanel({
               <motion.li
                 layout
                 key={g.id}
-                className={`relative module p-3 transition ${
+                className={`relative module p-4 transition ${
                   isOpen ? "ring-2 ring-signal/40" : ""
                 }`}
               >
@@ -274,28 +307,37 @@ export function GearLibraryPanel({
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span
-                          className="h-1.5 w-1.5"
+                          className="h-1.5 w-1.5 shrink-0"
                           style={{ background: PACKLOG_CATEGORY_HEX[g.category] }}
                         />
-                        <span className="font-mono text-[9px] tracking-[0.18em] text-muted-foreground">
+                        <span
+                          className={cn(packlogCardMono, "tracking-[0.14em] text-muted-foreground")}
+                        >
                           {t(`cat.${g.category}`)}
                         </span>
                       </div>
-                      <div className="mt-1 truncate text-sm font-medium">{pickName(lang, g)}</div>
-                      {g.brand && (
-                        <div className="font-mono text-[10px] text-muted-foreground">{g.brand}</div>
-                      )}
+                      <div
+                        className={cn(
+                          packlogItemName,
+                          "mt-1 break-words [overflow-wrap:anywhere] md:truncate",
+                        )}
+                      >
+                        {pickName(lang, g)}
+                      </div>
+                      {g.brand && <div className={cn(packlogCardMono, "mt-0.5")}>{g.brand}</div>}
                     </div>
-                    <div className="text-right">
-                      <div className="font-mono text-xs tabular-nums">{g.weightG}g</div>
+                    <div className="shrink-0 text-right">
+                      <div className="font-mono tabular-nums text-foreground [font-size:var(--font-weight-number-size)] [font-weight:var(--font-weight-number-weight)]">
+                        {g.weightG}g
+                      </div>
                       {avg !== null && (
-                        <div className="font-mono text-[10px] text-[#6B5234]">
+                        <div className="mt-0.5 font-mono text-sm tabular-nums text-signal">
                           ★ {avg.toFixed(1)}
                         </div>
                       )}
                     </div>
                   </div>
-                  <div className="mt-2 font-mono text-[9px] leading-snug text-muted-foreground">
+                  <div className={cn(packlogCardMono, "mt-2.5 text-pretty")}>
                     {g.history.length > 0 ? (
                       <span>
                         {t("library.card.reviewsPrefix").replace("{n}", String(g.history.length))}{" "}
@@ -316,39 +358,47 @@ export function GearLibraryPanel({
                       className="overflow-hidden"
                     >
                       <div className="mt-3 border-t border-dashed border-border pt-3">
-                        <p className="text-[12px] leading-relaxed text-foreground/85">
+                        <p className={cn(packlogProseCompact, "max-w-prose")}>
                           {lang === "zh" ? (g.descriptionZh ?? g.description) : g.description}
                         </p>
-                        <div className="mt-2 font-mono text-[9px] text-muted-foreground">
+                        <div className={cn(packlogCardMono, "mt-2")}>
                           {t("library.owned")} {g.ownedSince}
                         </div>
 
-                        <div className="mt-3">
-                          <div className="font-mono text-[9px] tracking-[0.18em] text-foreground">
+                        <div className="mt-4">
+                          <div className={cn(packlogKicker, "text-foreground")}>
                             {t("library.history")}
                           </div>
                           {g.history.length === 0 ? (
-                            <div className="mt-1 font-mono text-[10px] text-muted-foreground">
+                            <div className={cn(packlogCardMono, "mt-2 text-muted-foreground")}>
                               — {t("library.history.empty")}
                             </div>
                           ) : (
-                            <ul className="mt-1 space-y-1">
+                            <ul className="mt-2 space-y-2">
                               {g.history.map((h, i) => (
                                 <li
                                   key={i}
-                                  className="border-l-2 bg-surface-2 px-2 py-1 text-[11px]"
+                                  className="border-l-2 bg-surface-2 px-3 py-2"
                                   style={{ borderColor: verdictColor[h.verdict] }}
                                 >
-                                  <div className="flex items-center justify-between font-mono text-[9px]">
-                                    <span className="text-muted-foreground">
+                                  <div
+                                    className={cn(
+                                      packlogCardMono,
+                                      "flex flex-wrap items-center justify-between gap-x-2 gap-y-1",
+                                    )}
+                                  >
+                                    <span className="min-w-0 text-muted-foreground">
                                       {h.date} · {h.tripTitle}
                                     </span>
-                                    <span style={{ color: verdictColor[h.verdict] }}>
+                                    <span
+                                      className="shrink-0 font-medium"
+                                      style={{ color: verdictColor[h.verdict] }}
+                                    >
                                       {t(`review.verdict.${h.verdict}`)} · ★{h.utility}
                                     </span>
                                   </div>
                                   {h.note && (
-                                    <div className="mt-0.5 leading-snug text-foreground/80">
+                                    <div className={cn(packlogHint, "mt-1.5 text-foreground/85")}>
                                       &ldquo;{h.note}&rdquo;
                                     </div>
                                   )}
@@ -363,7 +413,7 @@ export function GearLibraryPanel({
                           onClick={() => openPicker(g)}
                           className={cn(
                             packlogBtnSecondary,
-                            "mt-3 w-full py-1.5 text-[10px] tracking-[0.18em]",
+                            "mt-4 w-full min-h-[var(--touch-target)] justify-center px-4 py-2.5 text-[11px] tracking-[0.16em] md:min-h-0 md:py-2 md:text-[10px]",
                           )}
                         >
                           {t("library.add")}
@@ -406,28 +456,28 @@ export function GearLibraryPanel({
             >
               <SheetDragHandle />
               <div className="relative shrink-0 border-b border-border px-5 pb-3 pt-1 md:px-6 md:pt-3">
-                <div className="pr-10 font-mono text-[10px] tracking-[0.22em] text-foreground">
+                <div className={cn(packlogKicker, "pr-10 text-foreground")}>
                   {t("library.pickTrip.title")}
                 </div>
                 <button
                   type="button"
                   onClick={() => setPickGear(null)}
-                  className="absolute right-4 top-2 font-mono text-sm text-muted-foreground hover:text-foreground md:top-3"
+                  className="absolute right-4 top-2 grid h-11 w-11 place-items-center font-mono text-base text-muted-foreground hover:text-foreground md:top-3 md:h-9 md:w-9 md:text-sm"
                   aria-label="close"
                 >
                   ✕
                 </button>
               </div>
               <div className={cn(packlogModalBodyScroll, "px-5 py-3 md:px-6")}>
-                <p className="font-mono text-[10px] text-muted-foreground">
+                <p className={cn(packlogCardMono, "text-foreground")}>
                   {pickName(lang, pickGear)} · {pickGear.weightG}g
                 </p>
-                <p className="mt-2 text-xs text-muted-foreground">
+                <p className={cn(packlogHint, "mt-2 text-muted-foreground")}>
                   {t("library.pickTrip.subtitle")}
                 </p>
 
                 {packTrips.length === 0 ? (
-                  <p className="mt-4 font-mono text-[11px] text-muted-foreground">
+                  <p className={cn(packlogCardMono, "mt-4 text-muted-foreground")}>
                     {t("library.pickTrip.empty")}
                   </p>
                 ) : (
@@ -437,11 +487,13 @@ export function GearLibraryPanel({
                         <button
                           type="button"
                           onClick={() => setPickTripId(tr.id)}
-                          className={`flex w-full flex-col items-start px-3 py-2 text-left text-xs transition ${
+                          className={`flex min-h-[var(--touch-target)] w-full flex-col items-start justify-center px-3 py-2 text-left text-sm transition md:min-h-0 md:text-xs ${
                             pickTripId === tr.id ? "bg-signal-soft/70" : "hover:bg-surface-2"
                           }`}
                         >
-                          <span className="font-medium">{tripShortSelectLabel(tr, lang)}</span>
+                          <span className="font-medium leading-snug">
+                            {tripShortSelectLabel(tr, lang)}
+                          </span>
                         </button>
                       </li>
                     ))}
@@ -449,11 +501,14 @@ export function GearLibraryPanel({
                 )}
               </div>
 
-              <div className="flex shrink-0 justify-end gap-2 border-t border-border px-5 py-3 md:px-6">
+              <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-border px-5 py-3 md:px-6">
                 <button
                   type="button"
                   onClick={() => setPickGear(null)}
-                  className="rounded border-0 bg-transparent px-2 py-1.5 font-mono text-[10px] tracking-[0.18em] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                  className={cn(
+                    packlogCardMono,
+                    "min-h-[var(--touch-target)] rounded-md px-3 py-2 text-link underline-offset-4 hover:text-link-hover hover:underline md:min-h-0 md:px-2 md:py-1.5",
+                  )}
                 >
                   {t("trips.create.cancel")}
                 </button>

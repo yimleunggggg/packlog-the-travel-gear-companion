@@ -18,7 +18,6 @@ import {
   packlogBtnBlock,
   packlogBtnPrimary,
   packlogBtnSecondary,
-  packlogBtnTertiary,
   packlogPageTitle,
 } from "@/lib/packlog-button-classes";
 import { tripTitleDisplay } from "@/lib/trip-list-label";
@@ -108,11 +107,11 @@ export function TripBriefing({
       className={cn("module corner-tick corner-tick-br relative overflow-hidden", className)}
     >
       <div className="p-[var(--card-padding)] md:p-8 md:pt-8">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border/80 pb-3">
           <button
             type="button"
             onClick={onBack}
-            className="min-h-[var(--touch-target)] min-w-[var(--touch-target)] px-1 text-left font-mono text-[10px] tracking-[0.2em] text-[#6B5234] hover:underline"
+            className="min-h-[var(--touch-target)] px-1 text-left font-mono text-[11px] tracking-[0.18em] text-link underline-offset-4 hover:text-link-hover hover:underline md:text-[10px] md:tracking-[0.2em]"
           >
             {t("trip.overview.backTrips")}
           </button>
@@ -120,7 +119,7 @@ export function TripBriefing({
             <button
               type="button"
               onClick={() => onPhase(phase === "PACK" ? "REVIEW" : "PACK")}
-              className="min-h-[var(--touch-target)] shrink-0 font-mono text-[10px] tracking-[0.18em] text-[#6B5234] underline decoration-[#6B5234]/50 underline-offset-2 hover:text-foreground"
+              className="min-h-[var(--touch-target)] shrink-0 rounded-md border border-border-strong bg-surface px-3 py-2 text-center font-mono text-[11px] font-medium tracking-[0.12em] text-foreground transition hover:border-foreground/20 hover:bg-surface-2 md:border-0 md:bg-transparent md:px-1 md:py-0 md:text-[10px] md:font-normal md:tracking-[0.18em] md:text-[#6B5234] md:underline md:decoration-[#6B5234]/50 md:underline-offset-2 md:hover:text-foreground"
             >
               {phase === "PACK" ? t("trip.cta.enterReview") : t("trip.cta.backToPacking")}
             </button>
@@ -146,23 +145,25 @@ export function TripBriefing({
               {trip.destinations.map((d) => (
                 <span
                   key={d.id}
-                  className="flex items-center gap-1.5 rounded-md border border-border-strong bg-surface px-2 py-0.5"
+                  className="flex max-w-full items-center gap-1.5 rounded-md border border-border-strong bg-surface px-2 py-1 text-xs leading-tight"
                 >
-                  <span>{d.countryFlag}</span>
-                  <span>{lang === "zh" ? d.cityZh : d.cityEn}</span>
+                  <span className="shrink-0">{d.countryFlag}</span>
+                  <span className="min-w-0 break-words [overflow-wrap:anywhere]">
+                    {lang === "zh" ? d.cityZh : d.cityEn}
+                  </span>
                 </span>
               ))}
-              <span className="font-mono tabular-nums">
+              <span className="min-w-0 max-w-full break-words font-mono text-xs leading-snug tabular-nums [overflow-wrap:anywhere]">
                 · {trip.startDate} · {trip.days}
                 {t("brief.days")} · {trip.climate}
               </span>
             </div>
 
-            <div className="mt-2 flex flex-wrap gap-1">
+            <div className="mt-2 flex flex-wrap gap-1.5">
               {scenTags.map((s) => (
                 <span
                   key={s}
-                  className="rounded border border-border-strong bg-surface px-1.5 py-0.5 text-[9px] text-muted-foreground"
+                  className="rounded border border-border-strong bg-surface px-2 py-0.5 text-xs leading-tight text-muted-foreground"
                 >
                   {t(`scenario.${s}`)}
                 </span>
@@ -227,18 +228,22 @@ export function TripBriefing({
                 id="trip-overview-pack-cta"
                 to="/trip/$tripId/pack"
                 params={{ tripId: trip.id }}
-                className={cn(packlogBtnPrimary, packlogBtnBlock)}
+                className={cn(
+                  packlogBtnPrimary,
+                  packlogBtnBlock,
+                  "min-h-[var(--touch-target)] py-3 text-[12px]",
+                )}
               >
                 {t("brief.cta.continue")}
               </Link>
-              <div className="flex flex-wrap items-stretch gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
                 <button
                   type="button"
                   onClick={onOpenClone}
                   className={cn(
                     packlogBtnSecondary,
                     packlogBtnBlock,
-                    "min-h-[var(--touch-target)] flex-1 sm:flex-none",
+                    "min-h-[var(--touch-target)] w-full justify-center sm:min-h-0",
                   )}
                 >
                   {t("brief.cta.clone")}
@@ -250,8 +255,7 @@ export function TripBriefing({
                     downloadManifestFile(trip.id, tripTitleDisplay(trip, lang), body, "csv");
                   }}
                   className={cn(
-                    packlogBtnTertiary,
-                    "flex min-h-[var(--touch-target)] flex-1 items-center justify-center px-3 py-2 text-[11px] sm:flex-none",
+                    "inline-flex min-h-[var(--touch-target)] w-full items-center justify-center rounded-[10px] border-[1.5px] border-border-strong bg-background font-mono text-[11px] font-semibold tracking-[0.14em] text-foreground transition hover:border-[#C8956C]/45 hover:bg-surface-2 sm:min-h-0",
                   )}
                 >
                   {t("brief.cta.export")}
@@ -260,10 +264,10 @@ export function TripBriefing({
             </div>
 
             <div className="mt-6 border-t border-[#E8E2D9] pt-4">
-              <div className="font-mono text-[10px] tracking-[0.22em] text-muted-foreground">
+              <div className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground md:tracking-[0.22em]">
                 {t("trip.bags.sectionTitle")}
               </div>
-              <ul className="mt-2 space-y-1.5 font-mono text-[12px]">
+              <ul className="mt-3 space-y-0.5 font-mono text-[13px] md:mt-2 md:space-y-1.5 md:text-[12px]">
                 {trip.containers.map((c) => {
                   const g = containerItemsGrams(c.id, trip);
                   const label = containerDisplayLabel(c, lang, t);
@@ -271,21 +275,23 @@ export function TripBriefing({
                   return (
                     <li
                       key={c.id}
-                      className="flex min-h-[var(--item-row-height)] items-center justify-between gap-3 tabular-nums"
+                      className="flex min-h-[var(--item-row-height)] items-start justify-between gap-3 border-b border-dashed border-border/70 py-2.5 last:border-0 md:items-center md:border-0 md:py-0"
                     >
-                      <span className="min-w-0 truncate text-foreground [font-size:var(--font-item-name-size)] [font-weight:var(--font-item-name-weight)]">
+                      <span className="min-w-0 flex-1 break-words text-foreground [font-size:var(--font-item-name-size)] [font-weight:var(--font-item-name-weight)] [overflow-wrap:anywhere] md:truncate">
                         {label}
                       </span>
-                      <span className="shrink-0 text-muted-foreground [font-family:var(--font-weight-number-family)] [font-size:var(--font-weight-number-size)]">
+                      <span className="shrink-0 pt-0.5 text-right text-muted-foreground [font-family:var(--font-weight-number-family)] [font-size:var(--font-weight-number-size)] md:pt-0">
                         {formatKgFromGrams(g)}kg{limit}
                       </span>
                     </li>
                   );
                 })}
                 {wornG > 0 ? (
-                  <li className="flex min-h-[var(--item-row-height)] items-center justify-between gap-3 tabular-nums text-muted-foreground">
-                    <span>{t("container.type.worn")}</span>
-                    <span>
+                  <li className="flex min-h-[var(--item-row-height)] items-start justify-between gap-3 border-b border-dashed border-border/70 py-2.5 text-muted-foreground last:border-0 md:items-center md:border-0 md:py-0">
+                    <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere] md:truncate">
+                      {t("container.type.worn")}
+                    </span>
+                    <span className="shrink-0 text-right font-mono tabular-nums [font-size:var(--font-weight-number-size)]">
                       {formatKgFromGrams(wornG)}kg（{t("trip.bags.wornHint")}）
                     </span>
                   </li>
@@ -315,19 +321,21 @@ export function TripBriefing({
                   />
                   <span className="text-muted-foreground">{t("trip.sharing.public")}</span>
                 </label>
-                <div className="mt-2">
-                  <div className="mb-1 block font-mono text-[9px] tracking-[0.15em] text-muted-foreground">
-                    {t("trip.sharing.tags")}
+                {trip.isPublic ? (
+                  <div className="mt-2">
+                    <div className="mb-1 block font-mono text-[9px] tracking-[0.15em] text-muted-foreground">
+                      {t("trip.sharing.tags")}
+                    </div>
+                    <p className="mb-1.5 text-[10px] leading-snug text-muted-foreground">
+                      {t("trip.sharing.tagsPlaceholder")}
+                    </p>
+                    <TripTagPicker
+                      value={trip.tags ?? []}
+                      onChange={scheduleTagSave}
+                      disabled={false}
+                    />
                   </div>
-                  <p className="mb-1.5 text-[10px] leading-snug text-muted-foreground">
-                    {t("trip.sharing.tagsPlaceholder")}
-                  </p>
-                  <TripTagPicker
-                    value={trip.tags ?? []}
-                    onChange={scheduleTagSave}
-                    disabled={false}
-                  />
-                </div>
+                ) : null}
               </div>
             )}
           </div>

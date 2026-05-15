@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Trip } from "@/lib/packlog-data";
-import { removeTripItem } from "@/lib/packlog-commands";
+import { removeTripItem, setTripItemVerdict, updateTripItem } from "@/lib/packlog-commands";
 import { filterSeedsNotInTrip, mergedScenarioSeedsForTrip } from "@/lib/packing-pool";
 
 function diveTripWithItem(): Trip {
@@ -94,5 +94,31 @@ describe("removeTripItem", () => {
     const next = removeTripItem(trip2, "c1", "i-cert");
     expect(next.containers[0]!.items).toHaveLength(1);
     expect(next.dismissedScenarioSeeds).toBeUndefined();
+  });
+});
+
+describe("reviewConfirmed", () => {
+  it("clears when verdict changes", () => {
+    const trip = diveTripWithItem();
+    const withConfirm = updateTripItem(trip, "c1", "i-cert", { reviewConfirmed: true });
+    expect(withConfirm.containers[0]!.items[0]!.reviewConfirmed).toBe(true);
+
+    const afterVerdict = setTripItemVerdict(withConfirm, "c1", "i-cert", "keep");
+    expect(afterVerdict.containers[0]!.items[0]!.reviewConfirmed).toBe(false);
+    expect(afterVerdict.containers[0]!.items[0]!.verdict).toBe("keep");
+  });
+
+  it("allows only reviewConfirmed patch without clearing", () => {
+    const trip = diveTripWithItem();
+    const next = updateTripItem(trip, "c1", "i-cert", { reviewConfirmed: true });
+    expect(next.containers[0]!.items[0]!.reviewConfirmed).toBe(true);
+  });
+
+  it("clears when note patch is applied", () => {
+    const trip = diveTripWithItem();
+    const confirmed = updateTripItem(trip, "c1", "i-cert", { reviewConfirmed: true });
+    const afterNote = updateTripItem(confirmed, "c1", "i-cert", { note: "wet rocks" });
+    expect(afterNote.containers[0]!.items[0]!.note).toBe("wet rocks");
+    expect(afterNote.containers[0]!.items[0]!.reviewConfirmed).toBe(false);
   });
 });

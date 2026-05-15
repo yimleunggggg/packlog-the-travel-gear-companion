@@ -50,7 +50,11 @@ export function setTripItemVerdict(
   itemId: string,
   verdict: Item["verdict"],
 ): Trip {
-  return withUpdatedItem(trip, containerId, itemId, (item) => ({ ...item, verdict }));
+  return withUpdatedItem(trip, containerId, itemId, (item) => ({
+    ...item,
+    verdict,
+    reviewConfirmed: false,
+  }));
 }
 
 export function setTripItemUtility(
@@ -62,6 +66,7 @@ export function setTripItemUtility(
   return withUpdatedItem(trip, containerId, itemId, (item) => ({
     ...item,
     utility: utility === 0 ? null : utility,
+    reviewConfirmed: false,
   }));
 }
 
@@ -102,7 +107,16 @@ export function updateTripItem(
   itemId: string,
   patch: Partial<Item>,
 ): Trip {
-  return withUpdatedItem(trip, containerId, itemId, (item) => ({ ...item, ...patch }));
+  return withUpdatedItem(trip, containerId, itemId, (item) => {
+    const next: Item = { ...item, ...patch };
+    const keys = Object.keys(patch) as (keyof Item)[];
+    const onlyConfirm =
+      keys.length === 1 && keys[0] === "reviewConfirmed" && patch.reviewConfirmed === true;
+    if (!onlyConfirm && keys.some((k) => k === "note" || k === "verdict" || k === "utility")) {
+      next.reviewConfirmed = false;
+    }
+    return next;
+  });
 }
 
 export function removeTripItem(trip: Trip, containerId: string, itemId: string): Trip {

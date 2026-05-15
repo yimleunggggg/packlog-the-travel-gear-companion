@@ -6,8 +6,8 @@ import type { Trip } from "@/lib/packlog-data";
 import { formatKgFromGrams } from "@/lib/weight-provenance";
 import { tripAllItems, tripBaseGrams, tripBig3PctOfBase } from "@/lib/trip-weight-stats";
 import {
-  i18nKeyForPackDisplayGroup,
   itemPackDisplayGroup,
+  packDisplayGroupLabel,
   packGroupOrder,
   PACK_DISPLAY_GROUP_CHART_COLOR,
   tripUsesOutdoorPackGrouping,
@@ -65,7 +65,7 @@ export function WeightDistributionPanel({
   };
 
   const rowLabel = (key: string) => {
-    if (outdoorView) return t(i18nKeyForPackDisplayGroup(key as PackDisplayGroup));
+    if (outdoorView) return packDisplayGroupLabel(t, key as PackDisplayGroup);
     return t(`cat.${key}`);
   };
 

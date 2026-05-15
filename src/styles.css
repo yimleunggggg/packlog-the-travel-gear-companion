@@ -198,6 +198,19 @@
   --font-label-weight: 400;
   --font-hint-size: 0.75rem;
   --font-hint-weight: 400;
+
+  /**
+   * F2 · 数据密集体（装备库 DNA、社区 N 标签等）
+   * 移动优先：辅文不小于 12px（Material 建议）；mono kicker ≥11px。
+   * 桌面可略压回紧凑排版。
+   */
+  --font-kicker-size: 0.6875rem;
+  --font-kicker-weight: 500;
+  --font-kicker-tracking: 0.2em;
+  --font-prose-compact-size: 0.9375rem;
+  --font-prose-compact-leading: 1.55;
+  --font-card-mono-size: 0.75rem;
+  --font-card-mono-leading: 1.45;
 }
 
 @media (min-width: 768px) {
@@ -206,6 +219,10 @@
     --card-padding: 16px 20px;
     --font-page-title-size: 1.75rem;
     --font-section-title-size: 1.125rem;
+    --font-kicker-size: 0.625rem;
+    --font-kicker-tracking: 0.22em;
+    --font-prose-compact-size: 0.875rem;
+    --font-prose-compact-leading: 1.5;
   }
 }
 
@@ -268,11 +285,30 @@
   a[href],
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
+  [role="checkbox"]:not([aria-disabled="true"]),
   input[type="submit"],
   label[for],
   summary {
     touch-action: manipulation;
   }
+  /**
+   * iOS Safari：聚焦 font-size < 16px 的 input/textarea/select 会强制整页缩放，导致布局「炸开」。
+   * 小屏统一至少 16px；桌面仍可由组件上的 md:text-sm 等压回紧凑排版。
+   */
+  @media (max-width: 767.98px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]):not(
+        [type="submit"]
+      ):not([type="button"]):not([type="image"]):not([type="file"]),
+    textarea,
+    select {
+      font-size: 1rem;
+    }
+  }
+  /**
+   * Packlog 列表 / 复盘日志：
+   * - 窄屏：信息纵向分组、名称任意换行、触控控件 ≥44px、表单字号 ≥16px（见上方 input 规则）
+   * - ≥768px：恢复紧凑表格式排版（grid-cols-12 等）
+   */
   h1,
   h2,
   h3,
@@ -390,15 +426,17 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 2px 6px;
+    padding: 6px 10px;
     border: 1px solid var(--border-strong);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--font-card-mono-size);
+    font-weight: 500;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--muted-foreground);
     border-radius: 3px;
     background: var(--surface);
+    min-height: 28px;
   }
 
   .scrim {

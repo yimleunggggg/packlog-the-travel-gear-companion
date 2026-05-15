@@ -20,6 +20,8 @@ import {
   packlogBtnSecondary,
   packlogBtnSm,
   packlogBtnTertiary,
+  packlogHint,
+  packlogItemName,
   packlogSectionTitle,
 } from "@/lib/packlog-button-classes";
 import { cn } from "@/lib/utils";
@@ -190,7 +192,7 @@ export function ContainerModule({
               <h3 className={cn(packlogSectionTitle, "leading-tight")}>{containerTitle}</h3>
             </div>
           </div>
-          <span className="pointer-events-none font-mono text-[10px] tracking-[0.18em] text-muted-foreground">
+          <span className="pointer-events-none font-mono text-xs tracking-[0.14em] text-muted-foreground md:text-[10px] md:tracking-[0.18em]">
             {expanded ? t("container.collapse") : t("container.expand")}
           </span>
         </header>
@@ -238,21 +240,35 @@ export function ContainerModule({
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.02 }}
                       draggable={false}
-                      className="group flex flex-col gap-3 px-4 py-3 hover:bg-surface-2"
+                      className="group flex flex-col gap-4 px-4 py-4 hover:bg-surface-2 md:gap-3 md:py-3"
                     >
-                      <div className="flex items-start gap-2">
-                        <span className="shrink-0 pt-0.5 font-mono text-[10px] text-muted-foreground">
+                      <div className="flex items-start gap-3">
+                        <span className="shrink-0 pt-1 font-mono text-[13px] tabular-nums text-muted-foreground md:pt-0.5 md:text-[10px]">
                           {String(idx + 1).padStart(2, "0")}
                         </span>
                         <span
-                          className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-[1px]"
+                          className="mt-2 h-1.5 w-1.5 shrink-0 rounded-[1px] md:mt-1.5"
                           style={{ background: PACKLOG_CATEGORY_HEX[it.category] }}
                         />
                         <div className="min-w-0 flex-1">
-                          <div className="text-sm font-medium leading-snug">{displayName}</div>
-                          <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 font-mono text-[11px] text-muted-foreground">
-                            <span>×{it.qty}</span>
-                            <ItemWeightLabel item={it} className="inline text-[11px]" />
+                          <div
+                            className={cn(
+                              packlogItemName,
+                              "break-words leading-snug [overflow-wrap:anywhere]",
+                            )}
+                          >
+                            {displayName}
+                          </div>
+                          <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1 font-mono text-[13px] text-muted-foreground md:text-[11px]">
+                            <div className="flex flex-wrap items-baseline gap-x-2">
+                              <span>×{it.qty}</span>
+                              <ItemWeightLabel item={it} className="inline text-[13px] md:text-[11px]" />
+                            </div>
+                            {it.reviewConfirmed ? (
+                              <span className="inline-flex items-center gap-1 rounded border border-success/35 bg-success/10 px-2 py-0.5 font-mono text-[10px] font-medium tracking-wide text-success md:text-[9px]">
+                                ✓ {t("review.row.logBadge")}
+                              </span>
+                            ) : null}
                           </div>
                         </div>
                       </div>
@@ -262,6 +278,11 @@ export function ContainerModule({
                         onUtility={(u) => onUtility?.(container.id, it.id, u)}
                         onNote={
                           onUpdate ? (note) => onUpdate(container.id, it.id, { note }) : undefined
+                        }
+                        onReviewConfirmedChange={
+                          onUpdate
+                            ? (next) => onUpdate(container.id, it.id, { reviewConfirmed: next })
+                            : undefined
                         }
                       />
                     </motion.li>
@@ -278,19 +299,20 @@ export function ContainerModule({
                     className="group flex flex-col gap-2 px-4 py-2.5 hover:bg-surface-2 md:grid md:grid-cols-12 md:items-center md:gap-2"
                   >
                     <div className="flex min-w-0 items-center gap-2 md:contents">
-                      <div className="shrink-0 md:col-span-1">
+                      <div className="flex shrink-0 items-center justify-center md:col-span-1">
                         <button
                           type="button"
                           onClick={() => onToggle(container.id, it.id)}
-                          className={`relative h-4 w-4 rounded-sm border ${
+                          className={`relative flex h-11 w-11 touch-manipulation items-center justify-center rounded-sm border md:h-4 md:w-4 ${
                             it.status === "packed"
                               ? "border-signal bg-signal"
                               : "border-border-strong bg-background"
                           }`}
                           aria-label="toggle pack"
+                          aria-pressed={it.status === "packed"}
                         >
                           {it.status === "packed" && (
-                            <span className="absolute inset-0 grid place-items-center font-mono text-[10px] text-signal-foreground">
+                            <span className="grid place-items-center font-mono text-[10px] leading-none text-signal-foreground md:absolute md:inset-0">
                               ✓
                             </span>
                           )}
@@ -313,7 +335,9 @@ export function ContainerModule({
                                 : "text-foreground"
                             }`}
                           >
-                            <span className="min-w-0 truncate">{displayName}</span>
+                            <span className="min-w-0 break-words [overflow-wrap:anywhere] md:truncate">
+                              {displayName}
+                            </span>
                             {it.brand && (
                               <span className="hidden shrink-0 font-mono text-[9px] text-muted-foreground sm:inline">
                                 · {it.brand}
@@ -369,7 +393,7 @@ export function ContainerModule({
                           type="button"
                           onClick={() => onCycleOwnership?.(container.id, it.id)}
                           title={t("own.toggle")}
-                          className="shrink-0 whitespace-nowrap rounded border px-1.5 py-0.5 font-mono text-[9px] tracking-[0.1em]"
+                          className="min-h-10 shrink-0 whitespace-nowrap rounded-md border px-3 py-2 text-xs font-medium tracking-wide md:min-h-0 md:rounded md:px-1.5 md:py-0.5 md:font-mono md:text-[9px] md:font-normal md:tracking-[0.1em]"
                           style={{
                             borderColor: ownColor[it.ownership],
                             color: ownColor[it.ownership],
@@ -379,14 +403,14 @@ export function ContainerModule({
                         >
                           {t(`own.${it.ownership}`)}
                         </button>
-                        <span className="tag-chip shrink-0 whitespace-nowrap">
+                        <span className="tag-chip max-md:min-h-10 max-md:items-center max-md:px-3 max-md:py-2 max-md:text-[11px]">
                           {t(`cat.${it.category}`)}
                         </span>
                         {onRemove && (
                           <button
                             type="button"
                             onClick={() => onRemove(container.id, it.id)}
-                            className="shrink-0 font-mono text-[10px] text-muted-foreground hover:text-destructive"
+                            className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-border-strong font-mono text-sm text-muted-foreground hover:border-destructive/60 hover:text-destructive md:h-auto md:w-auto md:border-0 md:py-0.5 md:font-mono md:text-[10px]"
                             aria-label="remove"
                           >
                             ✕
@@ -584,7 +608,8 @@ export function AddGearForm({
       verdict: null,
       utility: null,
       ownership,
-      note: category === "misc" && miscLabel.trim() ? miscLabel.trim() : undefined,
+      note:
+        category === "misc" && miscLabel.trim() ? miscLabel.trim() : undefined,
     });
   };
 
@@ -607,41 +632,69 @@ export function AddGearForm({
 
   const cats: Item["category"][] = ["tech", "apparel", "doc", "health", "optic", "misc"];
   const owns: Item["ownership"][] = ["owned", "wishlist", "borrowed", "undecided"];
+  const fid = useId();
 
   return (
-    <form onSubmit={submit} className="space-y-2">
-      <div className="grid grid-cols-12 gap-2">
-        <input
-          autoFocus
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={t("container.add.name")}
-          className="col-span-6 rounded border border-border-strong bg-background px-2 py-1.5 text-sm placeholder:text-muted-foreground focus:border-foreground/35 focus:outline-none"
-        />
-        <input
-          type="number"
-          min={1}
-          value={qty}
-          onChange={(e) => setQty(+e.target.value)}
-          placeholder={t("container.add.qty")}
-          className="col-span-2 rounded border border-border-strong bg-background px-2 py-1.5 text-center font-mono text-sm focus:border-foreground/35 focus:outline-none"
-        />
-        <input
-          type="number"
-          min={1}
-          value={weight}
-          onChange={(e) => {
-            setWeight(e.target.value === "" ? "" : +e.target.value);
-            setUserTouchedWeight(true);
-            setAiMid(null);
-            setAiLow(null);
-            setAiHigh(null);
-          }}
-          placeholder={t("container.add.weight")}
-          className={`col-span-4 rounded border bg-background px-2 py-1.5 text-right font-mono text-sm focus:border-foreground/35 focus:outline-none ${
-            !userTouchedWeight && hint ? "border-signal/60 text-signal" : "border-border-strong"
-          }`}
-        />
+    <form onSubmit={submit} className="space-y-3 md:space-y-2">
+      <div className="flex flex-col gap-3 md:grid md:grid-cols-12 md:gap-2">
+        <div className="min-w-0 md:col-span-6">
+          <label
+            htmlFor={`${fid}-name`}
+            className="mb-1 block text-xs font-medium text-foreground/90 md:sr-only"
+          >
+            {t("container.add.name")}
+          </label>
+          <input
+            id={`${fid}-name`}
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t("container.add.name")}
+            className="min-h-11 w-full rounded-md border border-border-strong bg-background px-3 py-2.5 text-base placeholder:text-muted-foreground focus:border-foreground/35 focus:outline-none md:min-h-0 md:px-2 md:py-1.5 md:text-sm"
+          />
+        </div>
+        <div className="min-w-0 md:col-span-2">
+          <label
+            htmlFor={`${fid}-qty`}
+            className="mb-1 block text-xs font-medium text-foreground/90 md:sr-only"
+          >
+            {t("container.add.qty")}
+          </label>
+          <input
+            id={`${fid}-qty`}
+            type="number"
+            min={1}
+            value={qty}
+            onChange={(e) => setQty(+e.target.value)}
+            placeholder={t("container.add.qty")}
+            className="min-h-11 w-full rounded-md border border-border-strong bg-background px-3 py-2.5 text-center text-base focus:border-foreground/35 focus:outline-none md:min-h-0 md:max-w-none md:px-2 md:py-1.5 md:font-mono md:text-sm"
+          />
+        </div>
+        <div className="min-w-0 md:col-span-4">
+          <label
+            htmlFor={`${fid}-weight`}
+            className="mb-1 block text-xs font-medium text-foreground/90 md:sr-only"
+          >
+            {t("container.add.weight")}
+          </label>
+          <input
+            id={`${fid}-weight`}
+            type="number"
+            min={1}
+            value={weight}
+            onChange={(e) => {
+              setWeight(e.target.value === "" ? "" : +e.target.value);
+              setUserTouchedWeight(true);
+              setAiMid(null);
+              setAiLow(null);
+              setAiHigh(null);
+            }}
+            placeholder={t("container.add.weight")}
+            className={`min-h-11 w-full rounded-md border bg-background px-3 py-2.5 text-right text-base focus:border-foreground/35 focus:outline-none md:min-h-0 md:px-2 md:py-1.5 md:font-mono md:text-sm ${
+              !userTouchedWeight && hint ? "border-signal/60 text-signal" : "border-border-strong"
+            }`}
+          />
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -649,7 +702,7 @@ export function AddGearForm({
           type="button"
           disabled={aiBusy}
           onClick={() => void applyAiEstimate()}
-          className="rounded border border-border-strong bg-surface px-2 py-1 font-mono text-[10px] tracking-[0.15em] text-muted-foreground hover:border-foreground/25 hover:text-foreground disabled:opacity-40"
+          className="min-h-10 rounded-md border border-border-strong bg-surface px-3 py-2 text-xs font-medium text-muted-foreground hover:border-foreground/25 hover:text-foreground disabled:opacity-40 md:min-h-0 md:px-2 md:py-1 md:font-mono md:text-[10px] md:font-normal md:tracking-[0.15em]"
         >
           {aiBusy ? "…" : t("weight.action.ai")}
         </button>
@@ -659,22 +712,24 @@ export function AddGearForm({
         <button
           type="button"
           onClick={applyHintNow}
-          className="flex w-full items-center justify-between rounded border border-signal/40 bg-signal-soft/40 px-2 py-1.5 text-left font-mono text-[10px] hover:bg-signal-soft"
+          className="flex min-h-11 w-full items-center justify-between gap-2 rounded-md border border-signal/40 bg-signal-soft/40 px-3 py-2.5 text-left hover:bg-signal-soft md:min-h-0 md:px-2 md:py-1.5"
         >
-          <span className="truncate text-foreground">
+          <span className="min-w-0 truncate font-mono text-xs text-foreground md:text-[10px]">
             <span className="text-signal">↳</span>{" "}
             {(lang === "zh" ? hint.nameZh : hint.nameEn) ?? name}
             <span className="ml-1.5 text-muted-foreground">
               · {hint.weightG}g · {t(`cat.${hint.category}`)}
             </span>
           </span>
-          <span className="ml-2 shrink-0 tracking-[0.15em] text-signal">
+          <span className="shrink-0 text-xs tracking-wide text-signal md:ml-2 md:font-mono md:text-[10px] md:tracking-[0.15em]">
             {t("container.libraryHint.useEnter")}
           </span>
         </button>
       )}
 
-      <div className="flex flex-wrap items-center gap-1">
+      <hr className="border-0 border-t border-border/70 md:hidden" />
+
+      <div className="flex flex-wrap gap-1.5 md:gap-1">
         {cats.map((c) => (
           <button
             type="button"
@@ -683,7 +738,7 @@ export function AddGearForm({
               setCategory(c);
               setUserTouchedCat(true);
             }}
-            className={`rounded border px-2 py-0.5 font-mono text-[10px] tracking-[0.15em] ${
+            className={`min-h-10 rounded-md border px-3 py-2 text-sm font-medium md:min-h-0 md:rounded md:px-2 md:py-0.5 md:font-mono md:text-[10px] md:font-normal md:tracking-[0.15em] ${
               category === c
                 ? "border-signal bg-signal text-signal-foreground"
                 : "border-border-strong text-muted-foreground hover:text-foreground"
@@ -693,13 +748,16 @@ export function AddGearForm({
           </button>
         ))}
       </div>
-      <div className="flex flex-wrap items-center gap-1">
+
+      <hr className="border-0 border-t border-border/70 md:hidden" />
+
+      <div className="flex flex-wrap gap-1.5 md:gap-1">
         {owns.map((o) => (
           <button
             type="button"
             key={o}
             onClick={() => setOwnership(o)}
-            className={`rounded border px-2 py-0.5 font-mono text-[10px] tracking-[0.15em] ${
+            className={`min-h-10 rounded-md border px-3 py-2 text-sm font-medium md:min-h-0 md:rounded md:px-2 md:py-0.5 md:font-mono md:text-[10px] md:font-normal md:tracking-[0.15em] ${
               ownership === o
                 ? "border-signal bg-signal text-signal-foreground"
                 : "border-border-strong text-muted-foreground hover:text-foreground"
@@ -710,19 +768,22 @@ export function AddGearForm({
         ))}
       </div>
       {t("container.add.suggest").trim() ? (
-        <p className="font-mono text-[10px] leading-relaxed text-muted-foreground">
+        <p className="text-xs leading-relaxed text-muted-foreground md:font-mono md:text-[10px]">
           {t("container.add.suggest")}
         </p>
       ) : null}
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
         <button
           type="button"
           onClick={onCancel}
-          className={cn(packlogBtnTertiary, "px-2 py-1 text-[10px]")}
+          className={cn(packlogBtnTertiary, "min-h-11 justify-center px-3 py-2 text-sm md:min-h-0 md:px-2 md:py-1 md:text-[10px]")}
         >
           {t("container.add.cancel")}
         </button>
-        <button type="submit" className={cn(packlogBtnPrimary, packlogBtnSm)}>
+        <button
+          type="submit"
+          className={cn(packlogBtnPrimary, packlogBtnSm, "min-h-11 w-full justify-center sm:w-auto md:min-h-0")}
+        >
           {t("container.add.commit")}
         </button>
       </div>
@@ -744,12 +805,12 @@ function Gauge({
   warn?: boolean;
 }) {
   return (
-    <div className="bg-surface px-4 py-3">
-      <div className="flex items-baseline justify-between">
-        <span className="font-mono text-[9px] tracking-[0.22em] text-muted-foreground">
+    <div className="bg-surface px-4 py-3.5 md:py-3">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="font-mono text-xs tracking-[0.14em] text-muted-foreground md:text-[9px] md:tracking-[0.22em]">
           {label}
         </span>
-        <span className="font-mono text-xs tabular-nums">
+        <span className="font-mono text-sm tabular-nums md:text-xs">
           <span className={warn ? "text-destructive" : "text-foreground"}>{current}</span>
           <span className="text-muted-foreground">{max}</span>
         </span>
@@ -771,26 +832,40 @@ function ReviewControls({
   onVerdict,
   onUtility,
   onNote,
+  onReviewConfirmedChange,
 }: {
   item: Item;
   onVerdict: (v: Item["verdict"]) => void;
   onUtility: (u: number) => void;
   onNote?: (note: string) => void;
+  onReviewConfirmedChange?: (next: boolean) => void;
 }) {
   const { t } = useI18n();
+  const canMarkDone = item.verdict != null && item.utility != null;
+  /** 移动端：标题与说明落在同一字号阶梯（13px），避免 10px 辅文 vs 20px 星的跳变；桌面保持紧凑。 */
+  const reviewSectionTitle =
+    "text-[13px] font-semibold tracking-tight text-foreground md:text-[11px] md:font-medium md:tracking-normal";
+  const reviewHintText =
+    "text-[13px] leading-relaxed text-muted-foreground md:text-xs md:leading-snug md:text-muted-foreground/90";
   const opts: { val: NonNullable<Item["verdict"]>; labelKey: string; color: string }[] = [
     { val: "keep", labelKey: "review.verdict.keep", color: "var(--success)" },
     { val: "upgrade", labelKey: "review.verdict.upgrade", color: "var(--signal)" },
     { val: "drop", labelKey: "review.verdict.drop", color: "var(--destructive)" },
   ];
   return (
-    <div className="w-full space-y-3 rounded-md border border-border-strong/80 bg-surface/50 p-3">
-      <div>
-        <div className="text-[11px] font-medium text-foreground">{t("review.row.outcome")}</div>
-        <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
-          {t("review.row.outcomeHint")}
-        </p>
-        <div className="mt-2 flex flex-wrap gap-1.5">
+    <div
+      className={cn(
+        "w-full touch-manipulation",
+        /* 窄屏：单层弱对比底 + 细描边，避免与清单行再叠一层「重边框卡片」 */
+        "max-md:space-y-5 max-md:rounded-xl max-md:bg-surface-2/40 max-md:px-4 max-md:py-4 max-md:ring-1 max-md:ring-border/50",
+        /* 桌面：沿用紧凑面板 */
+        "md:space-y-3 md:rounded-md md:border md:border-border-strong/80 md:bg-surface/50 md:p-3 md:ring-0",
+      )}
+    >
+      <div className="space-y-2">
+        <div className={reviewSectionTitle}>{t("review.row.outcome")}</div>
+        <p className={reviewHintText}>{t("review.row.outcomeHint")}</p>
+        <div className="mt-3 grid grid-cols-3 gap-2 md:mt-2 md:flex md:flex-wrap md:gap-1.5">
           {opts.map((o) => {
             const active = item.verdict === o.val;
             return (
@@ -798,7 +873,11 @@ function ReviewControls({
                 key={o.val}
                 type="button"
                 onClick={() => onVerdict(active ? null : o.val)}
-                className="rounded-md border px-2.5 py-1.5 text-left text-[12px] leading-tight transition"
+                className={cn(
+                  "rounded-lg border text-center font-medium leading-tight transition",
+                  "min-h-[var(--touch-target)] px-2 py-2 text-[13px] touch-manipulation",
+                  "md:min-h-0 md:rounded-md md:px-2.5 md:py-1.5 md:text-left md:text-[12px]",
+                )}
                 style={{
                   borderColor: active ? o.color : "var(--border-strong)",
                   background: active ? o.color : "transparent",
@@ -811,13 +890,11 @@ function ReviewControls({
           })}
         </div>
       </div>
-      <div>
-        <div className="text-[11px] font-medium text-foreground">{t("review.row.stars")}</div>
-        <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
-          {t("review.row.starsHint")}
-        </p>
+      <div className="space-y-2 border-t border-border/70 pt-4 md:border-0 md:pt-0">
+        <div className={reviewSectionTitle}>{t("review.row.stars")}</div>
+        <p className={reviewHintText}>{t("review.row.starsHint")}</p>
         <div
-          className="mt-2 flex items-center gap-0.5"
+          className="mt-3 flex max-w-[min(100%,20rem)] items-center justify-between gap-1 md:mt-2 md:max-w-none md:justify-start md:gap-0.5"
           role="group"
           aria-label={t("review.row.stars")}
         >
@@ -828,7 +905,12 @@ function ReviewControls({
                 key={n}
                 type="button"
                 onClick={() => onUtility(item.utility === n ? 0 : n)}
-                className="min-h-9 min-w-9 rounded border border-transparent text-[14px] leading-none transition hover:border-border-strong"
+                className={cn(
+                  "grid place-items-center rounded-lg border border-transparent leading-none transition",
+                  "min-h-[var(--touch-target)] min-w-[var(--touch-target)] text-lg touch-manipulation",
+                  "hover:border-border-strong active:scale-[0.98]",
+                  "md:min-h-9 md:min-w-9 md:text-[14px]",
+                )}
                 style={{ color: active ? "var(--signal)" : "var(--border-strong)" }}
                 aria-label={t("review.starPick").replace("{n}", String(n))}
                 aria-pressed={active}
@@ -840,24 +922,66 @@ function ReviewControls({
         </div>
       </div>
       {onNote ? (
-        <div>
+        <div className="space-y-2 border-t border-border/70 pt-4 md:border-0 md:pt-0">
           <label
-            className="text-[11px] font-medium text-foreground"
+            className={cn("block", reviewSectionTitle)}
             htmlFor={`rev-note-${item.id}`}
           >
             {t("review.row.noteLabel")}
           </label>
-          <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
-            {t("review.row.noteHint")}
-          </p>
+          <p className={reviewHintText}>{t("review.row.noteHint")}</p>
           <textarea
             id={`rev-note-${item.id}`}
             value={item.note ?? ""}
             onChange={(e) => onNote(e.target.value)}
             placeholder={t("review.notePlaceholder")}
-            rows={2}
-            className="mt-2 w-full resize-y rounded-md border border-border-strong bg-background px-2 py-2 text-[13px] leading-snug text-foreground placeholder:text-muted-foreground focus:border-foreground/35 focus:outline-none"
+            rows={3}
+            className="mt-1 w-full resize-y rounded-md border border-border-strong bg-background px-3 py-2.5 text-base leading-relaxed text-foreground placeholder:text-muted-foreground focus:border-foreground/35 focus:outline-none md:mt-2 md:px-2 md:py-2 md:text-[13px] md:leading-snug"
           />
+        </div>
+      ) : null}
+      {onReviewConfirmedChange ? (
+        <div className="space-y-3 border-t border-border/70 pt-4 md:border-t md:pt-3">
+          {item.reviewConfirmed ? (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <span
+                  className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-success/40 bg-success/10 font-mono text-base text-success md:h-8 md:w-8 md:text-sm"
+                  aria-hidden
+                >
+                  ✓
+                </span>
+                <p className="text-sm font-medium leading-snug text-success md:text-xs md:font-normal">
+                  {t("review.row.confirmed")}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onReviewConfirmedChange(false)}
+                className="min-h-[var(--touch-target)] w-full touch-manipulation text-center font-mono text-sm text-link underline underline-offset-4 hover:text-link-hover md:min-h-0 md:w-auto md:text-[11px]"
+              >
+                {t("review.row.reopen")}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className={reviewHintText}>{t("review.row.confirmHint")}</p>
+              <button
+                type="button"
+                disabled={!canMarkDone}
+                onClick={() => onReviewConfirmedChange(true)}
+                className={cn(
+                  packlogBtnSecondary,
+                  "flex min-h-[var(--touch-target)] w-full items-center justify-center gap-2 rounded-[10px] px-4 py-2.5 font-mono text-[11px] font-semibold tracking-[0.14em] disabled:cursor-not-allowed disabled:opacity-45 md:min-h-0 md:w-auto md:py-2 md:text-[10px]",
+                )}
+              >
+                <span aria-hidden className="text-base leading-none">
+                  ✓
+                </span>
+                {t("review.row.confirm")}
+              </button>
+            </div>
+          )}
         </div>
       ) : null}
     </div>
@@ -1197,219 +1321,218 @@ export function EditItemDialog({
           </div>
 
           <div className={cn(packlogModalBodyScroll, "space-y-3 px-5 py-3 md:px-6")}>
+        <input
+          autoFocus
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={t("container.add.name")}
+          className="w-full rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-foreground/35 focus:outline-none"
+        />
+
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            list={brandListId}
+            value={brand}
+            onChange={(e) => setBrand(e.target.value)}
+            placeholder={t("item.edit.brand")}
+            className="rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-foreground/35 focus:outline-none"
+          />
+          <input
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            placeholder={t("item.edit.model")}
+            className="rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-foreground/35 focus:outline-none"
+          />
+        </div>
+        <datalist id={brandListId}>
+          {brandOptions.map((b) => (
+            <option key={b} value={b} />
+          ))}
+        </datalist>
+
+        {(() => {
+          // Re-suggest from combined brand+model+name. If the suggested weight differs
+          // from the current weight, surface a one-click apply chip.
+          const probe = [brand, model, name].filter(Boolean).join(" ").trim();
+          const hint = probe.length > 1 ? suggestFromName(probe) : null;
+          if (!hint || hint.weightG === weight) return null;
+          return (
+            <button
+              type="button"
+              onClick={() => {
+                setWeight(hint.weightG);
+                setCategory(hint.category);
+                const canonical = lang === "zh" ? hint.nameZh : hint.nameEn;
+                if (canonical) setName(canonical);
+              }}
+              className="flex w-full items-center justify-between rounded border border-signal/40 bg-signal-soft/40 px-2 py-1.5 text-left font-mono text-[10px] hover:bg-signal-soft"
+            >
+              <span className="truncate text-foreground">
+                <span className="text-signal">↳</span>{" "}
+                {(lang === "zh" ? hint.nameZh : hint.nameEn) ?? probe}
+                <span className="ml-1.5 text-muted-foreground">
+                  · {hint.weightG}g · {t(`cat.${hint.category}`)}
+                </span>
+              </span>
+              <span className="ml-2 shrink-0 tracking-[0.15em] text-signal">{t("container.libraryHint.useEnter")}</span>
+            </button>
+          );
+        })()}
+
+        <div className="grid grid-cols-12 gap-2">
+          <input
+            type="number"
+            min={1}
+            value={qty}
+            onChange={(e) => setQty(+e.target.value)}
+            placeholder={t("container.add.qty")}
+            className="col-span-4 rounded border border-border-strong bg-background px-2 py-1.5 text-center font-mono text-sm focus:border-foreground/35 focus:outline-none"
+          />
+          <input
+            type="number"
+            min={1}
+            value={weight}
+            onChange={(e) => {
+              setWeight(+e.target.value);
+              setEstimateKind(null);
+              setAiBand(null);
+              setCommunityN(null);
+            }}
+            placeholder={t("container.add.weight")}
+            className="col-span-8 rounded border border-border-strong bg-background px-2 py-1.5 text-right font-mono text-sm focus:border-foreground/35 focus:outline-none"
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={aiBusy}
+            onClick={() => void applyAiEstimate()}
+            className="rounded border border-border-strong bg-surface px-2 py-1 font-mono text-[10px] tracking-[0.15em] text-muted-foreground hover:border-foreground/25 hover:text-foreground disabled:opacity-40"
+          >
+            {aiBusy ? "…" : t("weight.action.ai")}
+          </button>
+          <button
+            type="button"
+            disabled={!brand.trim() || !model.trim() || !cmPreview}
+            onClick={applyCommunityMedian}
+            title={
+              cmPreview
+                ? t("weight.community.applyTitle")
+                : t("weight.community.needSamples").trim() || undefined
+            }
+            className="rounded border border-border-strong bg-surface px-2 py-1 font-mono text-[10px] tracking-[0.15em] text-muted-foreground hover:border-foreground/25 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {t("weight.action.community")}
+          </button>
+        </div>
+        {(() => {
+          const hint =
+            brand.trim() && model.trim()
+              ? cmPreview
+                ? t("weight.community.preview")
+                    .replace("{n}", String(cmPreview.n))
+                    .replace("{g}", String(cmPreview.medianG))
+                : t("weight.community.needSamples").trim()
+              : t("weight.community.needBrandModel").trim();
+          return hint ? (
+            <p className="font-mono text-[10px] leading-relaxed text-muted-foreground">{hint}</p>
+          ) : null;
+        })()}
+
+        <div className="flex flex-wrap items-center gap-1">
+          {cats.map((c) => (
+            <button
+              type="button"
+              key={c}
+              onClick={() => setCategory(c)}
+              className={`rounded border px-2 py-0.5 font-mono text-[10px] tracking-[0.15em] ${
+                category === c
+                  ? "border-signal bg-signal text-signal-foreground"
+                  : "border-border-strong text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t(`cat.${c}`)}
+            </button>
+          ))}
+        </div>
+
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder={t("item.edit.note")}
+          rows={2}
+          className="w-full resize-none rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-foreground/35 focus:outline-none"
+        />
+
+        <div className="flex flex-col gap-2 rounded border border-border-strong bg-surface/40 px-2 py-2">
+          <label className="flex cursor-pointer items-center gap-2 text-xs">
             <input
-              autoFocus
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t("container.add.name")}
-              className="w-full rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-foreground/35 focus:outline-none"
+              type="checkbox"
+              checked={isWorn}
+              onChange={(e) => setIsWorn(e.target.checked)}
+              className="h-4 w-4 accent-[var(--signal)]"
             />
-
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                list={brandListId}
-                value={brand}
-                onChange={(e) => setBrand(e.target.value)}
-                placeholder={t("item.edit.brand")}
-                className="rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-foreground/35 focus:outline-none"
-              />
-              <input
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                placeholder={t("item.edit.model")}
-                className="rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-foreground/35 focus:outline-none"
-              />
-            </div>
-            <datalist id={brandListId}>
-              {brandOptions.map((b) => (
-                <option key={b} value={b} />
-              ))}
-            </datalist>
-
-            {(() => {
-              // Re-suggest from combined brand+model+name. If the suggested weight differs
-              // from the current weight, surface a one-click apply chip.
-              const probe = [brand, model, name].filter(Boolean).join(" ").trim();
-              const hint = probe.length > 1 ? suggestFromName(probe) : null;
-              if (!hint || hint.weightG === weight) return null;
-              return (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setWeight(hint.weightG);
-                    setCategory(hint.category);
-                    const canonical = lang === "zh" ? hint.nameZh : hint.nameEn;
-                    if (canonical) setName(canonical);
-                  }}
-                  className="flex w-full items-center justify-between rounded border border-signal/40 bg-signal-soft/40 px-2 py-1.5 text-left font-mono text-[10px] hover:bg-signal-soft"
-                >
-                  <span className="truncate text-foreground">
-                    <span className="text-signal">↳</span>{" "}
-                    {(lang === "zh" ? hint.nameZh : hint.nameEn) ?? probe}
-                    <span className="ml-1.5 text-muted-foreground">
-                      · {hint.weightG}g · {t(`cat.${hint.category}`)}
-                    </span>
-                  </span>
-                  <span className="ml-2 shrink-0 tracking-[0.15em] text-signal">
-                    {t("container.libraryHint.useEnter")}
-                  </span>
-                </button>
-              );
-            })()}
-
-            <div className="grid grid-cols-12 gap-2">
-              <input
-                type="number"
-                min={1}
-                value={qty}
-                onChange={(e) => setQty(+e.target.value)}
-                placeholder={t("container.add.qty")}
-                className="col-span-4 rounded border border-border-strong bg-background px-2 py-1.5 text-center font-mono text-sm focus:border-foreground/35 focus:outline-none"
-              />
-              <input
-                type="number"
-                min={1}
-                value={weight}
-                onChange={(e) => {
-                  setWeight(+e.target.value);
-                  setEstimateKind(null);
-                  setAiBand(null);
-                  setCommunityN(null);
-                }}
-                placeholder={t("container.add.weight")}
-                className="col-span-8 rounded border border-border-strong bg-background px-2 py-1.5 text-right font-mono text-sm focus:border-foreground/35 focus:outline-none"
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={aiBusy}
-                onClick={() => void applyAiEstimate()}
-                className="rounded border border-border-strong bg-surface px-2 py-1 font-mono text-[10px] tracking-[0.15em] text-muted-foreground hover:border-foreground/25 hover:text-foreground disabled:opacity-40"
-              >
-                {aiBusy ? "…" : t("weight.action.ai")}
-              </button>
-              <button
-                type="button"
-                disabled={!brand.trim() || !model.trim() || !cmPreview}
-                onClick={applyCommunityMedian}
-                title={
-                  cmPreview
-                    ? t("weight.community.applyTitle")
-                    : t("weight.community.needSamples").trim() || undefined
-                }
-                className="rounded border border-border-strong bg-surface px-2 py-1 font-mono text-[10px] tracking-[0.15em] text-muted-foreground hover:border-foreground/25 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {t("weight.action.community")}
-              </button>
-            </div>
-            {(() => {
-              const hint =
-                brand.trim() && model.trim()
-                  ? cmPreview
-                    ? t("weight.community.preview")
-                        .replace("{n}", String(cmPreview.n))
-                        .replace("{g}", String(cmPreview.medianG))
-                    : t("weight.community.needSamples").trim()
-                  : t("weight.community.needBrandModel").trim();
-              return hint ? (
-                <p className="font-mono text-[10px] leading-relaxed text-muted-foreground">
-                  {hint}
-                </p>
-              ) : null;
-            })()}
-
-            <div className="flex flex-wrap items-center gap-1">
-              {cats.map((c) => (
-                <button
-                  type="button"
-                  key={c}
-                  onClick={() => setCategory(c)}
-                  className={`rounded border px-2 py-0.5 font-mono text-[10px] tracking-[0.15em] ${
-                    category === c
-                      ? "border-signal bg-signal text-signal-foreground"
-                      : "border-border-strong text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {t(`cat.${c}`)}
-                </button>
-              ))}
-            </div>
-
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder={t("item.edit.note")}
-              rows={2}
-              className="w-full resize-none rounded border border-border-strong bg-background px-2 py-1.5 text-sm focus:border-foreground/35 focus:outline-none"
+            <span>{t("item.edit.worn")}</span>
+          </label>
+          <label className="flex cursor-pointer items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={isConsumable}
+              onChange={(e) => setIsConsumable(e.target.checked)}
+              className="h-4 w-4 accent-[var(--signal)]"
             />
+            <span>{t("item.edit.consumable")}</span>
+          </label>
+        </div>
 
-            <div className="flex flex-col gap-2 rounded border border-border-strong bg-surface/40 px-2 py-2">
-              <label className="flex cursor-pointer items-center gap-2 text-xs">
-                <input
-                  type="checkbox"
-                  checked={isWorn}
-                  onChange={(e) => setIsWorn(e.target.checked)}
-                  className="h-4 w-4 accent-[var(--signal)]"
-                />
-                <span>{t("item.edit.worn")}</span>
-              </label>
-              <label className="flex cursor-pointer items-center gap-2 text-xs">
-                <input
-                  type="checkbox"
-                  checked={isConsumable}
-                  onChange={(e) => setIsConsumable(e.target.checked)}
-                  className="h-4 w-4 accent-[var(--signal)]"
-                />
-                <span>{t("item.edit.consumable")}</span>
-              </label>
-            </div>
-
-            {onSaveToLibrary && (
-              <button
-                type="button"
-                disabled={savedToLib}
-                onClick={() => {
-                  onSaveToLibrary();
-                  setSavedToLib(true);
-                }}
-                className={`flex w-full items-center justify-center rounded border px-2 py-1.5 font-mono text-[10px] tracking-[0.15em] transition ${
-                  savedToLib
-                    ? "border-success/50 bg-success/10 text-success"
-                    : "border-border-strong bg-surface text-foreground hover:bg-surface-2"
-                }`}
-              >
-                {savedToLib ? t("item.edit.inLib") : t("item.edit.toLib")}
-              </button>
-            )}
+        {onSaveToLibrary && (
+          <button
+            type="button"
+            disabled={savedToLib}
+            onClick={() => {
+              onSaveToLibrary();
+              setSavedToLib(true);
+            }}
+            className={`flex w-full items-center justify-center rounded border px-2 py-1.5 font-mono text-[10px] tracking-[0.15em] transition ${
+              savedToLib
+                ? "border-success/50 bg-success/10 text-success"
+                : "border-border-strong bg-surface text-foreground hover:bg-surface-2"
+            }`}
+          >
+            {savedToLib ? t("item.edit.inLib") : t("item.edit.toLib")}
+          </button>
+        )}
           </div>
 
-          <div className="flex shrink-0 justify-between gap-2 border-t border-border px-5 py-3 md:px-6">
-            {onDelete ? (
-              <button
-                type="button"
-                onClick={onDelete}
-                className="rounded border border-destructive/50 px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-destructive hover:bg-destructive/10"
-              >
-                {t("item.edit.delete")}
-              </button>
-            ) : (
-              <span />
-            )}
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded border-0 bg-transparent px-2 py-1 font-mono text-[10px] tracking-[0.18em] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-              >
-                {t("container.add.cancel")}
-              </button>
-              <button type="submit" className={cn(packlogBtnPrimary, packlogBtnSm)}>
-                {t("item.edit.save")}
-              </button>
-            </div>
+        <div className="flex shrink-0 justify-between gap-2 border-t border-border px-5 py-3 md:px-6">
+          {onDelete ? (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="rounded border border-destructive/50 px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-destructive hover:bg-destructive/10"
+            >
+              {t("item.edit.delete")}
+            </button>
+          ) : (
+            <span />
+          )}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded border-0 bg-transparent px-2 py-1 font-mono text-[10px] tracking-[0.18em] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
+              {t("container.add.cancel")}
+            </button>
+            <button
+              type="submit"
+              className={cn(packlogBtnPrimary, packlogBtnSm)}
+            >
+              {t("item.edit.save")}
+            </button>
           </div>
+        </div>
         </motion.form>
       </motion.div>
     </AnimatePresence>

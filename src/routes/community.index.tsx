@@ -1,14 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { POST_AUTH_EVENT, type PostAuthIntent } from "@/lib/post-auth-intent";
 import { CommunityUrlImport } from "@/components/packlog/CommunityUrlImport";
 import { usePacklog } from "@/lib/packlog-store";
 import { useI18n } from "@/lib/i18n";
-import {
-  communityTemplates,
-  isCommunityGuide,
-  libraryCategoryMatchForTemplate,
-} from "@/lib/packlog-data";
+import { communityTemplates, isCommunityGuide, libraryCategoryMatchForTemplate } from "@/lib/packlog-data";
 import { motion } from "framer-motion";
 import { filterTripTagList, formatCommunityTag } from "@/lib/community-tag-display";
 import { canonicalTagKey, isPresetTagId, tagListIncludesFilter } from "@/lib/tag-presets";
@@ -17,7 +14,11 @@ import {
   packlogBtnSecondary,
   packlogBtnSm,
   packlogBtnTertiary,
+  packlogCardMono,
+  packlogFieldLabel,
   packlogHint,
+  packlogItemName,
+  packlogKicker,
   packlogPageTitle,
   packlogSectionTitle,
 } from "@/lib/packlog-button-classes";
@@ -37,7 +38,8 @@ export const Route = createFileRoute("/community/")({
       { title: "Community Kits · PACKLOG" },
       {
         name: "description",
-        content: "Reference packing kits from the community — copy any blueprint into your trip.",
+        content:
+          "Reference packing kits from the community — copy any blueprint into your trip.",
       },
     ],
   }),
@@ -69,10 +71,14 @@ function CommunityListPage() {
       const tpl = communityTemplates.find((x) => x.id === d.templateId);
       if (!tpl) return;
       cloneCommunity(d.tripId, tpl, d.selectedIdx, d.targetContainerId, d.ownership);
+      const n = d.selectedIdx.length;
+      if (n > 0) {
+        toast.success(t("community.merge.successToast").replace("{n}", String(n)));
+      }
     };
     window.addEventListener(POST_AUTH_EVENT, onResume as EventListener);
     return () => window.removeEventListener(POST_AUTH_EVENT, onResume as EventListener);
-  }, [targetTripId, cloneCommunity]);
+  }, [targetTripId, cloneCommunity, t]);
 
   const publicTrips = useMemo(() => trips.filter((tr) => tr.isPublic), [trips]);
   const filteredPublicTrips = useMemo(() => {
@@ -174,27 +180,30 @@ function CommunityListPage() {
 
       {trips.length > 0 && (
         <section className="module corner-tick p-5">
-          <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-4">
-            <div>
+          <div className="flex flex-col gap-4 border-b border-border pb-4 md:flex-row md:flex-wrap md:items-end md:justify-between md:gap-6">
+            <div className="min-w-0">
               <h2 className={packlogSectionTitle}>{t("community.public.title")}</h2>
-              <p className="mt-1 font-mono text-[10px] text-muted-foreground">
+              <p className={cn(packlogHint, "mt-2 max-w-prose text-muted-foreground")}>
                 {t("community.public.subtitle")}
               </p>
             </div>
-            <label className="block min-w-[200px]">
-              <span className="mb-1 block font-mono text-[9px] tracking-[0.15em] text-muted-foreground">
-                {t("community.public.filter")}
-              </span>
+            <label className="block w-full min-w-0 md:max-w-sm md:shrink-0">
+              <span className={packlogFieldLabel}>{t("community.public.filter")}</span>
               <input
                 value={publicTagQ}
                 onChange={(e) => setPublicTagQ(e.target.value)}
                 placeholder={t("community.public.filterPlaceholder")}
-                className="w-full rounded border border-border-strong bg-background px-2 py-1.5 font-mono text-xs focus:border-foreground/35 focus:outline-none"
+                type="search"
+                enterKeyHint="search"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                className="mt-1 min-h-11 w-full rounded-md border border-border-strong bg-background px-3 py-2.5 font-mono text-base text-foreground placeholder:text-muted-foreground focus:border-foreground/35 focus:outline-none md:min-h-0 md:py-2 md:text-sm"
               />
             </label>
           </div>
           {filteredPublicTrips.length === 0 ? (
-            <p className="mt-4 font-mono text-[11px] text-muted-foreground">
+            <p className={cn(packlogHint, "mt-4 text-muted-foreground")}>
               {publicTrips.length === 0
                 ? t("community.public.empty")
                 : t("community.public.noMatch")}
@@ -221,11 +230,9 @@ function CommunityListPage() {
                         });
                       }
                     }}
-                    className="module block cursor-pointer p-4 text-left transition hover:-translate-y-0.5"
+                    className="module block cursor-pointer p-4 text-left transition-shadow hover:shadow-md"
                   >
-                    <div className="mt-0.5 font-display text-lg leading-tight">
-                      {tripTitleDisplay(tr, lang)}
-                    </div>
+                    <div className="mt-0.5 font-display text-lg leading-tight">{tripTitleDisplay(tr, lang)}</div>
                     <div
                       className="mt-2 flex flex-wrap gap-1"
                       onClick={(e) => e.stopPropagation()}
@@ -246,7 +253,7 @@ function CommunityListPage() {
                             })
                           }
                           className={cn(
-                            "tag-chip cursor-pointer font-mono text-[9px] transition hover:border-foreground/25 hover:text-foreground",
+                            "tag-chip cursor-pointer transition hover:border-foreground/25 hover:text-foreground",
                             !isPresetTagId(tag) &&
                               "border-dashed border-muted-foreground/70 bg-transparent",
                           )}
@@ -269,9 +276,7 @@ function CommunityListPage() {
       <div>
         <h2 className={cn("mb-3", packlogSectionTitle)}>{t("community.blueprints.title")}</h2>
         {filteredTemplates.length === 0 && (tagFilter || kind !== "all") ? (
-          <p className="mb-3 font-mono text-[11px] text-muted-foreground">
-            {t("community.kind.empty")}
-          </p>
+          <p className={cn(packlogHint, "mb-3")}>{t("community.kind.empty")}</p>
         ) : null}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredTemplates.map((c, i) => {
@@ -279,8 +284,8 @@ function CommunityListPage() {
             return (
               <motion.div
                 key={c.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 transition={{ delay: i * 0.04 }}
                 role="button"
                 tabIndex={0}
@@ -293,27 +298,25 @@ function CommunityListPage() {
                     navigate({ to: "/community/$templateId", params: { templateId: c.id } });
                   }
                 }}
-                className="module corner-tick group relative block cursor-pointer p-4 text-left transition hover:-translate-y-0.5"
+                className="module corner-tick group relative block cursor-pointer p-4 text-left transition-shadow hover:shadow-md"
               >
-                <div className="font-mono text-[10px] tracking-[0.18em] text-foreground">
-                  {isCommunityGuide(c)
-                    ? t("community.badge.guide")
-                    : t("community.badge.blueprint")}{" "}
-                  · {t(`scenario.${c.scenario}`)} · ★ {c.rating}
+                <div className={packlogKicker}>
+                  {isCommunityGuide(c) ? t("community.badge.guide") : t("community.badge.blueprint")} ·{" "}
+                  {t(`scenario.${c.scenario}`)} · ★ {c.rating}
                 </div>
-                <h3 className={cn("mt-1", packlogSectionTitle)}>
+                <h3 className={cn("font-display mt-1", packlogItemName)}>
                   {lang === "zh" ? (c.titleZh ?? c.title) : c.title}
                 </h3>
-                <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
+                <p className={cn(packlogHint, "mt-2 line-clamp-2 text-pretty")}>
                   {lang === "zh" ? (c.introZh ?? c.intro) : c.intro}
                 </p>
-                <div className="mt-2 font-mono text-[10px] text-muted-foreground">
+                <div className={cn(packlogCardMono, "mt-2")}>
                   {t("community.match")}{" "}
                   <span className="tabular-nums text-foreground">
                     {catMatch.matched}/{catMatch.total}
                   </span>
                 </div>
-                <div className="mt-3 flex items-center justify-between font-mono text-[10px] text-muted-foreground">
+                <div className={cn(packlogCardMono, "mt-3 flex items-center justify-between")}>
                   <span>{c.author}</span>
                   <span>
                     {isCommunityGuide(c) && c.items.length === 0
@@ -334,16 +337,12 @@ function CommunityListPage() {
                       onClick={() =>
                         navigate({
                           to: "/community",
-                          search: {
-                            tag: canonicalTagKey(tag),
-                            kind: kind === "all" ? undefined : kind,
-                          },
+                          search: { tag: canonicalTagKey(tag), kind: kind === "all" ? undefined : kind },
                         })
                       }
                       className={cn(
-                        "tag-chip cursor-pointer font-mono text-[9px] transition hover:border-foreground/25 hover:text-foreground",
-                        !isPresetTagId(tag) &&
-                          "border-dashed border-muted-foreground/70 bg-transparent",
+                        "tag-chip cursor-pointer transition hover:border-foreground/25 hover:text-foreground",
+                        !isPresetTagId(tag) && "border-dashed border-muted-foreground/70 bg-transparent",
                       )}
                     >
                       {formatCommunityTag(tag, lang)}
@@ -368,11 +367,7 @@ function CommunityListPage() {
       {trips.length === 0 && (
         <div className="module corner-tick p-6 text-center">
           <p className="text-sm text-muted-foreground">{t("archive.empty")}</p>
-          <Link
-            to="/"
-            search={{ tag: undefined }}
-            className={cn(packlogBtnPrimary, packlogBtnSm, "mt-3 inline-flex")}
-          >
+          <Link to="/" search={{ tag: undefined }} className={cn(packlogBtnPrimary, packlogBtnSm, "mt-3 inline-flex")}>
             {t("archive.back")}
           </Link>
         </div>

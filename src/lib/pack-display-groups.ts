@@ -139,6 +139,29 @@ export function i18nKeyForPackDisplayGroup(g: PackDisplayGroup): string {
   return `pack.displayGroup.${g}`;
 }
 
+/** 若线上 i18n 未含新 key，避免把 raw key 露给用户（CDN/Workers 旧包时仍可读）。 */
+const PACK_DISPLAY_GROUP_FALLBACK_EN: Record<PackDisplayGroup, string> = {
+  sleep: "Sleep system",
+  wear: "Clothing & layers",
+  cook: "Cook kit",
+  nav: "Navigation & safety",
+  move: "Trekking gear",
+  resupply: "Food & water",
+  other: "Other",
+  apparel: "Clothes",
+  footwear: "Footwear",
+  tech: "Electronics",
+  health: "Toiletries",
+  doc: "Documents",
+  misc: "Misc & small items",
+};
+
+export function packDisplayGroupLabel(t: (key: string) => string, g: PackDisplayGroup): string {
+  const key = i18nKeyForPackDisplayGroup(g);
+  const s = t(key);
+  return s !== key ? s : PACK_DISPLAY_GROUP_FALLBACK_EN[g];
+}
+
 /** Default row category when adding custom gear from a pack display section. */
 export function defaultItemCategoryForPackDisplayGroup(g: PackDisplayGroup): Item["category"] {
   if ((URBAN_ORDER as readonly PackDisplayGroup[]).includes(g)) {

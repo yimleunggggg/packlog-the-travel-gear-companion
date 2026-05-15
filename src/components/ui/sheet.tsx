@@ -41,7 +41,7 @@ const sheetVariants = cva(
           "inset-x-0 bottom-0 flex max-h-[90vh] flex-col gap-0 border-t p-0 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
         left: "inset-y-0 left-0 h-full w-3/4 border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm",
         right:
-          "inset-y-0 right-0 h-full w-3/4 border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm",
+          "inset-y-0 right-0 flex h-[100dvh] max-h-[100dvh] w-[min(100vw-1rem,20rem)] flex-col border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm",
       },
     },
     defaultVariants: {
@@ -64,11 +64,13 @@ const SheetContent = React.forwardRef<
     <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
       <SheetPrimitive.Close
         className={cn(
-          "absolute z-10 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary",
-          side === "bottom" ? "right-4 top-3" : "right-4 top-4",
+          "absolute z-10 grid place-items-center rounded-md opacity-90 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary touch-manipulation",
+          side === "bottom"
+            ? "right-4 top-3 h-8 w-8"
+            : "right-2 top-[max(0.5rem,env(safe-area-inset-top))] h-11 w-11",
         )}
       >
-        <X className="h-4 w-4" />
+        <X className={side === "bottom" ? "h-4 w-4" : "h-5 w-5"} aria-hidden />
         <span className="sr-only">Close</span>
       </SheetPrimitive.Close>
       {side === "bottom" ? (

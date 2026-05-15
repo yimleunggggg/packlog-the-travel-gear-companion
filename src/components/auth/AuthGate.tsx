@@ -7,7 +7,7 @@ type Props = {
   pendingAction: () => void | Promise<void>;
   /** Persisted for OAuth / magic-link return */
   resumeIntent?: PostAuthIntent;
-  children: ReactElement<{ onClick?: (e: React.MouseEvent) => void }>;
+  children: ReactElement<{ onClick?: (e: React.MouseEvent) => void; disabled?: boolean }>;
 };
 
 /**
@@ -20,9 +20,9 @@ export function AuthGate({ pendingAction, resumeIntent, children }: Props) {
     (e: React.MouseEvent) => {
       children.props.onClick?.(e);
       if (e.defaultPrevented) return;
+      if (!ready) return;
       e.preventDefault();
       e.stopPropagation();
-      if (!ready) return;
       requestAuth(pendingAction, resumeIntent);
     },
     [children.props, pendingAction, resumeIntent, requestAuth, ready],
@@ -34,6 +34,7 @@ export function AuthGate({ pendingAction, resumeIntent, children }: Props) {
 
   return cloneElement(children, {
     ...children.props,
+    disabled: Boolean(children.props.disabled) || !ready,
     onClick,
   });
 }

@@ -196,7 +196,7 @@ export function ArchiveList({
                             });
                           }}
                           className={cn(
-                            "tag-chip cursor-pointer font-mono text-[9px] transition hover:border-foreground/25 hover:text-foreground",
+                            "tag-chip cursor-pointer transition hover:border-foreground/25 hover:text-foreground",
                             !isPresetTagId(tag) &&
                               "border-dashed border-muted-foreground/70 bg-transparent",
                           )}
