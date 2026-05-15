@@ -85,7 +85,8 @@ Before deploy, set production variables/secrets in Cloudflare if your Worker nee
 This repository now includes `.github/workflows/deploy-cloudflare.yml`.
 
 - Trigger: push to `main` (or manual run from Actions tab)
-- Target: Cloudflare Workers via `npm run release:cf` (build + deploy)
+- Target: optional **Supabase `db push`** (when secrets are set), then Cloudflare Workers via `npm run release:cf` (build + deploy)
+- Full checklist: **[docs/CI_DEPLOY.md](docs/CI_DEPLOY.md)**
 
 Set these GitHub repository secrets before enabling auto deploy:
 
@@ -95,6 +96,7 @@ Set these GitHub repository secrets before enabling auto deploy:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_PACKLOG_WORKSPACE`
+- `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD` (optional; when all three are set, migrations run on every deploy)
 
 ## Supabase + Vercel Integration
 
