@@ -34,6 +34,9 @@ dist-ssr
 .env*.local
 .env
 
+# Supabase CLI (local link / temp; do not commit)
+supabase/.temp/
+
 # Playwright
 playwright-report/
 test-results/
