@@ -29,13 +29,16 @@ export function CloneSheet({
 
   useEffect(() => {
     if (template) setSelected(template.items.map((_, i) => i));
-    if (containers[0]) setTarget(containers[0].id);
+    setTarget(containers[0]?.id ?? "");
   }, [template, containers]);
 
   const totalKg = useMemo(() => {
     if (!template) return 0;
     return (
-      selected.reduce((s, i) => s + template.items[i].weightG * template.items[i].qty, 0) / 1000
+      selected.reduce((s, i) => {
+        const item = template.items[i];
+        return item ? s + item.weightG * item.qty : s;
+      }, 0) / 1000
     );
   }, [selected, template]);
 
@@ -43,6 +46,7 @@ export function CloneSheet({
 
   const toggle = (i: number) =>
     setSelected((cur) => (cur.includes(i) ? cur.filter((x) => x !== i) : [...cur, i]));
+  const hasValidTarget = containers.some((c) => c.id === target);
 
   return (
     <AnimatePresence>
@@ -190,8 +194,9 @@ export function CloneSheet({
                 {t("community.merge.cancel")}
               </button>
               <button
-                disabled={selected.length === 0}
+                disabled={selected.length === 0 || !hasValidTarget}
                 onClick={() => {
+                  if (!hasValidTarget) return;
                   onCommit(selected, target);
                   onClose();
                 }}
