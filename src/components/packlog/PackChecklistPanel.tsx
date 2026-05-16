@@ -89,8 +89,7 @@ export function PackChecklistPanel({
   /** 打开「添加装备」时滚到表单附近，减少键盘弹出后版面半截不可见 */
   useEffect(() => {
     if (!adding) return;
-    const sel =
-      adding.source === "section" ? "[data-pack-inline-add]" : "[data-pack-footer-add]";
+    const sel = adding.source === "section" ? "[data-pack-inline-add]" : "[data-pack-footer-add]";
     const id = requestAnimationFrame(() => {
       document.querySelector(sel)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
@@ -140,30 +139,30 @@ export function PackChecklistPanel({
       });
 
       const merged = mergedScenarioSeedsForTrip(trip);
-    const unadded = filterSeedsNotInTrip(trip, merged);
-    const seedsByPackGroup: Partial<Record<PackDisplayGroup, SeedItem[]>> = {};
-    const showSeeds = packViewFilter === "all" || packViewFilter === "todo";
-    if (showSeeds) {
-      for (const s of unadded) {
-        const g = itemPackDisplayGroup(trip, {
-          name: s.en,
-          nameEn: s.en,
-          nameZh: s.zh,
-          category: s.category,
-        });
-        const list = seedsByPackGroup[g] ?? [];
-        list.push(s);
-        seedsByPackGroup[g] = list;
+      const unadded = filterSeedsNotInTrip(trip, merged);
+      const seedsByPackGroup: Partial<Record<PackDisplayGroup, SeedItem[]>> = {};
+      const showSeeds = packViewFilter === "all" || packViewFilter === "todo";
+      if (showSeeds) {
+        for (const s of unadded) {
+          const g = itemPackDisplayGroup(trip, {
+            name: s.en,
+            nameEn: s.en,
+            nameZh: s.zh,
+            category: s.category,
+          });
+          const list = seedsByPackGroup[g] ?? [];
+          list.push(s);
+          seedsByPackGroup[g] = list;
+        }
       }
-    }
 
-    return {
-      itemsByPackGroup,
-      seedsByPackGroup,
-      unaddedCount: showSeeds ? unadded.length : 0,
-      groupStatsByPackGroup,
-    };
-  }, [trip, tripId, bagFilter, packViewFilter]);
+      return {
+        itemsByPackGroup,
+        seedsByPackGroup,
+        unaddedCount: showSeeds ? unadded.length : 0,
+        groupStatsByPackGroup,
+      };
+    }, [trip, tripId, bagFilter, packViewFilter]);
 
   if (phase === "REVIEW") return null;
 
@@ -171,7 +170,9 @@ export function PackChecklistPanel({
     <section id="pack-checklist" className="module corner-tick relative scroll-mt-28 p-4 md:p-5">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
         <div className="min-w-0">
-          <div className="font-mono text-[10px] tracking-[0.22em] text-signal">{t("packChecklist.kicker")}</div>
+          <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
+            {t("packChecklist.kicker")}
+          </div>
           <h2 className={cn("mt-1", packlogSectionTitle)}>{t("packChecklist.title")}</h2>
           {t("packChecklist.subtitle").trim() ? (
             <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground md:text-sm">
@@ -207,7 +208,9 @@ export function PackChecklistPanel({
       ) : null}
 
       {t("packChecklist.hint").trim() ? (
-        <p className="mt-3 text-xs leading-relaxed text-muted-foreground md:text-[11px]">{t("packChecklist.hint")}</p>
+        <p className="mt-3 text-xs leading-relaxed text-muted-foreground md:text-[11px]">
+          {t("packChecklist.hint")}
+        </p>
       ) : null}
 
       <div className="mt-4 space-y-3">
@@ -226,7 +229,7 @@ export function PackChecklistPanel({
           const addTargetId =
             bagFilter !== "all"
               ? bagFilter
-              : preferredContainerIdForCategory(trip, defaultCat) ?? defaultContainerId;
+              : (preferredContainerIdForCategory(trip, defaultCat) ?? defaultContainerId);
           return (
             <details key={groupKey} className="rounded-md border border-border bg-surface/40" open>
               <summary className="cursor-pointer select-none px-3 py-3 hover:bg-surface-2 md:py-2 [&::-webkit-details-marker]:hidden">
@@ -302,7 +305,9 @@ export function PackChecklistPanel({
                                 style={{ background: PACKLOG_CATEGORY_HEX[it.category] }}
                                 aria-hidden
                               />
-                              <span className={cn(packlogItemName, "min-w-0 truncate")}>{pickName(lang, it)}</span>
+                              <span className={cn(packlogItemName, "min-w-0 truncate")}>
+                                {pickName(lang, it)}
+                              </span>
                             </span>
                             <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 pl-0 md:ml-auto md:flex-nowrap md:justify-end md:pl-0">
                               <span
@@ -312,7 +317,10 @@ export function PackChecklistPanel({
                                 )}
                               >
                                 ×{it.qty}{" "}
-                                <ItemWeightLabel item={it} className="inline text-[0.8125rem] leading-none md:text-[11px]" />
+                                <ItemWeightLabel
+                                  item={it}
+                                  className="inline text-[0.8125rem] leading-none md:text-[11px]"
+                                />
                               </span>
                               <span className="min-w-0 text-xs leading-snug text-muted-foreground md:max-w-[10rem] md:truncate md:font-mono md:text-[10px] md:leading-tight">
                                 <span className="text-foreground/75">{bagLabel}</span>
@@ -364,34 +372,37 @@ export function PackChecklistPanel({
                                   {t("packChecklist.row.status")}
                                 </div>
                                 <div className="mt-1.5 flex flex-wrap gap-1.5">
-                                  {(["owned", "wishlist", "borrowed", "undecided"] as const).map((o) => {
-                                    const activeOwn = it.ownership === o;
-                                    return (
-                                      <button
-                                        key={o}
-                                        type="button"
-                                        onClick={() => {
-                                          if (!activeOwn) onSetOwnership(it._containerId, it.id, o);
-                                        }}
-                                        className={cn(
-                                          "min-h-10 rounded-md border px-3 py-2 text-xs md:min-h-0 md:px-2 md:py-1 md:font-mono md:text-[9px]",
-                                          activeOwn &&
-                                            (o === "owned"
-                                              ? "border-success/90 bg-transparent text-[color:var(--success)]"
-                                              : "border-signal bg-signal-soft text-foreground"),
-                                          !activeOwn &&
-                                            "border-border-strong bg-transparent text-muted-foreground hover:text-foreground",
-                                        )}
-                                        style={
-                                          !activeOwn
-                                            ? { borderColor: ownColor[o], color: ownColor[o] }
-                                            : undefined
-                                        }
-                                      >
-                                        {activeOwn ? `${t(`own.${o}`)} ✓` : t(`own.${o}`)}
-                                      </button>
-                                    );
-                                  })}
+                                  {(["owned", "wishlist", "borrowed", "undecided"] as const).map(
+                                    (o) => {
+                                      const activeOwn = it.ownership === o;
+                                      return (
+                                        <button
+                                          key={o}
+                                          type="button"
+                                          onClick={() => {
+                                            if (!activeOwn)
+                                              onSetOwnership(it._containerId, it.id, o);
+                                          }}
+                                          className={cn(
+                                            "min-h-10 rounded-md border px-3 py-2 text-xs md:min-h-0 md:px-2 md:py-1 md:font-mono md:text-[9px]",
+                                            activeOwn &&
+                                              (o === "owned"
+                                                ? "border-success/90 bg-transparent text-[color:var(--success)]"
+                                                : "border-signal bg-signal-soft text-foreground"),
+                                            !activeOwn &&
+                                              "border-border-strong bg-transparent text-muted-foreground hover:text-foreground",
+                                          )}
+                                          style={
+                                            !activeOwn
+                                              ? { borderColor: ownColor[o], color: ownColor[o] }
+                                              : undefined
+                                          }
+                                        >
+                                          {activeOwn ? `${t(`own.${o}`)} ✓` : t(`own.${o}`)}
+                                        </button>
+                                      );
+                                    },
+                                  )}
                                 </div>
                               </div>
                               <div className="border-t border-border pt-2 font-mono text-[11px]">
@@ -465,8 +476,7 @@ export function PackChecklistPanel({
                     </div>
                     <div className="flex flex-col gap-2 border-t border-border/70 pt-2 md:flex-1 md:flex-row md:items-center md:justify-end md:gap-2 md:border-t-0 md:pt-0">
                       <span className="shrink-0 whitespace-nowrap font-mono text-sm tabular-nums text-muted-foreground md:text-[11px]">
-                        {seed.weightG}g
-                        {seed.qty && seed.qty > 1 ? ` ×${seed.qty}` : ""}
+                        {seed.weightG}g{seed.qty && seed.qty > 1 ? ` ×${seed.qty}` : ""}
                       </span>
                       <div
                         className="flex flex-wrap justify-stretch gap-1.5 md:max-w-[min(42%,11rem)] md:shrink-0 md:justify-end"
@@ -518,7 +528,9 @@ export function PackChecklistPanel({
                       data-pack-inline-add
                     >
                       <div className="mb-4 flex flex-col gap-1.5 border-b border-border/70 pb-3 text-sm leading-snug text-foreground md:mb-2 md:border-0 md:pb-0 md:font-mono md:text-[10px] md:leading-normal md:tracking-[0.18em] md:text-signal">
-                        <span className="font-medium text-signal md:font-normal">{t("container.add")}</span>
+                        <span className="font-medium text-signal md:font-normal">
+                          {t("container.add")}
+                        </span>
                         <span className="text-muted-foreground">
                           <span className="text-foreground/90">
                             {containerDisplayLabel(
@@ -579,7 +591,8 @@ export function PackChecklistPanel({
                 <span className="text-muted-foreground">
                   <span className="text-foreground/90">
                     {containerDisplayLabel(
-                      trip.containers.find((c) => c.id === adding.containerId) ?? trip.containers[0]!,
+                      trip.containers.find((c) => c.id === adding.containerId) ??
+                        trip.containers[0]!,
                       lang,
                       t,
                     )}
@@ -619,16 +632,13 @@ export function PackChecklistPanel({
           }}
           onSaveToLibrary={() => {
             const it = editing.item;
-            requestAuth(
-              () => onSaveToLibrary(it),
-              {
-                v: 1,
-                kind: "saveItemToLibrary",
-                tripId,
-                containerId: editing.cid,
-                itemId: it.id,
-              },
-            );
+            requestAuth(() => onSaveToLibrary(it), {
+              v: 1,
+              kind: "saveItemToLibrary",
+              tripId,
+              containerId: editing.cid,
+              itemId: it.id,
+            });
           }}
         />
       ) : null}
