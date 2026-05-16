@@ -13,9 +13,9 @@ export const packlogBtnTertiary =
 /** 小号 CTA（弹层、卡片内） */
 export const packlogBtnSm = "min-h-0 px-3 py-1.5 text-[10px] tracking-[0.18em]";
 
-/** 全宽主操作（行程简报、打包页底栏） */
+/** 全宽主操作（行程简报、打包页底栏）— 移动端全宽触控；桌面紧凑宽度 */
 export const packlogBtnBlock =
-  "min-h-[var(--touch-target)] w-full px-4 py-2.5 text-center text-[11px] tracking-[0.2em] sm:w-auto sm:min-w-[10rem]";
+  "min-h-[var(--touch-target)] w-full px-4 py-2.5 text-center text-[11px] tracking-[0.2em] md:min-h-0 md:w-auto md:min-w-[10rem] md:py-2 md:text-[10px]";
 
 /** 页面级大标题（F1：移动端 24px / 桌面 28px） */
 export const packlogPageTitle =
@@ -40,3 +40,24 @@ export const packlogLabel =
 /** 说明 / 提示（F1 hint） */
 export const packlogHint =
   "[font-size:var(--font-hint-size)] [font-weight:var(--font-hint-weight)] leading-relaxed text-[var(--text-tertiary)]";
+
+/**
+ * F2 · 数据密集体（装备库、社区统计等）— 与 `styles.css` :root 变量配套。
+ * 辅文不小于 12px（--font-card-mono-size），段正文 15px→14px（md）。
+ */
+export const packlogKicker =
+  "font-mono text-[var(--text-secondary)] [font-size:var(--font-kicker-size)] [font-weight:var(--font-kicker-weight)] [letter-spacing:var(--font-kicker-tracking)]";
+
+export const packlogProseCompact =
+  "text-pretty text-foreground/90 [font-size:var(--font-prose-compact-size)] [font-weight:400] [line-height:var(--font-prose-compact-leading)]";
+
+export const packlogCardMono =
+  "font-mono text-[var(--text-secondary)] [font-size:var(--font-card-mono-size)] [line-height:var(--font-card-mono-leading)]";
+
+/** 类目标题（卡片首行，与 F1 meta 尺寸对齐） */
+export const packlogCatTitle =
+  "font-sans font-semibold text-foreground [font-size:var(--font-item-meta-size)] [line-height:var(--font-item-meta-leading)]";
+
+/** 表单控件标签（sans · 与 meta 同阶，保证可读） */
+export const packlogFieldLabel =
+  "mb-1.5 block font-sans font-medium leading-snug text-foreground [font-size:var(--font-item-meta-size)]";

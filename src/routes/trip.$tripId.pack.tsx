@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { TripPackWorkspace } from "@/components/packlog/TripPackWorkspace";
 import { TripPackPageFoldout } from "@/components/packlog/TripPackPageFoldout";
@@ -13,6 +14,7 @@ import {
   packlogBtnBlock,
   packlogBtnPrimary,
   packlogBtnSecondary,
+  packlogBtnTertiary,
   packlogItemWeight,
   packlogSectionTitle,
 } from "@/lib/packlog-button-classes";
@@ -35,7 +37,13 @@ function TripPackPage() {
       const d = (e as CustomEvent<PostAuthIntent>).detail;
       if (d.kind === "communityClone" && d.tripId === tripId) {
         const tpl = communityTemplates.find((x) => x.id === d.templateId);
-        if (tpl) store.cloneCommunity(tripId, tpl, d.selectedIdx, d.targetContainerId, d.ownership);
+        if (tpl) {
+          store.cloneCommunity(tripId, tpl, d.selectedIdx, d.targetContainerId, d.ownership);
+          const n = d.selectedIdx.length;
+          if (n > 0) {
+            toast.success(t("community.merge.successToast").replace("{n}", String(n)));
+          }
+        }
         return;
       }
       if (d.kind === "saveItemToLibrary" && d.tripId === tripId) {
@@ -51,7 +59,7 @@ function TripPackPage() {
     };
     window.addEventListener(POST_AUTH_EVENT, onResume as EventListener);
     return () => window.removeEventListener(POST_AUTH_EVENT, onResume as EventListener);
-  }, [tripId, store]);
+  }, [tripId, store, t]);
 
   if (!trip) {
     return (
@@ -80,12 +88,18 @@ function TripPackPage() {
   const totalG = tripTotalGrams(trip);
 
   return (
-    <div className="min-h-dvh overscroll-y-none bg-background pb-[calc(5rem+env(safe-area-inset-bottom))]">
+    <div className="min-h-dvh overscroll-y-none bg-background pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8">
       <header className="sticky top-0 z-30 border-b border-[#E8E2D9] bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur-md">
         <div className="mx-auto flex max-w-[1480px] items-center gap-3 px-4 py-3">
           <button
             type="button"
-            onClick={() => navigate({ to: "/trip/$tripId", params: { tripId: trip.id } })}
+            onClick={() =>
+              void navigate({
+                to: "/trip/$tripId",
+                params: { tripId: trip.id },
+                hash: phase === "REVIEW" ? "trip-review-panel" : undefined,
+              })
+            }
             className="shrink-0 font-mono text-[10px] tracking-[0.2em] text-link hover:underline"
           >
             {t("pack.page.back")}
@@ -115,9 +129,7 @@ function TripPackPage() {
       {phase === "PACK" ? (
         <TripPackPageFoldout
           trip={trip}
-          onOpenClone={() =>
-            navigate({ to: "/community", search: { tag: undefined, kind: undefined } })
-          }
+          onOpenClone={() => navigate({ to: "/community", search: { tag: undefined, kind: undefined } })}
           onSharingPatch={(patch) => store.patchTrip(trip.id, patch)}
           onEnterReview={() => store.setPhase(trip.id, "REVIEW")}
         />
@@ -127,50 +139,72 @@ function TripPackPage() {
         <TripPackWorkspace trip={trip} variant="page" />
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-[#E8E2D9] bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
-        <div className="mx-auto flex max-w-[1480px] flex-col gap-2 px-4 py-3">
-          {phase !== "REVIEW" ? (
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className={cn(packlogBtnPrimary, packlogBtnBlock, "flex-1")}
-                onClick={() =>
-                  document.getElementById("pack-checklist")?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start",
-                  })
-                }
+      <motion.div className="fixed bottom-0 left-0 right-0 z-30 border-t border-[#E8E2D9] bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md max-md:fixed md:static md:z-auto md:mt-8 md:border-t md:bg-transparent md:pb-0 md:backdrop-blur-none">
+        <div className="mx-auto flex max-w-[1480px] flex-col gap-2 px-4 py-3 md:flex-row md:items-center md:justify-end md:gap-3 md:px-[var(--page-padding)]">
+          {phase === "REVIEW" ? (
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+              <Link
+                to="/trip/$tripId"
+                params={{ tripId: trip.id }}
+                hash="trip-review-panel"
+                className={cn(packlogBtnPrimary, packlogBtnBlock, "inline-flex flex-1 justify-center no-underline")}
               >
-                {t("pack.footer.scrollChecklist")}
-              </button>
-              <button
-                type="button"
-                className={cn(packlogBtnSecondary, packlogBtnBlock, "flex-1")}
-                onClick={() =>
-                  document.getElementById("pack-checklist-add")?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start",
-                  })
-                }
+                {t("pack.page.reviewCtaOverview")}
+              </Link>
+              <Link
+                to="/community"
+                search={{ tag: undefined, kind: undefined }}
+                className={cn(
+                  packlogBtnTertiary,
+                  packlogBtnBlock,
+                  "inline-flex flex-1 items-center justify-center border border-border-strong bg-surface-2/80 py-2.5 font-mono text-[11px] tracking-[0.12em] no-underline hover:bg-surface-2 md:py-2 md:text-[10px]",
+                )}
               >
-                {t("pack.footer.addGear")}
-              </button>
+                {t("pack.footer.reviewBrowseCommunity")}
+              </Link>
             </div>
-          ) : null}
-          <Link
-            to="/community"
-            search={{ tag: undefined, kind: undefined }}
-            className="text-center font-mono text-[10px] text-link underline underline-offset-2"
-          >
-            {t("brief.cta.clone")}
-          </Link>
+          ) : (
+            <>
+              <div className="flex gap-2 md:flex-initial">
+                <button
+                  type="button"
+                  className={cn(packlogBtnPrimary, packlogBtnBlock, "flex-1 md:flex-initial")}
+                  onClick={() =>
+                    document.getElementById("pack-checklist")?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "start",
+                    })
+                  }
+                >
+                  {t("pack.footer.scrollChecklist")}
+                </button>
+                <button
+                  type="button"
+                  className={cn(packlogBtnSecondary, packlogBtnBlock, "flex-1 md:flex-initial")}
+                  onClick={() =>
+                    document.getElementById("pack-checklist-add")?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "start",
+                    })
+                  }
+                >
+                  {t("pack.footer.addGear")}
+                </button>
+              </div>
+              <Link
+                to="/community"
+                search={{ tag: undefined, kind: undefined }}
+                className="text-center font-mono text-[10px] text-link underline underline-offset-2"
+              >
+                {t("brief.cta.clone")}
+              </Link>
+            </>
+          )}
           {t("pack.page.footerHint").trim() ? (
-            <p className="text-center font-mono text-[9px] text-muted-foreground">
-              {t("pack.page.footerHint")}
-            </p>
+            <p className="text-center font-mono text-[9px] text-muted-foreground">{t("pack.page.footerHint")}</p>
           ) : null}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
