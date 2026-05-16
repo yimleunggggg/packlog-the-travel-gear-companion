@@ -30,7 +30,7 @@ export function TripPackOverviewLite({
         <button
           type="button"
           onClick={onBack}
-          className="min-h-[var(--touch-target)] px-1 text-left font-mono text-[11px] tracking-[0.18em] text-link underline-offset-4 hover:text-link-hover hover:underline md:text-[10px] md:tracking-[0.2em]"
+          className="min-h-[var(--touch-target)] min-w-[var(--touch-target)] px-1 text-left font-mono text-[10px] tracking-[0.2em] text-[#6B5234] hover:underline"
         >
           {t("trip.overview.backTrips")}
         </button>
@@ -45,10 +45,8 @@ export function TripPackOverviewLite({
         </h1>
 
         <div className="mt-6">
-          <span className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground md:sr-only">
-            {t("brief.load")}
-          </span>
-          <div className="mt-1.5 flex min-h-[var(--touch-target)] items-center gap-3 md:mt-0">
+          <span className="sr-only">{t("brief.load")}</span>
+          <div className="flex min-h-[var(--touch-target)] items-center gap-3">
             <div className="relative h-2.5 min-w-0 flex-1 overflow-hidden rounded bg-surface-3">
               <motion.div
                 className={`absolute inset-y-0 left-0 ${pct >= 100 ? "bg-success" : "bg-signal"}`}
@@ -57,7 +55,7 @@ export function TripPackOverviewLite({
                 transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }}
               />
             </div>
-            <div className="shrink-0 text-right font-mono text-sm font-medium tabular-nums leading-none text-foreground">
+            <div className="shrink-0 font-mono text-sm tabular-nums">
               <span className={pct >= 100 ? "text-success" : "text-signal"}>{packedItems}</span>
               <span className="text-muted-foreground">/{totalItems}</span>
               <span className="text-muted-foreground"> · </span>

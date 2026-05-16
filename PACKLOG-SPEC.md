@@ -685,33 +685,16 @@ function getGroupMode(scenes: string[]): "outdoor" | "city" {
 }
 ```
 
-### 5.3 字体规范（F1 全局 + F2 数据密集体）
-
-**实现源**：`src/styles.css` `:root` CSS 变量 + `src/lib/packlog-button-classes.ts` 导出类（页面与组件只引用类名，避免魔法数字）。
-
-**F1 · 行程 / 清单主路径（原有）**
+### 5.3 移动端字体规范
 
 ```
-页面大标题：var(--font-page-title-size) / packlogPageTitle
-区块标题：  var(--font-section-title-size) / packlogSectionTitle
-清单物品名：var(--font-item-name-size) / packlogItemName
-重量数字：  var(--font-weight-number-size) / packlogItemWeight
-辅助标签：  var(--font-label-size) / packlogLabel
-说明提示：  var(--font-hint-size) / packlogHint
-触控最小：  var(--touch-target) = 44px
+页面大标题：20px / font-weight: 700
+卡片标题：16px / font-weight: 600
+清单物品名：15px / font-weight: 500
+重量数字：14px / font-mono / font-weight: 400
+辅助文字：13px / color: var(--text-secondary)
+标签文字：11px / uppercase (EN) or normal (ZH)
 ```
-
-**F2 · 装备库 / 社区统计等数据密集体（移动优先）**
-
-```
-mono 顶栏/角标：var(--font-kicker-size) — 窄屏 11px，≥768px 10px / packlogKicker
-段正文（DNA 长句）：var(--font-prose-compact-size) — 窄屏 15px，≥768px 14px / packlogProseCompact
-卡片 mono 辅文：var(--font-card-mono-size) = 12px / packlogCardMono（不小于 Material 辅文建议）
-类目标题（卡片首行 sans）：与 F1 meta 对齐 / packlogCatTitle
-全局 N 标签：.tag-chip — 继承 --font-card-mono-size，统一 padding
-```
-
-中文界面 **不对 mono 标签强制 uppercase**（`packlogKicker` 无 uppercase；英文社区标签仍可由 `.tag-chip` uppercase 处理）。
 
 ---
 

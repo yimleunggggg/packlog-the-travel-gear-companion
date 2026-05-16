@@ -52,33 +52,26 @@ export function BriefingStatsAndProgress({
       </div>
 
       {layout === "mobile" ? (
-        <div className="mt-4 space-y-3">
-          <div className="flex flex-col gap-1.5">
-            <span className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground">
-              {t("brief.load")}
-            </span>
-            <div className="flex min-h-[var(--touch-target)] items-center gap-3">
-              <div className="relative h-2.5 min-w-0 flex-1 overflow-hidden rounded bg-surface-3">
-                <motion.div
-                  className={`absolute inset-y-0 left-0 ${pct >= 100 ? "bg-success" : "bg-signal"}`}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${pct}%` }}
-                  transition={{ duration: 1, ease: [0.2, 0.8, 0.2, 1] }}
-                />
-              </div>
-              <div className="shrink-0 text-right font-mono text-sm font-medium tabular-nums leading-none text-foreground">
-                <span className={pct >= 100 ? "text-success" : "text-signal"}>{packedItems}</span>
-                <span className="text-muted-foreground">/{totalItems}</span>
-                <span className="text-muted-foreground"> · </span>
-                <span className={pct >= 100 ? "text-success" : "text-signal"}>
-                  {totalKg.toFixed(1)}kg
-                </span>
-              </div>
+        <div className="mt-3 space-y-2">
+          <div className="flex min-h-[var(--touch-target)] items-center gap-2">
+            <span className="sr-only">{t("brief.load")}</span>
+            <div className="relative h-2 min-w-0 flex-1 overflow-hidden rounded bg-surface-3">
+              <motion.div
+                className={`absolute inset-y-0 left-0 ${pct >= 100 ? "bg-success" : "bg-signal"}`}
+                initial={{ width: 0 }}
+                animate={{ width: `${pct}%` }}
+                transition={{ duration: 1, ease: [0.2, 0.8, 0.2, 1] }}
+              />
+            </div>
+            <div className="shrink-0 tabular-nums [font-family:var(--font-weight-number-family)] [font-size:var(--font-weight-number-size)]">
+              <span className={pct >= 100 ? "text-success" : "text-signal"}>{packedItems}</span>
+              <span className="text-muted-foreground">/{totalItems}</span>
+              <span className="text-muted-foreground"> · </span>
+              <span className="text-signal">{totalKg.toFixed(1)}kg</span>
             </div>
           </div>
-          <p className="font-mono text-sm tabular-nums leading-snug text-[var(--text-secondary)]">
-            {t("brief.stat.baseMass")}{" "}
-            <span className="font-semibold text-foreground">{formatKgFromGrams(baseG)}kg</span>
+          <p className="[font-family:var(--font-weight-number-family)] [font-size:var(--font-weight-number-size)] tabular-nums text-[var(--text-secondary)]">
+            {t("brief.stat.baseMass")} {formatKgFromGrams(baseG)}kg
           </p>
         </div>
       ) : (
@@ -130,26 +123,12 @@ function Stat({
           : "py-3 md:py-4",
       )}
     >
+      <div className="font-mono text-[9px] tracking-[0.22em] text-muted-foreground">{label}</div>
       <div
         className={cn(
-          "font-mono text-[9px] tracking-[0.22em] text-muted-foreground",
-          layout === "mobile" && "text-[10px] tracking-[0.2em]",
-        )}
-      >
-        {label}
-      </div>
-      <div
-        className={cn(
-          "mt-1 tabular-nums tracking-tight",
-          layout === "mobile"
-            ? cn(
-                "font-mono text-lg font-semibold leading-none",
-                accent ? "text-signal" : "text-foreground",
-              )
-            : cn(
-                "font-display text-xl font-bold md:text-2xl",
-                accent ? "text-signal" : "text-foreground",
-              ),
+          "mt-1 font-display font-bold tabular-nums tracking-tight",
+          layout === "mobile" ? "text-lg" : "text-xl md:text-2xl",
+          accent ? "text-signal" : "text-foreground",
         )}
       >
         {value}

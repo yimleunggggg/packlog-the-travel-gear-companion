@@ -1,6 +1,5 @@
 import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { TopBar } from "@/components/packlog/TopBar";
 import { TripBriefing } from "@/components/packlog/TripBriefing";
@@ -31,13 +30,7 @@ function TripDetail() {
       const d = (e as CustomEvent<PostAuthIntent>).detail;
       if (d.kind === "communityClone" && d.tripId === tripId) {
         const tpl = communityTemplates.find((x) => x.id === d.templateId);
-        if (tpl) {
-          store.cloneCommunity(tripId, tpl, d.selectedIdx, d.targetContainerId, d.ownership);
-          const n = d.selectedIdx.length;
-          if (n > 0) {
-            toast.success(t("community.merge.successToast").replace("{n}", String(n)));
-          }
-        }
+        if (tpl) store.cloneCommunity(tripId, tpl, d.selectedIdx, d.targetContainerId, d.ownership);
         return;
       }
       if (d.kind === "saveItemToLibrary" && d.tripId === tripId) {
@@ -53,7 +46,7 @@ function TripDetail() {
     };
     window.addEventListener(POST_AUTH_EVENT, onResume as EventListener);
     return () => window.removeEventListener(POST_AUTH_EVENT, onResume as EventListener);
-  }, [tripId, store, t]);
+  }, [tripId, store]);
 
   useEffect(() => {
     const pending = sessionStorage.getItem(SCROLL_TO_PACK_AFTER_CREATE_KEY);
@@ -121,7 +114,9 @@ function TripDetail() {
           phase={phase}
           onPhase={(p) => store.setPhase(trip.id, p)}
           onBack={() => navigate({ to: "/", search: { tag: undefined } })}
-          onOpenClone={() => navigate({ to: "/community", search: { tag: undefined, kind: undefined } })}
+          onOpenClone={() =>
+            navigate({ to: "/community", search: { tag: undefined, kind: undefined } })
+          }
           onSharingPatch={(patch) => store.patchTrip(trip.id, patch)}
         />
 

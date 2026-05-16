@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { ChevronDown } from "lucide-react";
 import type { Trip } from "@/lib/packlog-data";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/i18n";
-import { usePacklog } from "@/lib/packlog-store";
 import { tripScenarios } from "@/lib/trip-scenarios";
 import { buildTripManifestCsvForExcel, downloadManifestFile } from "@/lib/export-trip-manifest";
 import { formatKgFromGrams } from "@/lib/weight-provenance";
@@ -26,7 +25,6 @@ import { cn } from "@/lib/utils";
 import { TripTagPicker } from "@/components/packlog/TripTagPicker";
 import { BriefingStatsAndProgress } from "@/components/packlog/trip-briefing-stats";
 import { WeightDistributionPanel } from "@/components/packlog/WeightDistributionPanel";
-import { CommunityUrlImport } from "@/components/packlog/CommunityUrlImport";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export function TripPackPageFoldout({
@@ -41,37 +39,20 @@ export function TripPackPageFoldout({
   onEnterReview: () => void;
 }) {
   const { t, lang } = useI18n();
-  const { trips } = usePacklog();
   const { requestAuth } = useAuth();
   const tagSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  /** 与社区页一致：链接导入可指定任意行程；默认当前打包页行程 */
-  const [urlImportTargetTripId, setUrlImportTargetTripId] = useState(trip.id);
-
-  useEffect(() => {
-    setUrlImportTargetTripId(trip.id);
-  }, [trip.id]);
-
-  useEffect(() => {
-    if (trips.length === 0) return;
-    if (!trips.some((tr) => tr.id === urlImportTargetTripId)) {
-      setUrlImportTargetTripId(trips.find((tr) => tr.phase !== "REVIEW")?.id ?? trips[0]!.id);
-    }
-  }, [trips, urlImportTargetTripId]);
 
   const scheduleTagSave = (tags: string[]) => {
     if (!onSharingPatch) return;
     if (tagSaveTimer.current) clearTimeout(tagSaveTimer.current);
     tagSaveTimer.current = setTimeout(() => {
       tagSaveTimer.current = null;
-      requestAuth(
-        () => onSharingPatch({ tags }),
-        {
-          v: 1,
-          kind: "tripSharing",
-          tripId: trip.id,
-          patch: { tags },
-        },
-      );
+      requestAuth(() => onSharingPatch({ tags }), {
+        v: 1,
+        kind: "tripSharing",
+        tripId: trip.id,
+        patch: { tags },
+      });
     }, 450);
   };
 
@@ -96,7 +77,11 @@ export function TripPackPageFoldout({
   const today = new Date();
   const rawDep = calendarDaysUntilTripStart(trip.startDate, today);
   const depLabel =
-    rawDep == null ? t("brief.stat.dep") : rawDep < 0 ? t("brief.stat.dep.since") : t("brief.stat.dep");
+    rawDep == null
+      ? t("brief.stat.dep")
+      : rawDep < 0
+        ? t("brief.stat.dep.since")
+        : t("brief.stat.dep");
   const depStatValue =
     rawDep == null
       ? "—"
@@ -146,12 +131,13 @@ export function TripPackPageFoldout({
               <span>{t("brief.stat.mass")}</span>{" "}
               <span className="text-signal">{totalKg.toFixed(1)}kg</span>
               <span className="mx-2 text-border-strong">·</span>
-              <span>{t("brief.stat.baseMass")}</span>{" "}
-              <span>{formatKgFromGrams(baseG)}kg</span>
+              <span>{t("brief.stat.baseMass")}</span> <span>{formatKgFromGrams(baseG)}kg</span>
               {big3Pct != null ? (
                 <>
                   <span className="mx-2 text-border-strong">·</span>
-                  <span className="text-muted-foreground">{t("brief.stat.big3OfBase").replace("{n}", String(big3Pct))}</span>
+                  <span className="text-muted-foreground">
+                    {t("brief.stat.big3OfBase").replace("{n}", String(big3Pct))}
+                  </span>
                 </>
               ) : null}
             </p>
@@ -168,10 +154,13 @@ export function TripPackPageFoldout({
             ))}
           </div>
 
-          {wishlistCount > 0 || (rawDep != null && rawDep < 0 && unpackCount > 0 && totalItems > 0) ? (
+          {wishlistCount > 0 ||
+          (rawDep != null && rawDep < 0 && unpackCount > 0 && totalItems > 0) ? (
             <div className="space-y-1 font-mono text-[11px] leading-snug">
               {wishlistCount > 0 ? (
-                <p className="text-signal">{t("brief.hint.wishlist").replace("{n}", String(wishlistCount))}</p>
+                <p className="text-signal">
+                  {t("brief.hint.wishlist").replace("{n}", String(wishlistCount))}
+                </p>
               ) : null}
               {rawDep != null && rawDep < 0 && unpackCount > 0 && totalItems > 0 ? (
                 <p className="text-muted-foreground">
@@ -185,7 +174,11 @@ export function TripPackPageFoldout({
             <button
               type="button"
               onClick={onOpenClone}
-              className={cn(packlogBtnSecondary, packlogBtnBlock, "min-h-[var(--touch-target)] flex-1 sm:flex-none")}
+              className={cn(
+                packlogBtnSecondary,
+                packlogBtnBlock,
+                "min-h-[var(--touch-target)] flex-1 sm:flex-none",
+              )}
             >
               {t("brief.cta.clone")}
             </button>
@@ -204,20 +197,20 @@ export function TripPackPageFoldout({
             </button>
           </div>
 
-          <CommunityUrlImport
-            trips={trips}
-            targetTripId={urlImportTargetTripId}
-            onTargetTripChange={setUrlImportTargetTripId}
-          />
-
           {trip.phase === "PACK" ? (
-            <button type="button" onClick={onEnterReview} className={cn(packlogBtnSecondary, packlogBtnBlock)}>
+            <button
+              type="button"
+              onClick={onEnterReview}
+              className={cn(packlogBtnSecondary, packlogBtnBlock)}
+            >
               {t("trip.cta.enterReview")}
             </button>
           ) : null}
 
           <div className="rounded-md border border-[#E8E2D9] p-4">
-            <div className="font-mono text-[10px] tracking-[0.22em] text-muted-foreground">{t("trip.bags.sectionTitle")}</div>
+            <div className="font-mono text-[10px] tracking-[0.22em] text-muted-foreground">
+              {t("trip.bags.sectionTitle")}
+            </div>
             <ul className="mt-2 space-y-1.5 font-mono text-[12px]">
               {trip.containers.map((c) => {
                 const g = containerItemsGrams(c.id, trip);
@@ -250,38 +243,39 @@ export function TripPackPageFoldout({
 
           {onSharingPatch ? (
             <div className="rounded-md border border-border bg-surface-2/80 p-3">
-              <div className="font-mono text-[10px] tracking-[0.22em] text-signal">{t("trip.sharing.title")}</div>
+              <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
+                {t("trip.sharing.title")}
+              </div>
               <label className="mt-2 flex min-h-[var(--touch-target)] cursor-pointer items-center gap-2 text-xs">
                 <input
                   type="checkbox"
                   checked={trip.isPublic ?? false}
                   onChange={(e) => {
                     const checked = e.target.checked;
-                    requestAuth(
-                      () => onSharingPatch({ isPublic: checked }),
-                      {
-                        v: 1,
-                        kind: "tripSharing",
-                        tripId: trip.id,
-                        patch: { isPublic: checked },
-                      },
-                    );
+                    requestAuth(() => onSharingPatch({ isPublic: checked }), {
+                      v: 1,
+                      kind: "tripSharing",
+                      tripId: trip.id,
+                      patch: { isPublic: checked },
+                    });
                   }}
                   className="h-4 w-4 shrink-0 accent-[var(--signal)]"
                 />
                 <span className="text-muted-foreground">{t("trip.sharing.public")}</span>
               </label>
-              {trip.isPublic ? (
-                <div className="mt-2">
-                  <div className="mb-1 block font-mono text-[9px] tracking-[0.15em] text-muted-foreground">
-                    {t("trip.sharing.tags")}
-                  </div>
-                  <p className="mb-1.5 text-[10px] leading-snug text-muted-foreground">
-                    {t("trip.sharing.tagsPlaceholder")}
-                  </p>
-                  <TripTagPicker value={trip.tags ?? []} onChange={scheduleTagSave} disabled={false} />
+              <div className="mt-2">
+                <div className="mb-1 block font-mono text-[9px] tracking-[0.15em] text-muted-foreground">
+                  {t("trip.sharing.tags")}
                 </div>
-              ) : null}
+                <p className="mb-1.5 text-[10px] leading-snug text-muted-foreground">
+                  {t("trip.sharing.tagsPlaceholder")}
+                </p>
+                <TripTagPicker
+                  value={trip.tags ?? []}
+                  onChange={scheduleTagSave}
+                  disabled={false}
+                />
+              </div>
             </div>
           ) : null}
 

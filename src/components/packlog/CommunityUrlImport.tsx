@@ -1,28 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
 import { AuthGate } from "@/components/auth/AuthGate";
 import { usePacklog } from "@/lib/packlog-store";
 import { useI18n, pickName } from "@/lib/i18n";
 import type { Item, Trip } from "@/lib/packlog-data";
 import { packlogSubscriptionTier } from "@/lib/packlog-subscription-tier";
 import { containerDisplayLabel } from "@/lib/container-label";
-import { tripShortSelectLabel, tripTitleDisplay } from "@/lib/trip-list-label";
+import { tripShortSelectLabel } from "@/lib/trip-list-label";
 import { LIBRARY_CATEGORY_ORDER } from "@/lib/library-category-stats";
-import {
-  assignableContainers,
-  unassignedContainerId,
-} from "@/lib/unassigned-container";
-import {
-  packlogBtnBlock,
-  packlogBtnPrimary,
-  packlogBtnSm,
-  packlogCardMono,
-  packlogFieldLabel,
-  packlogHint,
-  packlogItemName,
-  packlogKicker,
-  packlogSectionTitle,
-} from "@/lib/packlog-button-classes";
+import { assignableContainers, unassignedContainerId } from "@/lib/unassigned-container";
+import { packlogBtnPrimary, packlogBtnSm, packlogSectionTitle } from "@/lib/packlog-button-classes";
 import { cn } from "@/lib/utils";
 import { PACKLOG_CATEGORY_HEX } from "@/lib/packlog-category-colors";
 
@@ -69,12 +55,10 @@ export function CommunityUrlImport({
   trips,
   targetTripId,
   onTargetTripChange,
-  tripPicker = "visible",
 }: {
   trips: Trip[];
   targetTripId: string;
-  onTargetTripChange?: (tripId: string) => void;
-  tripPicker?: "visible" | "hidden";
+  onTargetTripChange: (tripId: string) => void;
 }) {
   const { t, lang } = useI18n();
   const { addItem } = usePacklog();
@@ -88,10 +72,7 @@ export function CommunityUrlImport({
 
   const targetTrip = trips.find((tr) => tr.id === targetTripId) ?? null;
   const unassignedId = targetTrip ? unassignedContainerId(targetTrip.id) : "";
-  const bags = useMemo(
-    () => (targetTrip ? assignableContainers(targetTrip) : []),
-    [targetTrip],
-  );
+  const bags = useMemo(() => (targetTrip ? assignableContainers(targetTrip) : []), [targetTrip]);
 
   useEffect(() => {
     const trip = trips.find((tr) => tr.id === targetTripId);
@@ -168,79 +149,64 @@ export function CommunityUrlImport({
 
   const commit = useCallback(() => {
     if (!targetTrip || !targetCid) return;
-    let added = 0;
     for (const i of selected) {
       const row = rows[i];
       if (!row) continue;
       addItem(targetTrip.id, targetCid, rowToItemDraft(row, ownership));
-      added += 1;
-    }
-    if (added > 0) {
-      toast.success(t("community.urlImport.successToast").replace("{n}", String(added)));
     }
     setRows([]);
     setSelected([]);
     setUrl("");
     setErr(null);
     setOwnership("owned");
-  }, [addItem, targetTrip, targetCid, selected, rows, ownership, t]);
+  }, [addItem, targetTrip, targetCid, selected, rows, ownership]);
 
   if (!targetTrip) return null;
 
-  const fieldControl =
-    "min-h-[var(--touch-target)] w-full rounded-md border border-border-strong bg-background px-3 py-2.5 font-mono text-base text-foreground focus:border-[#C8956C] focus:outline-none md:min-h-0 md:py-2 md:text-sm";
-
   return (
-    <section className="module corner-tick corner-tick-br p-4 md:p-6">
-      <div className={cn(packlogKicker, "text-signal")}>{t("community.urlImport.kicker")}</div>
-      <h2 className={cn(packlogSectionTitle, "mt-2 max-w-prose text-pretty")}>
-        {t("community.urlImport.title")}
-      </h2>
-      {tripPicker === "hidden" ? (
-        <p className={cn(packlogHint, "mt-2 max-w-prose text-pretty text-muted-foreground")}>
-          {t("community.urlImport.embeddedHint")}
-        </p>
-      ) : null}
+    <section className="module corner-tick p-5">
+      <div className="font-mono text-[10px] tracking-[0.22em] text-signal">
+        {t("community.urlImport.kicker")}
+      </div>
+      <h2 className={cn("mt-1", packlogSectionTitle)}>{t("community.urlImport.title")}</h2>
       {t("community.urlImport.proHint").trim() ? (
-        <p className={cn(packlogCardMono, "mt-2 text-muted-foreground")}>{t("community.urlImport.proHint")}</p>
+        <p className="mt-1 font-mono text-[10px] text-muted-foreground">
+          {t("community.urlImport.proHint")}
+        </p>
       ) : null}
       {t("community.urlImport.hint").trim() ? (
-        <p className={cn(packlogHint, "mt-2 max-w-prose text-muted-foreground")}>{t("community.urlImport.hint")}</p>
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+          {t("community.urlImport.hint")}
+        </p>
       ) : null}
 
-      {tripPicker === "visible" ? (
-        <label className="mt-5 block">
-          <span className={packlogFieldLabel}>{t("community.merge.pickTrip")}</span>
-          <select
-            value={targetTripId}
-            onChange={(e) => onTargetTripChange?.(e.target.value)}
-            className={fieldControl}
-          >
-            {trips.map((tr) => (
-              <option key={tr.id} value={tr.id}>
-                {tripShortSelectLabel(tr, lang)}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : (
-        <p className={cn(packlogCardMono, "mt-4 rounded-md border border-border/80 bg-surface-2/50 px-3 py-2.5 text-foreground")}>
-          <span className="text-muted-foreground">{t("community.merge.pickTrip")} · </span>
-          {tripTitleDisplay(targetTrip, lang)}
-        </p>
-      )}
+      <label className="mt-4 block">
+        <span className="mb-1 block font-mono text-[9px] tracking-[0.18em] text-muted-foreground">
+          {t("community.merge.pickTrip")}
+        </span>
+        <select
+          value={targetTripId}
+          onChange={(e) => onTargetTripChange(e.target.value)}
+          className="w-full max-w-md rounded border border-border-strong bg-background px-2 py-1.5 font-mono text-xs focus:border-[#C8956C] focus:outline-none"
+        >
+          {trips.map((tr) => (
+            <option key={tr.id} value={tr.id}>
+              {tripShortSelectLabel(tr, lang)}
+            </option>
+          ))}
+        </select>
+      </label>
 
-      <div className="mt-5 flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end">
         <label className="min-w-0 flex-1">
-          <span className={packlogFieldLabel}>{t("community.urlImport.urlLabel")}</span>
+          <span className="mb-1 block font-mono text-[9px] tracking-[0.15em] text-muted-foreground">
+            URL
+          </span>
           <input
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder={t("community.urlImport.placeholder")}
-            className={fieldControl}
-            inputMode="url"
-            autoComplete="url"
-            autoCapitalize="none"
+            className="w-full rounded-md border border-border-strong bg-background px-3 py-2 font-mono text-xs focus:border-[#C8956C] focus:outline-none"
           />
         </label>
         <button
@@ -249,54 +215,41 @@ export function CommunityUrlImport({
           onClick={() => void runExtract()}
           className={cn(
             packlogBtnPrimary,
-            packlogBtnBlock,
-            "shrink-0 px-6 disabled:cursor-not-allowed disabled:opacity-40 md:min-h-[var(--touch-target)] md:w-auto md:min-w-[9rem]",
+            packlogBtnSm,
+            "shrink-0 px-4 py-2 disabled:cursor-not-allowed disabled:opacity-40",
           )}
         >
           {busy ? t("community.urlImport.busy") : t("community.urlImport.cta")}
         </button>
       </div>
-      {err ? (
-        <p className={cn(packlogCardMono, "mt-3 font-medium text-destructive")}>{err}</p>
-      ) : null}
+      {err ? <p className="mt-2 font-mono text-[11px] text-destructive">{err}</p> : null}
 
       {rows.length > 0 ? (
-        <div className="mt-6 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
-            <div className={cn(packlogKicker, "text-signal")}>{t("community.merge.itemsSection")}</div>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
+        <div className="mt-5 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="font-mono text-[10px] tracking-[0.2em] text-signal">
+              {t("community.merge.itemsSection")}
+            </div>
+            <div className="flex gap-2 font-mono text-[10px]">
               <button
                 type="button"
-                className={cn(
-                  packlogCardMono,
-                  "min-h-10 rounded-md px-2 font-medium text-link underline-offset-4 hover:text-link-hover hover:underline md:min-h-0",
-                )}
+                className="text-muted-foreground hover:text-[#6B5234]"
                 onClick={() => setSelected(rows.map((_, i) => i))}
               >
                 {t("community.merge.checkAll")}
               </button>
-              <span className="text-border-strong" aria-hidden>
-                |
-              </span>
+              <span className="text-border-strong">|</span>
               <button
                 type="button"
-                className={cn(
-                  packlogCardMono,
-                  "min-h-10 rounded-md px-2 font-medium text-link underline-offset-4 hover:text-link-hover hover:underline md:min-h-0",
-                )}
+                className="text-muted-foreground hover:text-[#6B5234]"
                 onClick={() => setSelected([])}
               >
                 {t("community.merge.uncheckAll")}
               </button>
-              <span className="text-border-strong" aria-hidden>
-                |
-              </span>
+              <span className="text-border-strong">|</span>
               <button
                 type="button"
-                className={cn(
-                  packlogCardMono,
-                  "min-h-10 rounded-md px-2 font-medium text-link underline-offset-4 hover:text-link-hover hover:underline md:min-h-0",
-                )}
+                className="text-muted-foreground hover:text-[#6B5234]"
                 onClick={() => {
                   setRows([]);
                   setSelected([]);
@@ -308,16 +261,20 @@ export function CommunityUrlImport({
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-border">
+          <div className="overflow-hidden rounded-md border border-border">
             {grouped.map(({ category, list }, gi) => (
               <section key={category} className={gi > 0 ? "border-t border-border" : ""}>
-                <div className="flex items-center gap-2 border-b border-border bg-surface-2/85 px-3 py-2.5">
+                <div className="flex items-center gap-2 border-b border-border bg-surface-2/85 px-3 py-2">
                   <span
                     className="h-2 w-2 shrink-0 rounded-[1px]"
                     style={{ background: PACKLOG_CATEGORY_HEX[category] }}
                   />
-                  <span className={cn(packlogKicker, "text-signal")}>{t(`cat.${category}`)}</span>
-                  <span className={cn(packlogCardMono, "text-muted-foreground")}>({list.length})</span>
+                  <span className="font-mono text-[10px] tracking-[0.18em] text-signal">
+                    {t(`cat.${category}`)}
+                  </span>
+                  <span className="font-mono text-[9px] text-muted-foreground">
+                    ({list.length})
+                  </span>
                 </div>
                 <ul className="divide-y divide-border">
                   {list.map(({ row, i }) => {
@@ -325,36 +282,29 @@ export function CommunityUrlImport({
                     return (
                       <li
                         key={`${i}-${row.name}`}
-                        className={cn(
-                          "flex gap-3 px-3 py-3 transition md:items-center md:gap-4",
-                          on ? "bg-surface" : "bg-surface-2/40",
-                        )}
+                        className={`grid grid-cols-12 items-start gap-2 px-3 py-2 transition ${on ? "bg-surface" : "bg-surface-2/40"}`}
                       >
                         <button
                           type="button"
                           role="checkbox"
                           aria-checked={on}
                           onClick={() => toggle(i)}
-                          className={cn(
-                            "mt-0.5 grid shrink-0 place-items-center rounded-md border transition md:mt-0",
-                            "min-h-11 min-w-11 md:h-9 md:w-9",
-                            on ? "border-signal bg-signal" : "border-border-strong bg-background",
-                          )}
+                          className={`col-span-1 mt-1 h-4 w-4 shrink-0 border ${on ? "border-signal bg-signal" : "border-border-strong bg-background"}`}
                           aria-label={t("community.urlImport.toggle")}
                         >
                           {on ? (
-                            <span className="font-mono text-sm leading-none text-signal-foreground md:text-xs">
+                            <span className="block text-center text-[10px] leading-4 text-signal-foreground">
                               ✓
                             </span>
                           ) : null}
                         </button>
-                        <div className="min-w-0 flex-1">
+                        <div className="col-span-11 sm:col-span-6">
                           <div className="flex items-center gap-1.5">
                             <span
-                              className="h-1.5 w-1.5 shrink-0"
+                              className="h-1.5 w-1.5"
                               style={{ background: PACKLOG_CATEGORY_HEX[row.category] }}
                             />
-                            <span className={cn(packlogItemName, "break-words [overflow-wrap:anywhere]")}>
+                            <span className="text-sm font-medium">
                               {pickName(lang, {
                                 name: row.name,
                                 nameEn: row.name,
@@ -363,29 +313,15 @@ export function CommunityUrlImport({
                             </span>
                           </div>
                           {row.note ? (
-                            <div className={cn(packlogHint, "mt-1 max-w-prose text-pretty text-muted-foreground")}>
+                            <div className="mt-0.5 font-mono text-[10px] leading-relaxed text-muted-foreground">
                               {row.note}
                             </div>
                           ) : null}
-                          <div className={cn(packlogCardMono, "mt-2 flex flex-wrap gap-x-4 gap-y-1 md:hidden")}>
-                            <span>×{row.quantity}</span>
-                            <span>{row.weight_g != null ? `${row.weight_g}g` : "—"}</span>
-                          </div>
                         </div>
-                        <div
-                          className={cn(
-                            packlogCardMono,
-                            "hidden shrink-0 tabular-nums text-muted-foreground md:block md:w-16 md:text-right",
-                          )}
-                        >
+                        <div className="col-span-6 text-right font-mono text-[10px] text-muted-foreground tabular-nums sm:col-span-2 sm:col-start-8">
                           ×{row.quantity}
                         </div>
-                        <div
-                          className={cn(
-                            packlogCardMono,
-                            "hidden shrink-0 tabular-nums text-muted-foreground md:block md:w-20 md:text-right",
-                          )}
-                        >
+                        <div className="col-span-6 text-right font-mono text-[10px] text-muted-foreground tabular-nums sm:col-span-2">
                           {row.weight_g != null ? `${row.weight_g}g` : "—"}
                         </div>
                       </li>
@@ -396,11 +332,13 @@ export function CommunityUrlImport({
             ))}
           </div>
 
-          <div className="flex flex-col gap-4 border-t border-border pt-5 md:flex-row md:items-start md:justify-between">
-            <div className="min-w-0 flex-1 space-y-5">
+          <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1 space-y-3">
               <div>
-                <div className={packlogFieldLabel}>{t("community.merge.ownership")}</div>
-                <div className="mt-2 flex flex-wrap gap-2">
+                <div className="font-mono text-[9px] tracking-[0.2em] text-muted-foreground">
+                  {t("community.merge.ownership")}
+                </div>
+                <div className="mt-1.5 flex flex-wrap gap-1">
                   {ownershipOptions.map((o) => {
                     const active = ownership === o;
                     return (
@@ -409,14 +347,17 @@ export function CommunityUrlImport({
                         type="button"
                         onClick={() => setOwnership(o)}
                         className={cn(
-                          "min-h-[var(--touch-target)] rounded-md border px-3 py-2 font-mono text-xs font-medium transition md:min-h-0 md:px-2.5 md:py-1.5 md:text-[11px]",
+                          "rounded border px-2 py-1 font-mono text-[9px]",
                           active &&
                             (o === "owned"
                               ? "border-success/90 text-[color:var(--success)]"
                               : "border-signal bg-signal-soft text-foreground"),
-                          !active && "border-border-strong text-muted-foreground hover:text-foreground",
+                          !active &&
+                            "border-border-strong text-muted-foreground hover:text-foreground",
                         )}
-                        style={!active ? { borderColor: ownColor[o], color: ownColor[o] } : undefined}
+                        style={
+                          !active ? { borderColor: ownColor[o], color: ownColor[o] } : undefined
+                        }
                       >
                         {t(`own.${o}`)}
                       </button>
@@ -425,13 +366,15 @@ export function CommunityUrlImport({
                 </div>
               </div>
               <div>
-                <div className={packlogFieldLabel}>{t("community.merge.target")}</div>
-                <div className="mt-2 flex flex-wrap gap-2">
+                <div className="font-mono text-[9px] tracking-[0.2em] text-muted-foreground">
+                  {t("community.merge.target")}
+                </div>
+                <div className="mt-1.5 flex flex-wrap gap-1">
                   <button
                     type="button"
                     onClick={() => setTargetCid(unassignedId)}
                     className={cn(
-                      "min-h-10 max-w-[min(100%,14rem)] truncate rounded-md border px-3 py-2 font-mono text-xs tracking-wide transition md:min-h-0 md:py-1.5 md:text-[11px]",
+                      "max-w-[min(100%,11rem)] truncate border px-2 py-1 font-mono text-[10px] tracking-[0.15em]",
                       targetCid === unassignedId
                         ? "border-signal bg-signal text-signal-foreground"
                         : "border-border-strong bg-transparent text-muted-foreground hover:border-foreground/30 hover:text-foreground",
@@ -445,7 +388,7 @@ export function CommunityUrlImport({
                       type="button"
                       onClick={() => setTargetCid(c.id)}
                       className={cn(
-                        "min-h-10 max-w-[min(100%,14rem)] truncate rounded-md border px-3 py-2 font-mono text-xs tracking-wide transition md:min-h-0 md:py-1.5 md:text-[11px]",
+                        "max-w-[min(100%,11rem)] truncate border px-2 py-1 font-mono text-[10px] tracking-[0.15em]",
                         targetCid === c.id
                           ? "border-signal bg-signal text-signal-foreground"
                           : "border-border-strong bg-transparent text-muted-foreground hover:border-foreground/30 hover:text-foreground",
@@ -456,7 +399,7 @@ export function CommunityUrlImport({
                   ))}
                 </div>
                 {targetCid === unassignedId && t("community.merge.unassignedHint").trim() ? (
-                  <p className={cn(packlogHint, "mt-2 max-w-prose text-muted-foreground")}>
+                  <p className="mt-1.5 font-mono text-[10px] leading-relaxed text-muted-foreground">
                     {t("community.merge.unassignedHint")}
                   </p>
                 ) : null}
@@ -468,8 +411,7 @@ export function CommunityUrlImport({
                 disabled={selected.length === 0 || !targetCid}
                 className={cn(
                   packlogBtnPrimary,
-                  packlogBtnBlock,
-                  "px-6 disabled:cursor-not-allowed disabled:opacity-40 md:min-w-[12rem]",
+                  "w-full px-4 py-2.5 text-[10px] tracking-[0.2em] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto",
                 )}
               >
                 {t("community.urlImport.addSelected")}

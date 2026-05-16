@@ -164,9 +164,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const requestAuth = useCallback(
     (action: () => void | Promise<void>, resume?: PostAuthIntent) => {
-      /** 未配置 Supabase 时走纯本地模式：不弹登录，直接执行动作（与已登录用户一致）。 */
       if (!authConfigured) {
-        void Promise.resolve(action());
+        console.warn("PACKLOG: Supabase URL/anon key missing; auth disabled.");
         return;
       }
       if (user) {

@@ -55,11 +55,6 @@ export type Item = {
   // Anything sharing the same sku is the same physical product.
   sku?: string;
   note?: string;
-  /**
-   * REVIEW phase: user explicitly marked this row as checked off (verdict + stars already saved live;
-   * this flag is for clarity / progress tracking). Cleared when verdict, utility, or note changes.
-   */
-  reviewConfirmed?: boolean;
   /** Worn on body — excluded from base weight (see trip-weight-stats). */
   isWorn?: boolean;
   /** Food, water, fuel canisters, etc. — excluded from base weight. */
