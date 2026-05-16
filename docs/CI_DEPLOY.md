@@ -7,6 +7,8 @@
 
 日常开发：**本地 commit → `git push origin main`**，无需每次打开 Supabase SQL Editor 或 Cloudflare 控制台发版。
 
+**生产环境以 Cloudflare Workers 为准**（`wrangler.jsonc` + `.github/workflows/deploy-cloudflare.yml`）。若仓库曾在 Vercel 连过 Git，推 `main` 仍会触发 Vercel 构建并可能发失败邮件；不需要 Vercel 时，在 [Vercel 控制台](https://vercel.com) 断开该项目的 Git 集成，或删除/停用对应 Project 即可。
+
 ## GitHub Repository secrets（一次性配置）
 
 在仓库 **Settings → Secrets and variables → Actions → New repository secret** 添加。
