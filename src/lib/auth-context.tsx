@@ -66,6 +66,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pendingSyncAction = useRef<(() => void | Promise<void>) | null>(null);
   const readyBoot = useRef(false);
   const prevUserRef = useRef<User | null>(null);
+  const latestSessionRef = useRef<Session | null>(null);
+  const lastAuthEventRef = useRef<string | null>(null);
 
   const authConfigured = hasSupabaseBrowserConfig();
 
@@ -77,10 +79,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
-    const finishBoot = (nextSession: Session | null) => {
-      if (cancelled) return;
+    const applySession = (nextSession: Session | null) => {
+      latestSessionRef.current = nextSession;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
+    };
+    const finishBoot = (nextSession: Session | null) => {
+      if (cancelled) return;
+      const safeSession = nextSession ?? latestSessionRef.current;
+      applySession(safeSession);
       setReady(true);
     };
 
@@ -91,6 +98,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .getSession()
       .then(({ data }) => {
         window.clearTimeout(bootTimer);
+        if (lastAuthEventRef.current) {
+          setReady(true);
+          return;
+        }
         finishBoot(data.session);
       })
       .catch(() => {
@@ -98,9 +109,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         finishBoot(null);
       });
 
-    const { data: sub } = client.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
+    const { data: sub } = client.auth.onAuthStateChange((event, nextSession) => {
+      lastAuthEventRef.current = event;
+      window.clearTimeout(bootTimer);
+      applySession(nextSession);
+      setReady(true);
     });
 
     return () => {
@@ -152,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const prev = prevUserRef.current;
     prevUserRef.current = user;
     if (!user || prev) return;
+    if (lastAuthEventRef.current !== "SIGNED_IN") return;
 
     if (pendingSyncAction.current) {
       const fn = pendingSyncAction.current;
