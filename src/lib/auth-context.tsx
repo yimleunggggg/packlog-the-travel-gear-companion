@@ -77,12 +77,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
-    client.auth.getSession().then(({ data }) => {
+    const finishBoot = (nextSession: Session | null) => {
       if (cancelled) return;
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
       setReady(true);
-    });
+    };
+
+    /** 弱网/墙内 Supabase 慢或挂起时，避免 AuthGate 永久 disabled。 */
+    const bootTimer = window.setTimeout(() => finishBoot(null), 8000);
+
+    client.auth
+      .getSession()
+      .then(({ data }) => {
+        window.clearTimeout(bootTimer);
+        finishBoot(data.session);
+      })
+      .catch(() => {
+        window.clearTimeout(bootTimer);
+        finishBoot(null);
+      });
 
     const { data: sub } = client.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
@@ -91,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       cancelled = true;
+      window.clearTimeout(bootTimer);
       sub.subscription.unsubscribe();
     };
   }, []);
@@ -164,8 +179,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const requestAuth = useCallback(
     (action: () => void | Promise<void>, resume?: PostAuthIntent) => {
+      /** 未配置 Supabase 时走纯本地模式：不弹登录，直接执行动作（与已登录用户一致）。 */
       if (!authConfigured) {
-        console.warn("PACKLOG: Supabase URL/anon key missing; auth disabled.");
+        void Promise.resolve(action());
         return;
       }
       if (user) {

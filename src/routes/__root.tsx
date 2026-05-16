@@ -1,4 +1,5 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/lib/auth-context";
 import { I18nProvider } from "@/lib/i18n";
 import { PacklogProvider } from "@/lib/packlog-store";
@@ -34,7 +35,7 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       {
         name: "viewport",
-        content: "width=device-width, initial-scale=1, viewport-fit=cover",
+        content: "width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content",
       },
       { title: "PACKLOG · 行前志" },
       {
@@ -42,6 +43,9 @@ export const Route = createRootRoute({
         content: "Modular, parametric packing for travelers who treat gear as a system.",
       },
       { name: "author", content: "PACKLOG" },
+      ...(import.meta.env.VITE_APP_BUILD_SHA
+        ? [{ name: "packlog-build", content: String(import.meta.env.VITE_APP_BUILD_SHA).slice(0, 7) }]
+        : []),
       { property: "og:title", content: "PACKLOG · 行前志" },
       {
         property: "og:description",
@@ -83,6 +87,7 @@ function RootComponent() {
       <AuthProvider>
         <PacklogProvider>
           <Outlet />
+          <Toaster richColors closeButton position="top-center" />
         </PacklogProvider>
       </AuthProvider>
     </I18nProvider>
