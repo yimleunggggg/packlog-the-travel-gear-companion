@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { TripPackWorkspace } from "@/components/packlog/TripPackWorkspace";
@@ -86,6 +87,8 @@ function TripPackPage() {
   );
   const pct = totalItems ? (packedItems / totalItems) * 100 : 0;
   const totalG = tripTotalGrams(trip);
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const scrollPackTarget = useMemo(() => (isDesktop ? "pack-by-bag" : "pack-checklist"), [isDesktop]);
 
   return (
     <div className="min-h-dvh overscroll-y-none bg-background pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8">
@@ -170,13 +173,13 @@ function TripPackPage() {
                   type="button"
                   className={cn(packlogBtnPrimary, packlogBtnBlock, "flex-1 md:flex-initial")}
                   onClick={() =>
-                    document.getElementById("pack-checklist")?.scrollIntoView({
+                    document.getElementById(scrollPackTarget)?.scrollIntoView({
                       behavior: "smooth",
                       block: "start",
                     })
                   }
                 >
-                  {t("pack.footer.scrollChecklist")}
+                  {isDesktop ? t("pack.footer.scrollBags") : t("pack.footer.scrollChecklist")}
                 </button>
                 <button
                   type="button"
