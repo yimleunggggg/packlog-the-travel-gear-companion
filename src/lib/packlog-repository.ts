@@ -117,9 +117,10 @@ export function createSupabasePacklogRepository(
         .limit(1)
         .maybeSingle();
 
-      if (error || !data?.snapshot) return seed;
+      if (error) throw error;
+      if (!data?.snapshot) return seed;
       const snapshot = parseSnapshotPayload(data.snapshot);
-      if (!snapshot) return seed;
+      if (!snapshot) throw new Error("Invalid packlog snapshot payload");
       return {
         trips: snapshot.trips,
         library: snapshot.library,
