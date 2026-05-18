@@ -17,6 +17,7 @@ import {
   storePostAuthIntent,
   type PostAuthIntent,
 } from "@/lib/post-auth-intent";
+import { shouldConsumeStoredPostAuthIntent } from "@/lib/auth-resume";
 import { getSupabaseBrowserClient, hasSupabaseBrowserConfig } from "@/lib/supabase-client";
 
 /** OAuth 返回后写入 `marketing_opt_in`；短时 TTL 防止未完成登录的残留意图误套用到下一次登录 */
@@ -66,6 +67,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pendingSyncAction = useRef<(() => void | Promise<void>) | null>(null);
   const readyBoot = useRef(false);
   const prevUserRef = useRef<User | null>(null);
+  const latestSessionRef = useRef<Session | null>(null);
+  const sawExplicitSignInRef = useRef(false);
 
   const authConfigured = hasSupabaseBrowserConfig();
 
@@ -77,15 +80,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
-    const finishBoot = (nextSession: Session | null) => {
-      if (cancelled) return;
+    const applySession = (nextSession: Session | null) => {
+      latestSessionRef.current = nextSession;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
+    };
+    const finishBoot = (nextSession: Session | null) => {
+      if (cancelled) return;
+      applySession(nextSession ?? latestSessionRef.current);
       setReady(true);
     };
 
     /** 弱网/墙内 Supabase 慢或挂起时，避免 AuthGate 永久 disabled。 */
-    const bootTimer = window.setTimeout(() => finishBoot(null), 8000);
+    const bootTimer = window.setTimeout(() => {
+      if (cancelled) return;
+      setReady(true);
+    }, 8000);
 
     client.auth
       .getSession()
@@ -98,9 +108,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         finishBoot(null);
       });
 
-    const { data: sub } = client.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
+    const { data: sub } = client.auth.onAuthStateChange((event, nextSession) => {
+      if (event === "SIGNED_IN") sawExplicitSignInRef.current = true;
+      applySession(nextSession);
     });
 
     return () => {
@@ -146,6 +156,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!ready) return;
     if (!readyBoot.current) {
       readyBoot.current = true;
+      if (
+        shouldConsumeStoredPostAuthIntent({
+          previousUserId: null,
+          currentUserId: user?.id ?? null,
+          sawExplicitSignIn: sawExplicitSignInRef.current,
+        })
+      ) {
+        sawExplicitSignInRef.current = false;
+        const intent = consumePostAuthIntent();
+        if (intent) dispatchResume(intent);
+      }
       prevUserRef.current = user;
       return;
     }
@@ -156,13 +177,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (pendingSyncAction.current) {
       const fn = pendingSyncAction.current;
       pendingSyncAction.current = null;
+      sawExplicitSignInRef.current = false;
       clearPostAuthIntent();
       setLoginSheetOpen(false);
       void Promise.resolve(fn());
       return;
     }
-    const intent = consumePostAuthIntent();
-    if (intent) dispatchResume(intent);
+    if (
+      shouldConsumeStoredPostAuthIntent({
+        previousUserId: prev?.id ?? null,
+        currentUserId: user.id,
+        sawExplicitSignIn: sawExplicitSignInRef.current,
+      })
+    ) {
+      sawExplicitSignInRef.current = false;
+      const intent = consumePostAuthIntent();
+      if (intent) dispatchResume(intent);
+    }
   }, [ready, user]);
 
   const closeLoginSheet = useCallback(() => {
