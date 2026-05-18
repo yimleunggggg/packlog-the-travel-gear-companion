@@ -29,10 +29,44 @@ export type PostAuthIntent =
     };
 
 const STORAGE_KEY = "packlog.postAuthIntent.v1";
+const POST_AUTH_INTENT_TTL_MS = 15 * 60 * 1000;
+
+type StoredPostAuthIntent = {
+  intent: PostAuthIntent;
+  expiresAt: number;
+};
+
+function isPostAuthIntent(value: unknown): value is PostAuthIntent {
+  if (!value || typeof value !== "object") return false;
+  const maybe = value as { v?: unknown; kind?: unknown };
+  return maybe.v === 1 && typeof maybe.kind === "string";
+}
+
+export function parseStoredPostAuthIntent(raw: string, now = Date.now()): PostAuthIntent | null {
+  try {
+    const parsed = JSON.parse(raw) as Partial<StoredPostAuthIntent>;
+    if (
+      typeof parsed.expiresAt !== "number" ||
+      parsed.expiresAt <= now ||
+      !isPostAuthIntent(parsed.intent)
+    ) {
+      return null;
+    }
+    return parsed.intent;
+  } catch {
+    return null;
+  }
+}
 
 export function storePostAuthIntent(intent: PostAuthIntent): void {
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(intent));
+    sessionStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        intent,
+        expiresAt: Date.now() + POST_AUTH_INTENT_TTL_MS,
+      } satisfies StoredPostAuthIntent),
+    );
   } catch {
     /* ignore quota */
   }
@@ -42,7 +76,7 @@ export function peekPostAuthIntent(): PostAuthIntent | null {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as PostAuthIntent;
+    return parseStoredPostAuthIntent(raw);
   } catch {
     return null;
   }
