@@ -13,6 +13,7 @@ import { LoginSheet } from "@/components/auth/LoginSheet";
 import {
   clearPostAuthIntent,
   consumePostAuthIntent,
+  peekPostAuthIntent,
   POST_AUTH_EVENT,
   storePostAuthIntent,
   type PostAuthIntent,
@@ -147,6 +148,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!readyBoot.current) {
       readyBoot.current = true;
       prevUserRef.current = user;
+      if (user && peekPostAuthIntent()) {
+        const intent = consumePostAuthIntent();
+        if (intent) {
+          setLoginSheetOpen(false);
+          dispatchResume(intent);
+        }
+      }
       return;
     }
     const prev = prevUserRef.current;
