@@ -45,10 +45,9 @@ describe("createPacklogRepository", () => {
     const repo = createPacklogRepository(seed, { userId: "user-123" });
     await repo.save(seed);
 
-    expect(upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ workspace: "u:user-123" }),
-      { onConflict: "workspace" },
-    );
+    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ workspace: "u:user-123" }), {
+      onConflict: "workspace",
+    });
   });
 });
 
