@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { Trip } from "@/lib/packlog-data";
-import { removeTripItem } from "@/lib/packlog-commands";
+import type { CommunityTemplate, Trip } from "@/lib/packlog-data";
+import { cloneCommunityTemplateToTrip, moveTripItem, removeTripItem } from "@/lib/packlog-commands";
 import { filterSeedsNotInTrip, mergedScenarioSeedsForTrip } from "@/lib/packing-pool";
+import { unassignedContainerId } from "@/lib/unassigned-container";
 
 function diveTripWithItem(): Trip {
   return {
@@ -94,5 +95,77 @@ describe("removeTripItem", () => {
     const next = removeTripItem(trip2, "c1", "i-cert");
     expect(next.containers[0]!.items).toHaveLength(1);
     expect(next.dismissedScenarioSeeds).toBeUndefined();
+  });
+});
+
+describe("moveTripItem", () => {
+  it("keeps the source item when the target container no longer exists", () => {
+    const trip: Trip = {
+      ...diveTripWithItem(),
+      containers: [
+        ...diveTripWithItem().containers,
+        {
+          id: "c2",
+          code: "C-02",
+          name: "Carry",
+          type: "carry",
+          capacityL: 40,
+          maxKg: 12,
+          items: [],
+        },
+      ],
+    };
+
+    const next = moveTripItem(trip, "c1", "i-cert", "missing-container");
+
+    expect(next).toBe(trip);
+    expect(next.containers[0]!.items.map((item) => item.id)).toEqual(["i-cert"]);
+  });
+});
+
+describe("cloneCommunityTemplateToTrip", () => {
+  it("falls back to unassigned and ignores invalid item indexes", () => {
+    const trip = diveTripWithItem();
+    const template: CommunityTemplate = {
+      id: "tpl",
+      author: "tester",
+      rating: 5,
+      cloned: 0,
+      title: "Template",
+      scenario: "dive",
+      climate: "warm",
+      totalWeight: "0.1kg",
+      tags: [],
+      intro: "",
+      items: [
+        {
+          name: "Mask",
+          nameZh: "面镜",
+          weightG: 120,
+          qty: 1,
+          category: "misc",
+          why: "backup",
+        },
+      ],
+    };
+
+    const next = cloneCommunityTemplateToTrip(
+      trip,
+      template,
+      [0, 9],
+      "missing-container",
+      "borrowed",
+    );
+    const unassigned = next.containers.find(
+      (container) => container.id === unassignedContainerId(trip.id),
+    );
+
+    expect(unassigned?.items).toHaveLength(1);
+    expect(unassigned?.items[0]).toMatchObject({
+      name: "Mask",
+      nameZh: "面镜",
+      ownership: "borrowed",
+    });
+    expect(next.containers.find((container) => container.id === "c1")?.items).toHaveLength(1);
   });
 });

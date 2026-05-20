@@ -148,8 +148,9 @@ export function moveTripItem(
   toContainerId: string,
 ): Trip {
   const fromContainer = trip.containers.find((container) => container.id === fromContainerId);
+  const toContainer = trip.containers.find((container) => container.id === toContainerId);
   const item = fromContainer?.items.find((candidate) => candidate.id === itemId);
-  if (!fromContainer || !item) return trip;
+  if (!fromContainer || !toContainer || !item) return trip;
   if (fromContainerId === toContainerId) return trip;
 
   const fromIndex = fromContainer.items.findIndex((candidate) => candidate.id === itemId);
@@ -182,10 +183,35 @@ export function cloneCommunityTemplateToTrip(
   ownership: Item["ownership"] = "owned",
 ): Trip {
   const nextTrip = ensureUnassignedContainer(trip);
-  const destId =
+  const requestedDestId =
     targetContainerId === unassignedContainerId(trip.id)
       ? unassignedContainerId(trip.id)
       : targetContainerId;
+  const destId = nextTrip.containers.some((container) => container.id === requestedDestId)
+    ? requestedDestId
+    : unassignedContainerId(trip.id);
+  const newItems = selectedIndexes.flatMap((index) => {
+    const item = template.items[index];
+    if (!item) return [];
+    return [
+      {
+        id: createClientId("cp"),
+        gearId: null,
+        name: item.name,
+        nameEn: item.name,
+        nameZh: item.nameZh,
+        qty: item.qty,
+        weightG: item.weightG,
+        weightSource: "library" as const,
+        category: item.category,
+        status: "todo" as const,
+        verdict: null,
+        utility: null,
+        ownership,
+        note: item.why,
+      },
+    ];
+  });
 
   return {
     ...nextTrip,
@@ -194,28 +220,7 @@ export function cloneCommunityTemplateToTrip(
         ? container
         : {
             ...container,
-            items: [
-              ...container.items,
-              ...selectedIndexes.map((index) => {
-                const item = template.items[index];
-                return {
-                  id: createClientId("cp"),
-                  gearId: null,
-                  name: item.name,
-                  nameEn: item.name,
-                  nameZh: item.nameZh,
-                  qty: item.qty,
-                  weightG: item.weightG,
-                  weightSource: "library" as const,
-                  category: item.category,
-                  status: "todo" as const,
-                  verdict: null,
-                  utility: null,
-                  ownership,
-                  note: item.why,
-                };
-              }),
-            ],
+            items: [...container.items, ...newItems],
           },
     ),
   };
