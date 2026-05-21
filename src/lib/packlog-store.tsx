@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -104,13 +105,21 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
   const [trips, setTrips] = useState<Trip[]>(seedTrips);
   const [library, setLibrary] = useState<GearSpec[]>(initialGearLibrary);
   const [hydrated, setHydrated] = useState(false);
+  const loadGenerationRef = useRef(0);
+  const rehydratingRef = useRef(true);
 
   useEffect(() => {
     let alive = true;
+    const generation = loadGenerationRef.current + 1;
+    loadGenerationRef.current = generation;
+    rehydratingRef.current = true;
+    setHydrated(false);
+    setTrips(seedForRepo.trips);
+    setLibrary(seedForRepo.library);
     repository
       .load()
       .then((restored) => {
-        if (!alive) return;
+        if (!alive || loadGenerationRef.current !== generation) return;
         setTrips(restored.trips);
         setLibrary(restored.library);
       })
@@ -118,16 +127,20 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
         console.error("Failed to load packlog state", err);
       })
       .finally(() => {
-        if (alive) setHydrated(true);
+        if (!alive || loadGenerationRef.current !== generation) return;
+        rehydratingRef.current = false;
+        setHydrated(true);
       });
     return () => {
       alive = false;
     };
-  }, [repository]);
+  }, [repository, seedForRepo]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || rehydratingRef.current) return;
+    const generation = loadGenerationRef.current;
     const timer = window.setTimeout(() => {
+      if (rehydratingRef.current || loadGenerationRef.current !== generation) return;
       repository.save({ trips, library }).catch((err) => {
         console.error("Failed to persist packlog state", err);
       });
