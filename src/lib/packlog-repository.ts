@@ -26,6 +26,10 @@ export interface PacklogRepository {
   clear: () => Promise<void>;
 }
 
+export function packlogSnapshotWorkspaceForUser(userId: string | null | undefined): string | null {
+  return userId ? `u:${userId}` : null;
+}
+
 function normalizeTripForSnapshot(t: Trip): z.infer<typeof tripSchema> {
   const scenarios = t.scenarios?.length ? t.scenarios : [t.scenario];
   return { ...t, scenario: scenarios[0]!, scenarios };
@@ -161,10 +165,9 @@ export function createPacklogRepository(
   const projectUrl = getEnv("VITE_SUPABASE_URL");
   const anonKey = getEnv("VITE_SUPABASE_ANON_KEY");
   const uid = opts?.userId ?? null;
-  const workspace =
-    backend === "supabase" && uid ? `u:${uid}` : (getEnv("VITE_PACKLOG_WORKSPACE") ?? "default");
+  const workspace = packlogSnapshotWorkspaceForUser(uid);
 
-  if (backend === "supabase" && projectUrl && anonKey) {
+  if (backend === "supabase" && projectUrl && anonKey && workspace) {
     return createSupabasePacklogRepository({
       seed,
       workspace,

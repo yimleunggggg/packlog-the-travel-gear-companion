@@ -66,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pendingSyncAction = useRef<(() => void | Promise<void>) | null>(null);
   const readyBoot = useRef(false);
   const prevUserRef = useRef<User | null>(null);
+  const latestSessionRef = useRef<Session | null>(null);
 
   const authConfigured = hasSupabaseBrowserConfig();
 
@@ -77,15 +78,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
-    const finishBoot = (nextSession: Session | null) => {
-      if (cancelled) return;
+    const applySession = (nextSession: Session | null) => {
+      latestSessionRef.current = nextSession;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
+    };
+    const finishBoot = (nextSession: Session | null) => {
+      if (cancelled) return;
+      applySession(nextSession);
       setReady(true);
     };
 
     /** 弱网/墙内 Supabase 慢或挂起时，避免 AuthGate 永久 disabled。 */
-    const bootTimer = window.setTimeout(() => finishBoot(null), 8000);
+    const bootTimer = window.setTimeout(() => {
+      if (!cancelled) setReady(true);
+    }, 8000);
 
     client.auth
       .getSession()
@@ -95,12 +102,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => {
         window.clearTimeout(bootTimer);
+        if (latestSessionRef.current) {
+          setReady(true);
+          return;
+        }
         finishBoot(null);
       });
 
     const { data: sub } = client.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
+      applySession(nextSession);
     });
 
     return () => {
@@ -141,28 +151,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void client.auth.updateUser({ data: { marketing_opt_in: want } });
   }, [ready, user]);
 
-  /** Resume flows only when user transitions from signed-out → signed-in (skip cold load with existing session). */
+  /** Resume flows after same-tab sign-in and after OAuth / magic-link redirect reloads. */
   useEffect(() => {
     if (!ready) return;
+    const resumeAfterSignIn = () => {
+      if (pendingSyncAction.current) {
+        const fn = pendingSyncAction.current;
+        pendingSyncAction.current = null;
+        clearPostAuthIntent();
+        setLoginSheetOpen(false);
+        void Promise.resolve(fn());
+        return;
+      }
+      const intent = consumePostAuthIntent();
+      if (intent) dispatchResume(intent);
+    };
+
     if (!readyBoot.current) {
       readyBoot.current = true;
       prevUserRef.current = user;
+      if (user) resumeAfterSignIn();
       return;
     }
     const prev = prevUserRef.current;
     prevUserRef.current = user;
     if (!user || prev) return;
 
-    if (pendingSyncAction.current) {
-      const fn = pendingSyncAction.current;
-      pendingSyncAction.current = null;
-      clearPostAuthIntent();
-      setLoginSheetOpen(false);
-      void Promise.resolve(fn());
-      return;
-    }
-    const intent = consumePostAuthIntent();
-    if (intent) dispatchResume(intent);
+    resumeAfterSignIn();
   }, [ready, user]);
 
   const closeLoginSheet = useCallback(() => {
