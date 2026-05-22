@@ -41,6 +41,7 @@ import { preferredContainerForCategory } from "./preferred-container-for-categor
 import { ensureUnassignedContainer, unassignedContainerId } from "./unassigned-container";
 import { useAuth } from "./auth-context";
 import { createPacklogRepository } from "./packlog-repository";
+import { createRepositoryHydrationGate } from "./repository-hydration";
 
 type Ctx = {
   trips: Trip[];
@@ -101,39 +102,40 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
     () => createPacklogRepository(seedForRepo, { userId: user?.id ?? null }),
     [seedForRepo, user?.id],
   );
+  const hydrationGate = useMemo(() => createRepositoryHydrationGate(), []);
   const [trips, setTrips] = useState<Trip[]>(seedTrips);
   const [library, setLibrary] = useState<GearSpec[]>(initialGearLibrary);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     let alive = true;
+    const loadGeneration = hydrationGate.beginLoad();
+    setHydrated(false);
     repository
       .load()
       .then((restored) => {
-        if (!alive) return;
+        if (!alive || !hydrationGate.markLoaded(loadGeneration)) return;
         setTrips(restored.trips);
         setLibrary(restored.library);
+        setHydrated(true);
       })
       .catch((err) => {
         console.error("Failed to load packlog state", err);
-      })
-      .finally(() => {
-        if (alive) setHydrated(true);
       });
     return () => {
       alive = false;
     };
-  }, [repository]);
+  }, [hydrationGate, repository]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !hydrationGate.canSave()) return;
     const timer = window.setTimeout(() => {
       repository.save({ trips, library }).catch((err) => {
         console.error("Failed to persist packlog state", err);
       });
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [repository, trips, library, hydrated]);
+  }, [hydrationGate, repository, trips, library, hydrated]);
 
   const getTrip = useCallback((id: string) => trips.find((t) => t.id === id), [trips]);
 
