@@ -107,18 +107,17 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let alive = true;
+    setHydrated(false);
     repository
       .load()
       .then((restored) => {
         if (!alive) return;
         setTrips(restored.trips);
         setLibrary(restored.library);
+        setHydrated(true);
       })
       .catch((err) => {
         console.error("Failed to load packlog state", err);
-      })
-      .finally(() => {
-        if (alive) setHydrated(true);
       });
     return () => {
       alive = false;

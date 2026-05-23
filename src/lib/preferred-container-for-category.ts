@@ -1,11 +1,12 @@
 import type { Container, Item, Trip } from "./packlog-data";
+import { assignableContainers } from "./unassigned-container";
 
 /** Default bag for new items by category — matches `addFromLibrary` routing. */
 export function preferredContainerForCategory(
   trip: Trip,
   category: Item["category"],
 ): Container | undefined {
-  const { containers } = trip;
+  const containers = assignableContainers(trip);
   if (!containers.length) return undefined;
   if (category === "optic") {
     return (
