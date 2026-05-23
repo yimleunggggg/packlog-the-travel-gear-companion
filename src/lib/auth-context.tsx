@@ -66,6 +66,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pendingSyncAction = useRef<(() => void | Promise<void>) | null>(null);
   const readyBoot = useRef(false);
   const prevUserRef = useRef<User | null>(null);
+  const sessionRef = useRef<Session | null>(null);
+  const suppressResumeForUserIdRef = useRef<string | null>(null);
 
   const authConfigured = hasSupabaseBrowserConfig();
 
@@ -77,15 +79,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
-    const finishBoot = (nextSession: Session | null) => {
-      if (cancelled) return;
+    const applySession = (nextSession: Session | null) => {
+      sessionRef.current = nextSession;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
+    };
+    const finishBoot = (nextSession: Session | null) => {
+      if (cancelled) return;
+      if (!nextSession && sessionRef.current) {
+        setReady(true);
+        return;
+      }
+      if (nextSession?.user) suppressResumeForUserIdRef.current = nextSession.user.id;
+      applySession(nextSession);
       setReady(true);
     };
 
     /** 弱网/墙内 Supabase 慢或挂起时，避免 AuthGate 永久 disabled。 */
-    const bootTimer = window.setTimeout(() => finishBoot(null), 8000);
+    const bootTimer = window.setTimeout(() => {
+      if (!cancelled) setReady(true);
+    }, 8000);
 
     client.auth
       .getSession()
@@ -98,9 +111,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         finishBoot(null);
       });
 
-    const { data: sub } = client.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
+    const { data: sub } = client.auth.onAuthStateChange((event, nextSession) => {
+      if (event === "INITIAL_SESSION" && nextSession?.user) {
+        suppressResumeForUserIdRef.current = nextSession.user.id;
+      }
+      applySession(nextSession);
     });
 
     return () => {
@@ -147,6 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!readyBoot.current) {
       readyBoot.current = true;
       prevUserRef.current = user;
+      if (user) suppressResumeForUserIdRef.current = null;
       return;
     }
     const prev = prevUserRef.current;
@@ -159,6 +175,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearPostAuthIntent();
       setLoginSheetOpen(false);
       void Promise.resolve(fn());
+      return;
+    }
+    if (suppressResumeForUserIdRef.current === user.id) {
+      suppressResumeForUserIdRef.current = null;
       return;
     }
     const intent = consumePostAuthIntent();
