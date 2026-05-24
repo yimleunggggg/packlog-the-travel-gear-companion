@@ -23,7 +23,11 @@ test.describe("smoke", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/community/rei-first-aid-checklist");
 
-    await page.getByRole("button", { name: "Select all" }).click();
+    await page
+      .getByRole("listitem")
+      .filter({ hasText: "Antiseptic wipes" })
+      .getByRole("checkbox")
+      .click();
     await page.getByRole("button", { name: "Add to trip" }).click();
     await page.goto("/trip/TRP-0421/pack");
 
