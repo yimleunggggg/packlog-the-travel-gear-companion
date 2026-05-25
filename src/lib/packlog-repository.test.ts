@@ -57,7 +57,10 @@ describe("packlog repository", () => {
     vi.stubEnv("VITE_SUPABASE_URL", "https://example.supabase.co");
     vi.stubEnv("VITE_SUPABASE_ANON_KEY", "anon-key");
 
-    const repo = createPacklogRepository({ trips: seedTrips, library: gearLibrary }, { userId: null });
+    const repo = createPacklogRepository(
+      { trips: seedTrips, library: gearLibrary },
+      { userId: null },
+    );
     await repo.save({ trips: [], library: [] });
 
     expect(storage.has("packlog.snapshot.v1")).toBe(true);
