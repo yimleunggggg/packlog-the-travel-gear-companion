@@ -15,15 +15,28 @@ function browserStorageKey(userId: string | null | undefined): string {
   return STORAGE_KEY_GUEST;
 }
 
-type SeedState = {
+export type SeedState = {
   trips: Trip[];
   library: GearSpec[];
 };
 
+export type PacklogLoadResult = SeedState & {
+  source: "persisted" | "seed";
+};
+
 export interface PacklogRepository {
-  load: () => Promise<SeedState>;
+  load: () => Promise<PacklogLoadResult>;
   save: (state: SeedState) => Promise<void>;
   clear: () => Promise<void>;
+}
+
+function canUseBrowserStorage() {
+  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+}
+
+export function hasBrowserPacklogSnapshot(userId: string | null | undefined): boolean {
+  if (!canUseBrowserStorage()) return false;
+  return window.localStorage.getItem(browserStorageKey(userId)) != null;
 }
 
 function normalizeTripForSnapshot(t: Trip): z.infer<typeof tripSchema> {
@@ -61,34 +74,32 @@ export function createBrowserPacklogRepository(
   seed: SeedState,
   opts?: { userId?: string | null },
 ): PacklogRepository {
-  const canUseStorage = () =>
-    typeof window !== "undefined" && typeof window.localStorage !== "undefined";
   const key = browserStorageKey(opts?.userId ?? null);
 
   return {
     load: async () => {
-      if (!canUseStorage()) return seed;
+      if (!canUseBrowserStorage()) return { ...seed, source: "seed" };
       const raw = window.localStorage.getItem(key);
-      if (!raw) return seed;
+      if (!raw) return { ...seed, source: "seed" };
 
       const snapshot = parseSnapshot(raw);
       if (!snapshot) {
-        window.localStorage.removeItem(key);
-        return seed;
+        throw new Error(`Invalid PACKLOG snapshot in localStorage key ${key}`);
       }
 
       return {
         trips: snapshot.trips,
         library: snapshot.library,
+        source: "persisted",
       };
     },
     save: async (state) => {
-      if (!canUseStorage()) return;
+      if (!canUseBrowserStorage()) return;
       const snapshot = toSnapshot(state);
       window.localStorage.setItem(key, JSON.stringify(snapshot));
     },
     clear: async () => {
-      if (!canUseStorage()) return;
+      if (!canUseBrowserStorage()) return;
       window.localStorage.removeItem(key);
     },
   };
@@ -117,12 +128,14 @@ export function createSupabasePacklogRepository(
         .limit(1)
         .maybeSingle();
 
-      if (error || !data?.snapshot) return seed;
+      if (error) throw error;
+      if (!data?.snapshot) return { ...seed, source: "seed" };
       const snapshot = parseSnapshotPayload(data.snapshot);
-      if (!snapshot) return seed;
+      if (!snapshot) throw new Error(`Invalid PACKLOG snapshot payload for workspace ${workspace}`);
       return {
         trips: snapshot.trips,
         library: snapshot.library,
+        source: "persisted",
       };
     },
     save: async (state) => {
@@ -161,13 +174,10 @@ export function createPacklogRepository(
   const projectUrl = getEnv("VITE_SUPABASE_URL");
   const anonKey = getEnv("VITE_SUPABASE_ANON_KEY");
   const uid = opts?.userId ?? null;
-  const workspace =
-    backend === "supabase" && uid ? `u:${uid}` : (getEnv("VITE_PACKLOG_WORKSPACE") ?? "default");
-
-  if (backend === "supabase" && projectUrl && anonKey) {
+  if (backend === "supabase" && projectUrl && anonKey && uid) {
     return createSupabasePacklogRepository({
       seed,
-      workspace,
+      workspace: `u:${uid}`,
     });
   }
   return createBrowserPacklogRepository(seed, { userId: uid });
