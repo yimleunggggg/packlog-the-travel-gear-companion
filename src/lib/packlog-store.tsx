@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -40,7 +41,7 @@ import {
 import { preferredContainerForCategory } from "./preferred-container-for-category";
 import { ensureUnassignedContainer, unassignedContainerId } from "./unassigned-container";
 import { useAuth } from "./auth-context";
-import { createPacklogRepository } from "./packlog-repository";
+import { createPacklogRepository, type PacklogRepository } from "./packlog-repository";
 
 type Ctx = {
   trips: Trip[];
@@ -104,21 +105,25 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
   const [trips, setTrips] = useState<Trip[]>(seedTrips);
   const [library, setLibrary] = useState<GearSpec[]>(initialGearLibrary);
   const [hydrated, setHydrated] = useState(false);
+  const loadedRepositoryRef = useRef<PacklogRepository | null>(null);
 
   useEffect(() => {
     let alive = true;
+    loadedRepositoryRef.current = null;
+    setHydrated(false);
     repository
       .load()
       .then((restored) => {
         if (!alive) return;
         setTrips(restored.trips);
         setLibrary(restored.library);
+        loadedRepositoryRef.current = repository;
+        setHydrated(true);
       })
       .catch((err) => {
+        if (!alive) return;
+        loadedRepositoryRef.current = null;
         console.error("Failed to load packlog state", err);
-      })
-      .finally(() => {
-        if (alive) setHydrated(true);
       });
     return () => {
       alive = false;
@@ -126,9 +131,11 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
   }, [repository]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || loadedRepositoryRef.current !== repository) return;
+    const state = { trips, library };
     const timer = window.setTimeout(() => {
-      repository.save({ trips, library }).catch((err) => {
+      if (loadedRepositoryRef.current !== repository) return;
+      repository.save(state).catch((err) => {
         console.error("Failed to persist packlog state", err);
       });
     }, 350);
