@@ -57,7 +57,10 @@ describe("packlog repository Supabase safety", () => {
   });
 
   it("rejects invalid Supabase snapshots instead of overwriting them with seed data", async () => {
-    const { client } = makeClient({ data: { snapshot: { version: 1, trips: "bad" } }, error: null });
+    const { client } = makeClient({
+      data: { snapshot: { version: 1, trips: "bad" } },
+      error: null,
+    });
     supabaseClientMock.getSupabaseBrowserClient.mockReturnValue(client);
     const repo = createSupabasePacklogRepository({ seed, workspace: "u:user-1" });
 
