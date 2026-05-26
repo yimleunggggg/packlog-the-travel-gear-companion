@@ -37,9 +37,9 @@ Repository interface:
 Current adapters:
 
 - browser local storage (`packlog.snapshot.v1`)
-- Supabase snapshot sync (`packlog_snapshots` table)
+- Supabase snapshot sync (`packlog_snapshots` table) for signed-in users
 
-Backend is selected by env (`VITE_DATA_BACKEND`).
+Backend is selected by env (`VITE_DATA_BACKEND`); signed-out users stay on browser local storage even when Supabase is configured.
 
 ### 4) Schema Layer
 
@@ -64,7 +64,7 @@ Before auth is added, keep collection lightweight and privacy-safe:
    - `item_toggled`
    - `review_sealed`
 3. Never mix telemetry schema with domain schema.
-4. Once login is introduced, attach `userId/workspaceId` at repository boundary.
+4. Signed-in Supabase snapshots are scoped at the repository boundary with `workspace = u:<user_id>`.
 
 ## Suggested Database Tables (Future)
 
