@@ -117,9 +117,10 @@ export function createSupabasePacklogRepository(
         .limit(1)
         .maybeSingle();
 
-      if (error || !data?.snapshot) return seed;
+      if (error) throw error;
+      if (!data?.snapshot) return seed;
       const snapshot = parseSnapshotPayload(data.snapshot);
-      if (!snapshot) return seed;
+      if (!snapshot) throw new Error("Invalid packlog snapshot payload");
       return {
         trips: snapshot.trips,
         library: snapshot.library,
@@ -153,6 +154,24 @@ function getEnv(name: string): string | undefined {
   return env[name];
 }
 
+export function packlogSnapshotWorkspaceForUser(userId: string): string {
+  return `u:${userId}`;
+}
+
+export function shouldUseSupabaseSnapshots(config: {
+  backend: string | undefined;
+  projectUrl: string | undefined;
+  anonKey: string | undefined;
+  userId: string | null | undefined;
+}): boolean {
+  return (
+    config.backend === "supabase" &&
+    Boolean(config.projectUrl) &&
+    Boolean(config.anonKey) &&
+    Boolean(config.userId)
+  );
+}
+
 export function createPacklogRepository(
   seed: SeedState,
   opts?: { userId?: string | null },
@@ -161,13 +180,11 @@ export function createPacklogRepository(
   const projectUrl = getEnv("VITE_SUPABASE_URL");
   const anonKey = getEnv("VITE_SUPABASE_ANON_KEY");
   const uid = opts?.userId ?? null;
-  const workspace =
-    backend === "supabase" && uid ? `u:${uid}` : (getEnv("VITE_PACKLOG_WORKSPACE") ?? "default");
 
-  if (backend === "supabase" && projectUrl && anonKey) {
+  if (shouldUseSupabaseSnapshots({ backend, projectUrl, anonKey, userId: uid }) && uid) {
     return createSupabasePacklogRepository({
       seed,
-      workspace,
+      workspace: packlogSnapshotWorkspaceForUser(uid),
     });
   }
   return createBrowserPacklogRepository(seed, { userId: uid });

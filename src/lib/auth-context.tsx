@@ -66,6 +66,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pendingSyncAction = useRef<(() => void | Promise<void>) | null>(null);
   const readyBoot = useRef(false);
   const prevUserRef = useRef<User | null>(null);
+  const bootSessionRef = useRef<Session | null>(null);
+  const bootFinishedRef = useRef(false);
 
   const authConfigured = hasSupabaseBrowserConfig();
 
@@ -77,30 +79,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
+    bootSessionRef.current = null;
+    bootFinishedRef.current = false;
+
     const finishBoot = (nextSession: Session | null) => {
-      if (cancelled) return;
+      if (cancelled || bootFinishedRef.current) return;
+      bootFinishedRef.current = true;
+      bootSessionRef.current = nextSession;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
       setReady(true);
     };
 
     /** 弱网/墙内 Supabase 慢或挂起时，避免 AuthGate 永久 disabled。 */
-    const bootTimer = window.setTimeout(() => finishBoot(null), 8000);
+    const bootTimer = window.setTimeout(() => finishBoot(bootSessionRef.current), 8000);
 
     client.auth
       .getSession()
       .then(({ data }) => {
         window.clearTimeout(bootTimer);
-        finishBoot(data.session);
+        finishBoot(data.session ?? bootSessionRef.current);
       })
       .catch(() => {
         window.clearTimeout(bootTimer);
-        finishBoot(null);
+        finishBoot(bootSessionRef.current);
       });
 
     const { data: sub } = client.auth.onAuthStateChange((_event, nextSession) => {
+      bootSessionRef.current = nextSession;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
+      if (!bootFinishedRef.current && nextSession) {
+        window.clearTimeout(bootTimer);
+        finishBoot(nextSession);
+      }
     });
 
     return () => {

@@ -16,8 +16,8 @@
 ## 3. 用户数据存在哪
 
 - **默认**：浏览器 **`localStorage`** 存一整份快照（行程 + 装备库）。
-- **可选云端**：设置 **`VITE_DATA_BACKEND=supabase`** 并配置 Supabase 后，写入表 **`packlog_snapshots`**（按 `workspace` 一条 JSON 快照）。
-- **真正多用户、防串数据**需在 Supabase 里建表、配置 **RLS**，并把 `workspace` 与用户 ID 绑定规则定清楚。
+- **可选云端**：登录用户在 **`VITE_DATA_BACKEND=supabase`** 且配置 Supabase 后，写入表 **`packlog_snapshots`**（`workspace = u:<用户ID>`）。
+- **访客数据**：未登录时只写浏览器 **`localStorage`**，避免所有访客共享同一条云端快照。
 
 ## 4. 登录与营销订阅（实现要点）
 
