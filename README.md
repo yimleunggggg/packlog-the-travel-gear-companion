@@ -95,7 +95,6 @@ Set these GitHub repository secrets before enabling auto deploy:
 - `VITE_DATA_BACKEND`
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
-- `VITE_PACKLOG_WORKSPACE`
 - `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD` (optional; when all three are set, migrations run on every deploy)
 
 ## Supabase + Vercel Integration
@@ -110,8 +109,7 @@ For full remote persistence:
    - `VITE_DATA_BACKEND=supabase`
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
-   - `VITE_PACKLOG_WORKSPACE`
-4. Deploy to Vercel and set the same variables in Project Settings -> Environment Variables.
+4. Deploy to Cloudflare and set the same variables before build time.
 
 If `VITE_DATA_BACKEND` is not `supabase`, app falls back to local storage automatically.
 
@@ -139,7 +137,7 @@ OAuth and magic links return to `/auth/callback`, which exchanges the PKCE code 
 
 **邮件订阅勾选**：勾选「产品更新」后，值保存在用户的 **`raw_user_meta_data.marketing_opt_in`**（boolean）。在 Supabase SQL Editor 可查询：`select id, email, raw_user_meta_data from auth.users`。
 
-**按用户隔离的本地数据**：登录用户的浏览器快照键为 `packlog.snapshot.v1.u.<uuid>`，未登录访客仍为 `packlog.snapshot.v1`。启用 Supabase 且已登录时，`workspace` 会使用 `u:<user_id>`（与是否设置 `VITE_PACKLOG_WORKSPACE` 无关）。
+**按用户隔离的数据**：登录用户的浏览器快照键为 `packlog.snapshot.v1.u.<uuid>`。启用 Supabase 且已登录时，云端 `workspace` 会使用 `u:<user_id>`；未登录访客仍只写入本机 `packlog.snapshot.v1`。
 
 ## Next-step Upgrade Path
 
