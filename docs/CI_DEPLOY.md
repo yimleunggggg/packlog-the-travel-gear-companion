@@ -15,26 +15,26 @@
 
 ### Cloudflare（已有）
 
-| Name | 说明 |
-|------|------|
-| `CLOUDFLARE_API_TOKEN` | Cloudflare API Token（需 Workers 编辑等权限） |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare 账号 Account ID |
+| Name                    | 说明                                          |
+| ----------------------- | --------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`  | Cloudflare API Token（需 Workers 编辑等权限） |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare 账号 Account ID                    |
 
 ### 构建期 `VITE_*`（已有）
 
-| Name | 说明 |
-|------|------|
-| `VITE_DATA_BACKEND` | 生产填 `supabase` |
-| `VITE_SUPABASE_URL` | Supabase **Project URL** |
+| Name                     | 说明                         |
+| ------------------------ | ---------------------------- |
+| `VITE_DATA_BACKEND`      | 生产填 `supabase`            |
+| `VITE_SUPABASE_URL`      | Supabase **Project URL**     |
 | `VITE_SUPABASE_ANON_KEY` | Supabase **anon public** key |
 
 ### Supabase CLI（迁移自动化，新增）
 
-| Name | 说明 |
-|------|------|
+| Name                    | 说明                                                                                                 |
+| ----------------------- | ---------------------------------------------------------------------------------------------------- |
 | `SUPABASE_ACCESS_TOKEN` | [Account → Access Tokens](https://supabase.com/dashboard/account/tokens) 创建，用于 CLI 管理远端项目 |
-| `SUPABASE_PROJECT_REF` | 项目 ref，见控制台 URL `https://supabase.com/dashboard/project/<ref>` |
-| `SUPABASE_DB_PASSWORD` | **Project Settings → Database** 下的数据库密码（用于 `supabase link` 非交互链接） |
+| `SUPABASE_PROJECT_REF`  | 项目 ref，见控制台 URL `https://supabase.com/dashboard/project/<ref>`                                |
+| `SUPABASE_DB_PASSWORD`  | **Project Settings → Database** 下的数据库密码（用于 `supabase link` 非交互链接）                    |
 
 三者**任缺其一**时，CI 会 **跳过迁移步骤**（仍会部署 Cloudflare），并在日志里输出 `notice`，避免误以为自己已推迁移。
 
