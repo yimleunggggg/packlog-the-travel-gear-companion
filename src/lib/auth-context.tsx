@@ -66,6 +66,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pendingSyncAction = useRef<(() => void | Promise<void>) | null>(null);
   const readyBoot = useRef(false);
   const prevUserRef = useRef<User | null>(null);
+  const sessionRef = useRef<Session | null>(null);
+  const bootTimedOutRef = useRef(false);
+  const bootSettledRef = useRef(false);
+  const suppressBootResumeRef = useRef(false);
 
   const authConfigured = hasSupabaseBrowserConfig();
 
@@ -77,15 +81,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
-    const finishBoot = (nextSession: Session | null) => {
+    const applySession = (nextSession: Session | null) => {
       if (cancelled) return;
+      sessionRef.current = nextSession;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
+    };
+    const finishBoot = (nextSession: Session | null) => {
+      if (cancelled) return;
+      if (bootTimedOutRef.current && !bootSettledRef.current && nextSession?.user) {
+        suppressBootResumeRef.current = true;
+      }
+      bootSettledRef.current = true;
+      applySession(nextSession);
       setReady(true);
     };
 
     /** 弱网/墙内 Supabase 慢或挂起时，避免 AuthGate 永久 disabled。 */
-    const bootTimer = window.setTimeout(() => finishBoot(null), 8000);
+    const bootTimer = window.setTimeout(() => {
+      if (cancelled) return;
+      bootTimedOutRef.current = true;
+      setReady(true);
+    }, 8000);
 
     client.auth
       .getSession()
@@ -95,12 +112,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => {
         window.clearTimeout(bootTimer);
-        finishBoot(null);
+        bootSettledRef.current = true;
+        if (!sessionRef.current) {
+          applySession(null);
+        }
+        setReady(true);
       });
 
-    const { data: sub } = client.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
+    const { data: sub } = client.auth.onAuthStateChange((event, nextSession) => {
+      if (event === "INITIAL_SESSION") {
+        window.clearTimeout(bootTimer);
+        if (bootTimedOutRef.current && !bootSettledRef.current && nextSession?.user) {
+          suppressBootResumeRef.current = true;
+        }
+        bootSettledRef.current = true;
+        setReady(true);
+      }
+      applySession(nextSession);
     });
 
     return () => {
@@ -151,6 +179,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const prev = prevUserRef.current;
     prevUserRef.current = user;
+    if (suppressBootResumeRef.current && user && !prev) {
+      suppressBootResumeRef.current = false;
+      return;
+    }
     if (!user || prev) return;
 
     if (pendingSyncAction.current) {
