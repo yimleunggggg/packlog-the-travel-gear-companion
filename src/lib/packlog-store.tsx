@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -88,6 +89,16 @@ type Ctx = {
 
 const StoreCtx = createContext<Ctx | null>(null);
 
+type StoreState = {
+  trips: Trip[];
+  library: GearSpec[];
+};
+
+type PendingMutation = {
+  repository: ReturnType<typeof createPacklogRepository>;
+  mutator: (current: StoreState) => StoreState;
+};
+
 export function PacklogProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const seedForRepo = useMemo(
@@ -101,24 +112,49 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
     () => createPacklogRepository(seedForRepo, { userId: user?.id ?? null }),
     [seedForRepo, user?.id],
   );
-  const [trips, setTrips] = useState<Trip[]>(seedTrips);
-  const [library, setLibrary] = useState<GearSpec[]>(initialGearLibrary);
+  const [state, setState] = useState<StoreState>({
+    trips: seedTrips,
+    library: initialGearLibrary,
+  });
   const [hydrated, setHydrated] = useState(false);
+  const repositoryRef = useRef(repository);
+  const hydratedRepositoryRef = useRef<typeof repository | null>(null);
+  const pendingMutationsRef = useRef<PendingMutation[]>([]);
+  const { trips, library } = state;
+
+  const applyStoreMutation = useCallback((mutator: (current: StoreState) => StoreState) => {
+    if (hydratedRepositoryRef.current !== repositoryRef.current) {
+      pendingMutationsRef.current.push({ repository: repositoryRef.current, mutator });
+    }
+    setState(mutator);
+  }, []);
 
   useEffect(() => {
+    repositoryRef.current = repository;
+    hydratedRepositoryRef.current = null;
+    pendingMutationsRef.current = pendingMutationsRef.current.filter(
+      (pending) => pending.repository === repository,
+    );
+    setHydrated(false);
     let alive = true;
     repository
       .load()
       .then((restored) => {
         if (!alive) return;
-        setTrips(restored.trips);
-        setLibrary(restored.library);
+        const queued = pendingMutationsRef.current.filter(
+          (pending) => pending.repository === repository,
+        );
+        pendingMutationsRef.current = [];
+        const restoredState = queued.reduce<StoreState>(
+          (current, pending) => pending.mutator(current),
+          restored,
+        );
+        setState(restoredState);
+        hydratedRepositoryRef.current = repository;
+        setHydrated(true);
       })
       .catch((err) => {
         console.error("Failed to load packlog state", err);
-      })
-      .finally(() => {
-        if (alive) setHydrated(true);
       });
     return () => {
       alive = false;
@@ -127,29 +163,37 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return;
+    if (hydratedRepositoryRef.current !== repository) return;
     const timer = window.setTimeout(() => {
-      repository.save({ trips, library }).catch((err) => {
+      if (hydratedRepositoryRef.current !== repository) return;
+      repository.save(state).catch((err) => {
         console.error("Failed to persist packlog state", err);
       });
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [repository, trips, library, hydrated]);
+  }, [repository, state, hydrated]);
 
   const getTrip = useCallback((id: string) => trips.find((t) => t.id === id), [trips]);
 
   const updateTrip = useCallback((tripId: string, mutator: (t: Trip) => Trip) => {
-    setTrips((cur) => cur.map((t) => (t.id === tripId ? mutator(t) : t)));
-  }, []);
+    applyStoreMutation((cur) => ({
+      ...cur,
+      trips: cur.trips.map((t) => (t.id === tripId ? mutator(t) : t)),
+    }));
+  }, [applyStoreMutation]);
 
   const createTrip: Ctx["createTrip"] = useCallback((args) => {
     const fresh = makeFreshTrip(args);
-    setTrips((cur) => [fresh, ...cur]);
+    applyStoreMutation((cur) => ({ ...cur, trips: [fresh, ...cur.trips] }));
     return fresh;
-  }, []);
+  }, [applyStoreMutation]);
 
   const patchTrip: Ctx["patchTrip"] = useCallback((tripId, patch) => {
-    setTrips((cur) => cur.map((t) => (t.id === tripId ? { ...t, ...patch } : t)));
-  }, []);
+    applyStoreMutation((cur) => ({
+      ...cur,
+      trips: cur.trips.map((t) => (t.id === tripId ? { ...t, ...patch } : t)),
+    }));
+  }, [applyStoreMutation]);
 
   const setPhase: Ctx["setPhase"] = (tripId, p) =>
     updateTrip(tripId, (trip) => setTripPhase(trip, p));
@@ -226,7 +270,7 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
 
   const addToLibrary: Ctx["addToLibrary"] = (item) => {
     const spec = buildLibrarySpecFromItem(item);
-    setLibrary((lib) => mergeLibrarySpec(lib, spec));
+    applyStoreMutation((cur) => ({ ...cur, library: mergeLibrarySpec(cur.library, spec) }));
     return spec;
   };
 
@@ -245,7 +289,10 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
     const trip = trips.find((x) => x.id === tripId);
     if (!trip) return;
     const entries = collectReviewEntries(trip);
-    setLibrary((lib) => applyReviewEntriesToLibrary(lib, entries));
+    applyStoreMutation((cur) => ({
+      ...cur,
+      library: applyReviewEntriesToLibrary(cur.library, entries),
+    }));
   };
 
   const addContainer: Ctx["addContainer"] = (tripId, draft) =>
