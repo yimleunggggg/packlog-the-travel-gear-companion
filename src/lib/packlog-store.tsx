@@ -175,25 +175,34 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
 
   const getTrip = useCallback((id: string) => trips.find((t) => t.id === id), [trips]);
 
-  const updateTrip = useCallback((tripId: string, mutator: (t: Trip) => Trip) => {
-    applyStoreMutation((cur) => ({
-      ...cur,
-      trips: cur.trips.map((t) => (t.id === tripId ? mutator(t) : t)),
-    }));
-  }, [applyStoreMutation]);
+  const updateTrip = useCallback(
+    (tripId: string, mutator: (t: Trip) => Trip) => {
+      applyStoreMutation((cur) => ({
+        ...cur,
+        trips: cur.trips.map((t) => (t.id === tripId ? mutator(t) : t)),
+      }));
+    },
+    [applyStoreMutation],
+  );
 
-  const createTrip: Ctx["createTrip"] = useCallback((args) => {
-    const fresh = makeFreshTrip(args);
-    applyStoreMutation((cur) => ({ ...cur, trips: [fresh, ...cur.trips] }));
-    return fresh;
-  }, [applyStoreMutation]);
+  const createTrip: Ctx["createTrip"] = useCallback(
+    (args) => {
+      const fresh = makeFreshTrip(args);
+      applyStoreMutation((cur) => ({ ...cur, trips: [fresh, ...cur.trips] }));
+      return fresh;
+    },
+    [applyStoreMutation],
+  );
 
-  const patchTrip: Ctx["patchTrip"] = useCallback((tripId, patch) => {
-    applyStoreMutation((cur) => ({
-      ...cur,
-      trips: cur.trips.map((t) => (t.id === tripId ? { ...t, ...patch } : t)),
-    }));
-  }, [applyStoreMutation]);
+  const patchTrip: Ctx["patchTrip"] = useCallback(
+    (tripId, patch) => {
+      applyStoreMutation((cur) => ({
+        ...cur,
+        trips: cur.trips.map((t) => (t.id === tripId ? { ...t, ...patch } : t)),
+      }));
+    },
+    [applyStoreMutation],
+  );
 
   const setPhase: Ctx["setPhase"] = (tripId, p) =>
     updateTrip(tripId, (trip) => setTripPhase(trip, p));
