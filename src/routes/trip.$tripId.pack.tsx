@@ -32,6 +32,8 @@ function TripPackPage() {
   const { t, lang } = useI18n();
   const store = usePacklog();
   const trip = store.getTrip(tripId);
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const scrollPackTarget = useMemo(() => (isDesktop ? "pack-by-bag" : "pack-checklist"), [isDesktop]);
 
   useEffect(() => {
     const onResume = (e: Event) => {
@@ -87,8 +89,6 @@ function TripPackPage() {
   );
   const pct = totalItems ? (packedItems / totalItems) * 100 : 0;
   const totalG = tripTotalGrams(trip);
-  const isDesktop = useMediaQuery("(min-width: 768px)");
-  const scrollPackTarget = useMemo(() => (isDesktop ? "pack-by-bag" : "pack-checklist"), [isDesktop]);
 
   return (
     <div className="min-h-dvh overscroll-y-none bg-background pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8">
