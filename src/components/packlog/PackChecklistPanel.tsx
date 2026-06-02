@@ -29,7 +29,11 @@ import {
 import type { SeedItem } from "@/lib/scenario-templates";
 import type { PackViewFilter } from "@/lib/pack-view-filter";
 import { itemMatchesPackViewFilter } from "@/lib/pack-view-filter";
-import { isUnassignedContainer, unassignedContainerId } from "@/lib/unassigned-container";
+import {
+  assignableContainers,
+  isUnassignedContainer,
+  unassignedContainerId,
+} from "@/lib/unassigned-container";
 import { PACKLOG_CATEGORY_HEX } from "@/lib/packlog-category-colors";
 
 const ownColor: Record<Item["ownership"], string> = {
@@ -97,9 +101,10 @@ export function PackChecklistPanel({
     return () => cancelAnimationFrame(id);
   }, [adding]);
 
-  const defaultContainerId = trip.containers[0]?.id ?? "";
+  const assignable = useMemo(() => assignableContainers(trip), [trip]);
+  const defaultContainerId = assignable[0]?.id ?? "";
 
-  const { itemsByPackGroup, seedsByPackGroup, unaddedCount, unassignedItems, groupStatsByPackGroup } =
+  const { itemsByPackGroup, seedsByPackGroup, unaddedCount, groupStatsByPackGroup } =
     useMemo(() => {
       const itemsByPackGroup: Partial<Record<PackDisplayGroup, ItemWithCtx[]>> = {};
       const groupStatsByPackGroup: Partial<
@@ -114,14 +119,16 @@ export function PackChecklistPanel({
         groupStatsByPackGroup[g] = cur;
       };
       const unassignedId = unassignedContainerId(tripId);
-      const unassignedItems: ItemWithCtx[] = [];
       trip.containers.forEach((c) => {
         if (isUnassignedContainer(c, tripId)) {
           if (bagFilter === "all") {
             c.items.forEach((it) => bumpStats(itemPackDisplayGroup(trip, it), it));
             c.items.forEach((it) => {
               if (!itemMatchesPackViewFilter(it, packViewFilter)) return;
-              unassignedItems.push({ ...it, _containerId: unassignedId });
+              const g = itemPackDisplayGroup(trip, it);
+              const list = itemsByPackGroup[g] ?? [];
+              list.push({ ...it, _containerId: unassignedId });
+              itemsByPackGroup[g] = list;
             });
           }
           return;
@@ -159,7 +166,6 @@ export function PackChecklistPanel({
       itemsByPackGroup,
       seedsByPackGroup,
       unaddedCount: showSeeds ? unadded.length : 0,
-      unassignedItems,
       groupStatsByPackGroup,
     };
   }, [trip, tripId, bagFilter, packViewFilter]);
@@ -188,13 +194,11 @@ export function PackChecklistPanel({
             className="min-h-11 w-full max-w-full rounded-md border border-border-strong bg-background px-3 py-2.5 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/35 md:min-h-0 md:min-w-[12rem] md:py-1.5 md:font-mono md:text-[11px]"
           >
             <option value="all">{t("categoryView.filterAll")}</option>
-            {trip.containers
-              .filter((c) => !isUnassignedContainer(c, tripId))
-              .map((c) => (
-                <option key={c.id} value={c.id}>
-                  {containerDisplayLabel(c, lang, t)}
-                </option>
-              ))}
+            {assignable.map((c) => (
+              <option key={c.id} value={c.id}>
+                {containerDisplayLabel(c, lang, t)}
+              </option>
+            ))}
           </select>
         </div>
       </div>

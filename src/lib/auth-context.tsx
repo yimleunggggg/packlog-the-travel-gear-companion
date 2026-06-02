@@ -77,30 +77,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
-    const finishBoot = (nextSession: Session | null) => {
+    let bootDone = false;
+    let latestSession: Session | null = null;
+    const applySession = (nextSession: Session | null) => {
       if (cancelled) return;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
+    };
+    const finishBoot = (nextSession: Session | null) => {
+      if (cancelled || bootDone) return;
+      bootDone = true;
+      applySession(nextSession);
       setReady(true);
     };
 
     /** 弱网/墙内 Supabase 慢或挂起时，避免 AuthGate 永久 disabled。 */
-    const bootTimer = window.setTimeout(() => finishBoot(null), 8000);
+    const bootTimer = window.setTimeout(() => finishBoot(latestSession), 8000);
 
     client.auth
       .getSession()
       .then(({ data }) => {
         window.clearTimeout(bootTimer);
-        finishBoot(data.session);
+        latestSession = data.session;
+        if (bootDone) {
+          applySession(latestSession);
+          return;
+        }
+        finishBoot(latestSession);
       })
       .catch(() => {
         window.clearTimeout(bootTimer);
-        finishBoot(null);
+        finishBoot(latestSession);
       });
 
     const { data: sub } = client.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
+      latestSession = nextSession;
+      applySession(nextSession);
+      if (!bootDone && nextSession) {
+        window.clearTimeout(bootTimer);
+        finishBoot(nextSession);
+      }
     });
 
     return () => {

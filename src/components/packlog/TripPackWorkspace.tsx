@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,6 +22,8 @@ import {
 import { cn } from "@/lib/utils";
 import { isUnassignedContainer } from "@/lib/unassigned-container";
 
+export const OPEN_PACK_CATEGORY_CHECKLIST_EVENT = "packlog:open-category-checklist";
+
 /**
  * Shared packing surface: filters + bag weight cards + checklist + add bag.
  * - `page`: used under `/trip/:id/pack` (filter bar full-width, then padded main column).
@@ -41,6 +43,13 @@ export function TripPackWorkspace({
   const [packViewFilter, setPackViewFilter] = useState<PackViewFilter>("all");
   /** 打包页桌面端：默认展示按箱包列表；分类核对清单折叠，避免占满屏。 */
   const [categoryChecklistOpen, setCategoryChecklistOpen] = useState(false);
+
+  useEffect(() => {
+    if (variant !== "page") return;
+    const openChecklist = () => setCategoryChecklistOpen(true);
+    window.addEventListener(OPEN_PACK_CATEGORY_CHECKLIST_EVENT, openChecklist);
+    return () => window.removeEventListener(OPEN_PACK_CATEGORY_CHECKLIST_EVENT, openChecklist);
+  }, [variant]);
 
   const main = useMemo(
     () => (trip.containers ?? []).filter((c) => !isUnassignedContainer(c, trip.id)),

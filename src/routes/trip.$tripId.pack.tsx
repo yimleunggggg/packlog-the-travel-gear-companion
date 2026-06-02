@@ -3,7 +3,10 @@ import { useEffect, useMemo } from "react";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { TripPackWorkspace } from "@/components/packlog/TripPackWorkspace";
+import {
+  OPEN_PACK_CATEGORY_CHECKLIST_EVENT,
+  TripPackWorkspace,
+} from "@/components/packlog/TripPackWorkspace";
 import { TripPackPageFoldout } from "@/components/packlog/TripPackPageFoldout";
 import { POST_AUTH_EVENT, type PostAuthIntent } from "@/lib/post-auth-intent";
 import { communityTemplates } from "@/lib/packlog-data";
@@ -32,6 +35,8 @@ function TripPackPage() {
   const { t, lang } = useI18n();
   const store = usePacklog();
   const trip = store.getTrip(tripId);
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const scrollPackTarget = useMemo(() => (isDesktop ? "pack-by-bag" : "pack-checklist"), [isDesktop]);
 
   useEffect(() => {
     const onResume = (e: Event) => {
@@ -87,8 +92,6 @@ function TripPackPage() {
   );
   const pct = totalItems ? (packedItems / totalItems) * 100 : 0;
   const totalG = tripTotalGrams(trip);
-  const isDesktop = useMediaQuery("(min-width: 768px)");
-  const scrollPackTarget = useMemo(() => (isDesktop ? "pack-by-bag" : "pack-checklist"), [isDesktop]);
 
   return (
     <div className="min-h-dvh overscroll-y-none bg-background pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8">
@@ -184,12 +187,15 @@ function TripPackPage() {
                 <button
                   type="button"
                   className={cn(packlogBtnSecondary, packlogBtnBlock, "flex-1 md:flex-initial")}
-                  onClick={() =>
-                    document.getElementById("pack-checklist-add")?.scrollIntoView({
-                      behavior: "smooth",
-                      block: "start",
-                    })
-                  }
+                  onClick={() => {
+                    window.dispatchEvent(new Event(OPEN_PACK_CATEGORY_CHECKLIST_EVENT));
+                    requestAnimationFrame(() => {
+                      document.getElementById("pack-checklist-add")?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start",
+                      });
+                    });
+                  }}
                 >
                   {t("pack.footer.addGear")}
                 </button>
