@@ -89,7 +89,9 @@ type Ctx = {
 const StoreCtx = createContext<Ctx | null>(null);
 
 export function PacklogProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, ready: authReady, authConfigured } = useAuth();
+  const authPending = authConfigured && !authReady;
+  const repoKey = authPending ? null : user?.id ? `user:${user.id}` : "guest";
   const seedForRepo = useMemo(
     () =>
       user?.id
@@ -98,15 +100,20 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
     [user?.id],
   );
   const repository = useMemo(
-    () => createPacklogRepository(seedForRepo, { userId: user?.id ?? null }),
-    [seedForRepo, user?.id],
+    () => (repoKey ? createPacklogRepository(seedForRepo, { userId: user?.id ?? null }) : null),
+    [repoKey, seedForRepo, user?.id],
   );
   const [trips, setTrips] = useState<Trip[]>(seedTrips);
   const [library, setLibrary] = useState<GearSpec[]>(initialGearLibrary);
-  const [hydrated, setHydrated] = useState(false);
+  const [hydratedRepoKey, setHydratedRepoKey] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!repository || !repoKey) {
+      setHydratedRepoKey(null);
+      return;
+    }
     let alive = true;
+    setHydratedRepoKey(null);
     repository
       .load()
       .then((restored) => {
@@ -118,22 +125,22 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
         console.error("Failed to load packlog state", err);
       })
       .finally(() => {
-        if (alive) setHydrated(true);
+        if (alive) setHydratedRepoKey(repoKey);
       });
     return () => {
       alive = false;
     };
-  }, [repository]);
+  }, [repository, repoKey]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!repository || hydratedRepoKey !== repoKey) return;
     const timer = window.setTimeout(() => {
       repository.save({ trips, library }).catch((err) => {
         console.error("Failed to persist packlog state", err);
       });
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [repository, trips, library, hydrated]);
+  }, [repository, repoKey, hydratedRepoKey, trips, library]);
 
   const getTrip = useCallback((id: string) => trips.find((t) => t.id === id), [trips]);
 

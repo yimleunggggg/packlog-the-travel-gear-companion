@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,18 +22,14 @@ import {
 import { cn } from "@/lib/utils";
 import { isUnassignedContainer } from "@/lib/unassigned-container";
 
+export const OPEN_PACK_CATEGORY_CHECKLIST_EVENT = "packlog:open-category-checklist";
+
 /**
  * Shared packing surface: filters + bag weight cards + checklist + add bag.
  * - `page`: used under `/trip/:id/pack` (filter bar full-width, then padded main column).
  * - `embedded`: used on `/trip/:id` below briefing (`#trip-pack-workspace` for scroll).
  */
-export function TripPackWorkspace({
-  trip,
-  variant,
-}: {
-  trip: Trip;
-  variant: "embedded" | "page";
-}) {
+export function TripPackWorkspace({ trip, variant }: { trip: Trip; variant: "embedded" | "page" }) {
   const { t } = useI18n();
   const store = usePacklog();
   const isDesktop = useMediaQuery("(min-width: 768px)");
@@ -41,6 +37,13 @@ export function TripPackWorkspace({
   const [packViewFilter, setPackViewFilter] = useState<PackViewFilter>("all");
   /** 打包页桌面端：默认展示按箱包列表；分类核对清单折叠，避免占满屏。 */
   const [categoryChecklistOpen, setCategoryChecklistOpen] = useState(false);
+
+  useEffect(() => {
+    if (variant !== "page") return;
+    const openChecklist = () => setCategoryChecklistOpen(true);
+    window.addEventListener(OPEN_PACK_CATEGORY_CHECKLIST_EVENT, openChecklist);
+    return () => window.removeEventListener(OPEN_PACK_CATEGORY_CHECKLIST_EVENT, openChecklist);
+  }, [variant]);
 
   const main = useMemo(
     () => (trip.containers ?? []).filter((c) => !isUnassignedContainer(c, trip.id)),
@@ -105,7 +108,9 @@ export function TripPackWorkspace({
           className="grid grid-cols-1 gap-6 md:grid-cols-2"
         >
           <div id="pack-by-bag" className="scroll-mt-28 md:col-span-2 border-b border-border pb-2">
-            <div className="font-mono text-[10px] tracking-[0.22em] text-muted-foreground">{t("bags.sectionKicker")}</div>
+            <div className="font-mono text-[10px] tracking-[0.22em] text-muted-foreground">
+              {t("bags.sectionKicker")}
+            </div>
             <h3 className={cn("mt-1", packlogSectionTitle)}>{t("bags.sectionTitle")}</h3>
             {t("bags.sectionHint").trim() ? (
               <p className="mt-1 text-sm text-muted-foreground">{t("bags.sectionHint")}</p>
@@ -129,7 +134,9 @@ export function TripPackWorkspace({
                 onUpdate={(cid, iid, patch) => store.updateItem(trip.id, cid, iid, patch)}
                 onSaveToLibrary={(item) => store.addToLibrary(item)}
                 isInLibrary={(item) =>
-                  store.library.some((g) => g.name === item.name && (g.brand ?? "") === (item.brand ?? ""))
+                  store.library.some(
+                    (g) => g.name === item.name && (g.brand ?? "") === (item.brand ?? ""),
+                  )
                 }
                 variant="wide"
               />
@@ -153,7 +160,9 @@ export function TripPackWorkspace({
               onUpdate={(cid, iid, patch) => store.updateItem(trip.id, cid, iid, patch)}
               onSaveToLibrary={(item) => store.addToLibrary(item)}
               isInLibrary={(item) =>
-                store.library.some((g) => g.name === item.name && (g.brand ?? "") === (item.brand ?? ""))
+                store.library.some(
+                  (g) => g.name === item.name && (g.brand ?? "") === (item.brand ?? ""),
+                )
               }
             />
           ))}
@@ -196,7 +205,9 @@ export function TripPackWorkspace({
                   onAddToContainer={(cid, item) => store.addItem(trip.id, cid, item)}
                   onSaveToLibrary={(item) => store.addToLibrary(item)}
                   isInLibrary={(item) =>
-                    store.library.some((g) => g.name === item.name && (g.brand ?? "") === (item.brand ?? ""))
+                    store.library.some(
+                      (g) => g.name === item.name && (g.brand ?? "") === (item.brand ?? ""),
+                    )
                   }
                 />
               </CollapsibleContent>
@@ -216,7 +227,9 @@ export function TripPackWorkspace({
                 onAddToContainer={(cid, item) => store.addItem(trip.id, cid, item)}
                 onSaveToLibrary={(item) => store.addToLibrary(item)}
                 isInLibrary={(item) =>
-                  store.library.some((g) => g.name === item.name && (g.brand ?? "") === (item.brand ?? ""))
+                  store.library.some(
+                    (g) => g.name === item.name && (g.brand ?? "") === (item.brand ?? ""),
+                  )
                 }
               />
             </div>
@@ -234,7 +247,11 @@ export function TripPackWorkspace({
             to="/trip/$tripId"
             params={{ tripId: trip.id }}
             hash="trip-review-panel"
-            className={cn(packlogBtnPrimary, packlogBtnBlock, "inline-flex w-full justify-center no-underline")}
+            className={cn(
+              packlogBtnPrimary,
+              packlogBtnBlock,
+              "inline-flex w-full justify-center no-underline",
+            )}
           >
             {t("pack.page.reviewCtaOverview")}
           </Link>
@@ -295,7 +312,9 @@ export function TripPackWorkspace({
         id="trip-pack-workspace"
         className="scroll-mt-[calc(5rem+env(safe-area-inset-top))] space-y-4 border-t border-border pt-8"
       >
-        <div className="font-mono text-[10px] tracking-[0.22em] text-muted-foreground">{t("packChecklist.kicker")}</div>
+        <div className="font-mono text-[10px] tracking-[0.22em] text-muted-foreground">
+          {t("packChecklist.kicker")}
+        </div>
         <h2 className={packlogSectionTitle}>{t("pack.page.embeddedTitle")}</h2>
         {t("pack.page.embeddedHint").trim() ? (
           <p className={packlogHint}>{t("pack.page.embeddedHint")}</p>
