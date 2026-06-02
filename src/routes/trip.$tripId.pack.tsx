@@ -36,7 +36,10 @@ function TripPackPage() {
   const store = usePacklog();
   const trip = store.getTrip(tripId);
   const isDesktop = useMediaQuery("(min-width: 768px)");
-  const scrollPackTarget = useMemo(() => (isDesktop ? "pack-by-bag" : "pack-checklist"), [isDesktop]);
+  const scrollPackTarget = useMemo(
+    () => (isDesktop ? "pack-by-bag" : "pack-checklist"),
+    [isDesktop],
+  );
 
   useEffect(() => {
     const onResume = (e: Event) => {
@@ -135,7 +138,9 @@ function TripPackPage() {
       {phase === "PACK" ? (
         <TripPackPageFoldout
           trip={trip}
-          onOpenClone={() => navigate({ to: "/community", search: { tag: undefined, kind: undefined } })}
+          onOpenClone={() =>
+            navigate({ to: "/community", search: { tag: undefined, kind: undefined } })
+          }
           onSharingPatch={(patch) => store.patchTrip(trip.id, patch)}
           onEnterReview={() => store.setPhase(trip.id, "REVIEW")}
         />
@@ -153,7 +158,11 @@ function TripPackPage() {
                 to="/trip/$tripId"
                 params={{ tripId: trip.id }}
                 hash="trip-review-panel"
-                className={cn(packlogBtnPrimary, packlogBtnBlock, "inline-flex flex-1 justify-center no-underline")}
+                className={cn(
+                  packlogBtnPrimary,
+                  packlogBtnBlock,
+                  "inline-flex flex-1 justify-center no-underline",
+                )}
               >
                 {t("pack.page.reviewCtaOverview")}
               </Link>
@@ -210,7 +219,9 @@ function TripPackPage() {
             </>
           )}
           {t("pack.page.footerHint").trim() ? (
-            <p className="text-center font-mono text-[9px] text-muted-foreground">{t("pack.page.footerHint")}</p>
+            <p className="text-center font-mono text-[9px] text-muted-foreground">
+              {t("pack.page.footerHint")}
+            </p>
           ) : null}
         </div>
       </motion.div>
