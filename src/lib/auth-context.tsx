@@ -11,6 +11,13 @@ import {
 import type { Session, User } from "@supabase/supabase-js";
 import { LoginSheet } from "@/components/auth/LoginSheet";
 import {
+  applyAuthStateEvent,
+  applyInitialSessionResult,
+  initialAuthBootState,
+  markAuthBootReady,
+  type AuthBootState,
+} from "@/lib/auth-boot";
+import {
   clearPostAuthIntent,
   consumePostAuthIntent,
   POST_AUTH_EVENT,
@@ -77,30 +84,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
-    const finishBoot = (nextSession: Session | null) => {
+    const bootState: { current: AuthBootState<Session> } = {
+      current: initialAuthBootState(),
+    };
+    const commitBootState = (nextState: AuthBootState<Session>) => {
       if (cancelled) return;
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
-      setReady(true);
+      bootState.current = nextState;
+      setSession(nextState.session);
+      setUser(nextState.session?.user ?? null);
+      if (nextState.ready) setReady(true);
     };
 
     /** 弱网/墙内 Supabase 慢或挂起时，避免 AuthGate 永久 disabled。 */
-    const bootTimer = window.setTimeout(() => finishBoot(null), 8000);
+    const bootTimer = window.setTimeout(() => {
+      commitBootState(markAuthBootReady(bootState.current));
+    }, 8000);
 
     client.auth
       .getSession()
       .then(({ data }) => {
         window.clearTimeout(bootTimer);
-        finishBoot(data.session);
+        commitBootState(applyInitialSessionResult(bootState.current, data.session));
       })
       .catch(() => {
         window.clearTimeout(bootTimer);
-        finishBoot(null);
+        commitBootState(markAuthBootReady(bootState.current));
       });
 
     const { data: sub } = client.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
+      commitBootState(applyAuthStateEvent(bootState.current, nextSession));
     });
 
     return () => {
