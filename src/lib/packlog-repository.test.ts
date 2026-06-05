@@ -1,8 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  createPacklogRepository,
-  createSupabasePacklogRepository,
-} from "@/lib/packlog-repository";
+import { createPacklogRepository, createSupabasePacklogRepository } from "@/lib/packlog-repository";
 
 const supabaseMock = vi.hoisted(() => ({
   client: null as null | { from: ReturnType<typeof vi.fn> },
