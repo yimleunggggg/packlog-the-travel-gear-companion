@@ -89,7 +89,8 @@ type Ctx = {
 const StoreCtx = createContext<Ctx | null>(null);
 
 export function PacklogProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, ready: authReady } = useAuth();
+  const repositoryScope = authReady ? (user?.id ? `user:${user.id}` : "guest") : "auth-pending";
   const seedForRepo = useMemo(
     () =>
       user?.id
@@ -103,37 +104,41 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
   );
   const [trips, setTrips] = useState<Trip[]>(seedTrips);
   const [library, setLibrary] = useState<GearSpec[]>(initialGearLibrary);
-  const [hydrated, setHydrated] = useState(false);
+  const [hydratedRepositoryScope, setHydratedRepositoryScope] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!authReady) {
+      setHydratedRepositoryScope(null);
+      return;
+    }
+
     let alive = true;
+    setHydratedRepositoryScope(null);
     repository
       .load()
       .then((restored) => {
         if (!alive) return;
         setTrips(restored.trips);
         setLibrary(restored.library);
+        setHydratedRepositoryScope(repositoryScope);
       })
       .catch((err) => {
         console.error("Failed to load packlog state", err);
-      })
-      .finally(() => {
-        if (alive) setHydrated(true);
       });
     return () => {
       alive = false;
     };
-  }, [repository]);
+  }, [authReady, repository, repositoryScope]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!authReady || hydratedRepositoryScope !== repositoryScope) return;
     const timer = window.setTimeout(() => {
       repository.save({ trips, library }).catch((err) => {
         console.error("Failed to persist packlog state", err);
       });
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [repository, trips, library, hydrated]);
+  }, [authReady, repository, repositoryScope, trips, library, hydratedRepositoryScope]);
 
   const getTrip = useCallback((id: string) => trips.find((t) => t.id === id), [trips]);
 
