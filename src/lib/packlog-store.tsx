@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -40,7 +41,8 @@ import {
 import { preferredContainerForCategory } from "./preferred-container-for-category";
 import { ensureUnassignedContainer, unassignedContainerId } from "./unassigned-container";
 import { useAuth } from "./auth-context";
-import { createPacklogRepository } from "./packlog-repository";
+import { createPacklogRepository, type PacklogRepository } from "./packlog-repository";
+import { createRepositoryLoadGate } from "./packlog-persistence-gate";
 
 type Ctx = {
   trips: Trip[];
@@ -104,13 +106,16 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
   const [trips, setTrips] = useState<Trip[]>(seedTrips);
   const [library, setLibrary] = useState<GearSpec[]>(initialGearLibrary);
   const [hydrated, setHydrated] = useState(false);
+  const repositoryLoadGate = useRef(createRepositoryLoadGate<PacklogRepository>());
 
   useEffect(() => {
     let alive = true;
+    const loadToken = repositoryLoadGate.current.beginLoad();
+    setHydrated(false);
     repository
       .load()
       .then((restored) => {
-        if (!alive) return;
+        if (!alive || !repositoryLoadGate.current.isCurrentLoad(loadToken)) return;
         setTrips(restored.trips);
         setLibrary(restored.library);
       })
@@ -118,7 +123,9 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
         console.error("Failed to load packlog state", err);
       })
       .finally(() => {
-        if (alive) setHydrated(true);
+        if (alive && repositoryLoadGate.current.finishLoad(loadToken, repository)) {
+          setHydrated(true);
+        }
       });
     return () => {
       alive = false;
@@ -126,7 +133,7 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
   }, [repository]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !repositoryLoadGate.current.canSave(repository)) return;
     const timer = window.setTimeout(() => {
       repository.save({ trips, library }).catch((err) => {
         console.error("Failed to persist packlog state", err);

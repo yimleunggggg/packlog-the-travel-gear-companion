@@ -153,6 +153,17 @@ function getEnv(name: string): string | undefined {
   return env[name];
 }
 
+export function shouldUseSupabaseRepository(options: {
+  backend: string;
+  userId: string | null;
+  projectUrl?: string;
+  anonKey?: string;
+}): boolean {
+  return Boolean(
+    options.backend === "supabase" && options.userId && options.projectUrl && options.anonKey,
+  );
+}
+
 export function createPacklogRepository(
   seed: SeedState,
   opts?: { userId?: string | null },
@@ -161,13 +172,11 @@ export function createPacklogRepository(
   const projectUrl = getEnv("VITE_SUPABASE_URL");
   const anonKey = getEnv("VITE_SUPABASE_ANON_KEY");
   const uid = opts?.userId ?? null;
-  const workspace =
-    backend === "supabase" && uid ? `u:${uid}` : (getEnv("VITE_PACKLOG_WORKSPACE") ?? "default");
 
-  if (backend === "supabase" && projectUrl && anonKey) {
+  if (shouldUseSupabaseRepository({ backend, userId: uid, projectUrl, anonKey })) {
     return createSupabasePacklogRepository({
       seed,
-      workspace,
+      workspace: `u:${uid}`,
     });
   }
   return createBrowserPacklogRepository(seed, { userId: uid });
