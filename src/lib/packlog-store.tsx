@@ -95,10 +95,7 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
   const [library, setLibrary] = useState<GearSpec[]>(initialGearLibrary);
   const guestSeedRef = useRef({ trips: seedTrips, library: initialGearLibrary });
   const seedForRepo = useMemo(
-    () =>
-      user?.id
-        ? guestSeedRef.current
-        : { trips: seedTrips, library: initialGearLibrary },
+    () => (user?.id ? guestSeedRef.current : { trips: seedTrips, library: initialGearLibrary }),
     [user?.id],
   );
   const repository = useMemo(
