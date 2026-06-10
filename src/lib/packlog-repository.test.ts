@@ -59,10 +59,9 @@ describe("createPacklogRepository", () => {
     await repo.save(seed);
 
     expect(from).toHaveBeenCalledWith("packlog_snapshots");
-    expect(upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ workspace: "u:user-123" }),
-      { onConflict: "workspace" },
-    );
+    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ workspace: "u:user-123" }), {
+      onConflict: "workspace",
+    });
   });
 
   it("throws Supabase read errors instead of falling back to seed data", async () => {
