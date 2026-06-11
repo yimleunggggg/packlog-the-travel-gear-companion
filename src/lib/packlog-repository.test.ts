@@ -34,10 +34,7 @@ vi.mock("@/lib/supabase-client", () => ({
   getSupabaseBrowserClient: supabaseMock.getSupabaseBrowserClient,
 }));
 
-import {
-  createPacklogRepository,
-  createSupabasePacklogRepository,
-} from "@/lib/packlog-repository";
+import { createPacklogRepository, createSupabasePacklogRepository } from "@/lib/packlog-repository";
 
 function makeTrip(id: string): Trip {
   return {
