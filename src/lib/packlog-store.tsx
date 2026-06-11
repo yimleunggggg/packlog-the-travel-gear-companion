@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -104,29 +105,36 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
   const [trips, setTrips] = useState<Trip[]>(seedTrips);
   const [library, setLibrary] = useState<GearSpec[]>(initialGearLibrary);
   const [hydrated, setHydrated] = useState(false);
+  const loadedRepositoryRef = useRef<typeof repository | null>(null);
 
   useEffect(() => {
     let alive = true;
+    loadedRepositoryRef.current = null;
+    setHydrated(false);
+    setTrips(seedForRepo.trips);
+    setLibrary(seedForRepo.library);
     repository
       .load()
       .then((restored) => {
         if (!alive) return;
         setTrips(restored.trips);
         setLibrary(restored.library);
+        loadedRepositoryRef.current = repository;
+        setHydrated(true);
       })
       .catch((err) => {
-        console.error("Failed to load packlog state", err);
-      })
-      .finally(() => {
-        if (alive) setHydrated(true);
+        if (alive) {
+          console.error("Failed to load packlog state", err);
+        }
       });
     return () => {
       alive = false;
     };
-  }, [repository]);
+  }, [repository, seedForRepo]);
 
   useEffect(() => {
     if (!hydrated) return;
+    if (loadedRepositoryRef.current !== repository) return;
     const timer = window.setTimeout(() => {
       repository.save({ trips, library }).catch((err) => {
         console.error("Failed to persist packlog state", err);

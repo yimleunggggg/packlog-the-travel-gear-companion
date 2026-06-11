@@ -99,7 +99,7 @@ export function PackChecklistPanel({
 
   const defaultContainerId = trip.containers[0]?.id ?? "";
 
-  const { itemsByPackGroup, seedsByPackGroup, unaddedCount, unassignedItems, groupStatsByPackGroup } =
+  const { itemsByPackGroup, seedsByPackGroup, unaddedCount, groupStatsByPackGroup } =
     useMemo(() => {
       const itemsByPackGroup: Partial<Record<PackDisplayGroup, ItemWithCtx[]>> = {};
       const groupStatsByPackGroup: Partial<
@@ -114,14 +114,16 @@ export function PackChecklistPanel({
         groupStatsByPackGroup[g] = cur;
       };
       const unassignedId = unassignedContainerId(tripId);
-      const unassignedItems: ItemWithCtx[] = [];
       trip.containers.forEach((c) => {
         if (isUnassignedContainer(c, tripId)) {
           if (bagFilter === "all") {
             c.items.forEach((it) => bumpStats(itemPackDisplayGroup(trip, it), it));
             c.items.forEach((it) => {
               if (!itemMatchesPackViewFilter(it, packViewFilter)) return;
-              unassignedItems.push({ ...it, _containerId: unassignedId });
+              const g = itemPackDisplayGroup(trip, it);
+              const list = itemsByPackGroup[g] ?? [];
+              list.push({ ...it, _containerId: unassignedId });
+              itemsByPackGroup[g] = list;
             });
           }
           return;
@@ -138,31 +140,30 @@ export function PackChecklistPanel({
       });
 
       const merged = mergedScenarioSeedsForTrip(trip);
-    const unadded = filterSeedsNotInTrip(trip, merged);
-    const seedsByPackGroup: Partial<Record<PackDisplayGroup, SeedItem[]>> = {};
-    const showSeeds = packViewFilter === "all" || packViewFilter === "todo";
-    if (showSeeds) {
-      for (const s of unadded) {
-        const g = itemPackDisplayGroup(trip, {
-          name: s.en,
-          nameEn: s.en,
-          nameZh: s.zh,
-          category: s.category,
-        });
-        const list = seedsByPackGroup[g] ?? [];
-        list.push(s);
-        seedsByPackGroup[g] = list;
+      const unadded = filterSeedsNotInTrip(trip, merged);
+      const seedsByPackGroup: Partial<Record<PackDisplayGroup, SeedItem[]>> = {};
+      const showSeeds = packViewFilter === "all" || packViewFilter === "todo";
+      if (showSeeds) {
+        for (const s of unadded) {
+          const g = itemPackDisplayGroup(trip, {
+            name: s.en,
+            nameEn: s.en,
+            nameZh: s.zh,
+            category: s.category,
+          });
+          const list = seedsByPackGroup[g] ?? [];
+          list.push(s);
+          seedsByPackGroup[g] = list;
+        }
       }
-    }
 
-    return {
-      itemsByPackGroup,
-      seedsByPackGroup,
-      unaddedCount: showSeeds ? unadded.length : 0,
-      unassignedItems,
-      groupStatsByPackGroup,
-    };
-  }, [trip, tripId, bagFilter, packViewFilter]);
+      return {
+        itemsByPackGroup,
+        seedsByPackGroup,
+        unaddedCount: showSeeds ? unadded.length : 0,
+        groupStatsByPackGroup,
+      };
+    }, [trip, tripId, bagFilter, packViewFilter]);
 
   if (phase === "REVIEW") return null;
 
