@@ -99,45 +99,46 @@ export function PackChecklistPanel({
 
   const defaultContainerId = trip.containers[0]?.id ?? "";
 
-  const { itemsByPackGroup, seedsByPackGroup, unaddedCount, unassignedItems, groupStatsByPackGroup } =
-    useMemo(() => {
-      const itemsByPackGroup: Partial<Record<PackDisplayGroup, ItemWithCtx[]>> = {};
-      const groupStatsByPackGroup: Partial<
-        Record<PackDisplayGroup, { n: number; totalG: number; packedG: number }>
-      > = {};
-      const bumpStats = (g: PackDisplayGroup, it: Item) => {
-        const line = it.weightG * it.qty;
-        const cur = groupStatsByPackGroup[g] ?? { n: 0, totalG: 0, packedG: 0 };
-        cur.n += 1;
-        cur.totalG += line;
-        if (it.status === "packed") cur.packedG += line;
-        groupStatsByPackGroup[g] = cur;
-      };
-      const unassignedId = unassignedContainerId(tripId);
-      const unassignedItems: ItemWithCtx[] = [];
-      trip.containers.forEach((c) => {
-        if (isUnassignedContainer(c, tripId)) {
-          if (bagFilter === "all") {
-            c.items.forEach((it) => bumpStats(itemPackDisplayGroup(trip, it), it));
-            c.items.forEach((it) => {
-              if (!itemMatchesPackViewFilter(it, packViewFilter)) return;
-              unassignedItems.push({ ...it, _containerId: unassignedId });
-            });
-          }
-          return;
+  const { itemsByPackGroup, seedsByPackGroup, unaddedCount, groupStatsByPackGroup } = useMemo(() => {
+    const itemsByPackGroup: Partial<Record<PackDisplayGroup, ItemWithCtx[]>> = {};
+    const groupStatsByPackGroup: Partial<
+      Record<PackDisplayGroup, { n: number; totalG: number; packedG: number }>
+    > = {};
+    const bumpStats = (g: PackDisplayGroup, it: Item) => {
+      const line = it.weightG * it.qty;
+      const cur = groupStatsByPackGroup[g] ?? { n: 0, totalG: 0, packedG: 0 };
+      cur.n += 1;
+      cur.totalG += line;
+      if (it.status === "packed") cur.packedG += line;
+      groupStatsByPackGroup[g] = cur;
+    };
+    const unassignedId = unassignedContainerId(tripId);
+    trip.containers.forEach((c) => {
+      if (isUnassignedContainer(c, tripId)) {
+        if (bagFilter === "all") {
+          c.items.forEach((it) => bumpStats(itemPackDisplayGroup(trip, it), it));
+          c.items.forEach((it) => {
+            if (!itemMatchesPackViewFilter(it, packViewFilter)) return;
+            const g = itemPackDisplayGroup(trip, it);
+            const list = itemsByPackGroup[g] ?? [];
+            list.push({ ...it, _containerId: unassignedId });
+            itemsByPackGroup[g] = list;
+          });
         }
-        if (bagFilter !== "all" && c.id !== bagFilter) return;
-        c.items.forEach((it) => bumpStats(itemPackDisplayGroup(trip, it), it));
-        c.items.forEach((it) => {
-          if (!itemMatchesPackViewFilter(it, packViewFilter)) return;
-          const g = itemPackDisplayGroup(trip, it);
-          const list = itemsByPackGroup[g] ?? [];
-          list.push({ ...it, _containerId: c.id });
-          itemsByPackGroup[g] = list;
-        });
+        return;
+      }
+      if (bagFilter !== "all" && c.id !== bagFilter) return;
+      c.items.forEach((it) => bumpStats(itemPackDisplayGroup(trip, it), it));
+      c.items.forEach((it) => {
+        if (!itemMatchesPackViewFilter(it, packViewFilter)) return;
+        const g = itemPackDisplayGroup(trip, it);
+        const list = itemsByPackGroup[g] ?? [];
+        list.push({ ...it, _containerId: c.id });
+        itemsByPackGroup[g] = list;
       });
+    });
 
-      const merged = mergedScenarioSeedsForTrip(trip);
+    const merged = mergedScenarioSeedsForTrip(trip);
     const unadded = filterSeedsNotInTrip(trip, merged);
     const seedsByPackGroup: Partial<Record<PackDisplayGroup, SeedItem[]>> = {};
     const showSeeds = packViewFilter === "all" || packViewFilter === "todo";
@@ -159,7 +160,6 @@ export function PackChecklistPanel({
       itemsByPackGroup,
       seedsByPackGroup,
       unaddedCount: showSeeds ? unadded.length : 0,
-      unassignedItems,
       groupStatsByPackGroup,
     };
   }, [trip, tripId, bagFilter, packViewFilter]);
