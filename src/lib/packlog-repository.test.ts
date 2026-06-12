@@ -25,8 +25,8 @@ function testTrip(): Trip {
     days: 1,
     startDate: "2026.06.12",
     climate: "warm",
-    scenario: "city",
-    scenarios: ["city"],
+    scenario: "general",
+    scenarios: ["general"],
     phase: "PACK",
     containers: [],
   };
