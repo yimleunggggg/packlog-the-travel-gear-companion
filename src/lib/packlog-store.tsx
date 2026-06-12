@@ -120,7 +120,7 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
       })
       .catch((err) => {
         console.error("Failed to load packlog state", err);
-      })
+      });
     return () => {
       alive = false;
     };
