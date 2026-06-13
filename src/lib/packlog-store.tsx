@@ -89,24 +89,32 @@ type Ctx = {
 const StoreCtx = createContext<Ctx | null>(null);
 
 export function PacklogProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, ready: authReady } = useAuth();
+  const userId = authReady ? (user?.id ?? null) : null;
+  const repositoryKey = authReady ? (userId ? `user:${userId}` : "guest") : "auth-pending";
   const seedForRepo = useMemo(
     () =>
-      user?.id
+      userId
         ? { trips: [], library: initialGearLibrary }
         : { trips: seedTrips, library: initialGearLibrary },
-    [user?.id],
+    [userId],
   );
   const repository = useMemo(
-    () => createPacklogRepository(seedForRepo, { userId: user?.id ?? null }),
-    [seedForRepo, user?.id],
+    () => createPacklogRepository(seedForRepo, { userId }),
+    [seedForRepo, userId],
   );
   const [trips, setTrips] = useState<Trip[]>(seedTrips);
   const [library, setLibrary] = useState<GearSpec[]>(initialGearLibrary);
-  const [hydrated, setHydrated] = useState(false);
+  const [loadedRepositoryKey, setLoadedRepositoryKey] = useState<string | null>(null);
+  const hydrated = loadedRepositoryKey === repositoryKey;
 
   useEffect(() => {
+    if (!authReady) {
+      setLoadedRepositoryKey(null);
+      return;
+    }
     let alive = true;
+    setLoadedRepositoryKey(null);
     repository
       .load()
       .then((restored) => {
@@ -118,14 +126,15 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
         console.error("Failed to load packlog state", err);
       })
       .finally(() => {
-        if (alive) setHydrated(true);
+        if (alive) setLoadedRepositoryKey(repositoryKey);
       });
     return () => {
       alive = false;
     };
-  }, [repository]);
+  }, [authReady, repository, repositoryKey]);
 
   useEffect(() => {
+    if (!authReady) return;
     if (!hydrated) return;
     const timer = window.setTimeout(() => {
       repository.save({ trips, library }).catch((err) => {
@@ -133,7 +142,7 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
       });
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [repository, trips, library, hydrated]);
+  }, [authReady, repository, trips, library, hydrated]);
 
   const getTrip = useCallback((id: string) => trips.find((t) => t.id === id), [trips]);
 
