@@ -147,7 +147,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!readyBoot.current) {
       readyBoot.current = true;
       prevUserRef.current = user;
-      return;
+      if (!user) return;
+      const resumeTimer = window.setTimeout(() => {
+        const intent = consumePostAuthIntent();
+        if (intent) dispatchResume(intent);
+      }, 0);
+      return () => window.clearTimeout(resumeTimer);
     }
     const prev = prevUserRef.current;
     prevUserRef.current = user;
@@ -162,7 +167,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     const intent = consumePostAuthIntent();
-    if (intent) dispatchResume(intent);
+    if (intent) {
+      const resumeTimer = window.setTimeout(() => dispatchResume(intent), 0);
+      return () => window.clearTimeout(resumeTimer);
+    }
   }, [ready, user]);
 
   const closeLoginSheet = useCallback(() => {
