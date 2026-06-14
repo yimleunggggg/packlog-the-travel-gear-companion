@@ -1,4 +1,8 @@
-export type AuthBootUpdateSource = "auth-event" | "get-session-success" | "get-session-error" | "timeout";
+export type AuthBootUpdateSource =
+  | "auth-event"
+  | "get-session-success"
+  | "get-session-error"
+  | "timeout";
 
 export type AuthBootUpdate = {
   applySession: boolean;
