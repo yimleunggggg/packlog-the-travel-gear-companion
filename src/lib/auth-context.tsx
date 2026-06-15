@@ -17,6 +17,13 @@ import {
   storePostAuthIntent,
   type PostAuthIntent,
 } from "@/lib/post-auth-intent";
+import {
+  markAuthBootTimedOut,
+  resolveAuthStateBootEvent,
+  resolveGetSessionBootResult,
+  type AuthBootSessionApplication,
+  type AuthBootTracker,
+} from "@/lib/auth-boot";
 import { getSupabaseBrowserClient, hasSupabaseBrowserConfig } from "@/lib/supabase-client";
 
 /** OAuth 返回后写入 `marketing_opt_in`；短时 TTL 防止未完成登录的残留意图误套用到下一次登录 */
@@ -66,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pendingSyncAction = useRef<(() => void | Promise<void>) | null>(null);
   const readyBoot = useRef(false);
   const prevUserRef = useRef<User | null>(null);
+  const suppressNextResumeRef = useRef(false);
 
   const authConfigured = hasSupabaseBrowserConfig();
 
@@ -77,30 +85,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
-    const finishBoot = (nextSession: Session | null) => {
+    const bootTracker: AuthBootTracker = { timedOut: false, authEventSeen: false };
+    const markReady = () => {
       if (cancelled) return;
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
+      setReady(true);
+    };
+    const applyBootSession = (application: AuthBootSessionApplication | null) => {
+      if (!application || cancelled) return;
+      if (application.suppressResume) suppressNextResumeRef.current = true;
+      setSession(application.session);
+      setUser(application.session?.user ?? null);
       setReady(true);
     };
 
     /** 弱网/墙内 Supabase 慢或挂起时，避免 AuthGate 永久 disabled。 */
-    const bootTimer = window.setTimeout(() => finishBoot(null), 8000);
+    const bootTimer = window.setTimeout(() => {
+      markAuthBootTimedOut(bootTracker);
+      markReady();
+    }, 8000);
 
     client.auth
       .getSession()
       .then(({ data }) => {
         window.clearTimeout(bootTimer);
-        finishBoot(data.session);
+        applyBootSession(resolveGetSessionBootResult(bootTracker, data.session));
       })
       .catch(() => {
         window.clearTimeout(bootTimer);
-        finishBoot(null);
+        if (bootTracker.timedOut) {
+          markReady();
+          return;
+        }
+        applyBootSession(resolveGetSessionBootResult(bootTracker, null));
       });
 
-    const { data: sub } = client.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
+    const { data: sub } = client.auth.onAuthStateChange((event, nextSession) => {
+      window.clearTimeout(bootTimer);
+      applyBootSession(resolveAuthStateBootEvent(bootTracker, event, nextSession));
     });
 
     return () => {
@@ -146,6 +167,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!ready) return;
     if (!readyBoot.current) {
       readyBoot.current = true;
+      prevUserRef.current = user;
+      return;
+    }
+    if (suppressNextResumeRef.current) {
+      suppressNextResumeRef.current = false;
       prevUserRef.current = user;
       return;
     }
