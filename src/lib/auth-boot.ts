@@ -5,10 +5,7 @@ type AuthBootCoordinatorOptions = {
   markReady: () => void;
 };
 
-export function createAuthBootCoordinator({
-  applySession,
-  markReady,
-}: AuthBootCoordinatorOptions) {
+export function createAuthBootCoordinator({ applySession, markReady }: AuthBootCoordinatorOptions) {
   let cancelled = false;
   let authEventSeen = false;
   let readyMarked = false;
