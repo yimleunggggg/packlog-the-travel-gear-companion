@@ -18,6 +18,7 @@ import {
   type PostAuthIntent,
 } from "@/lib/post-auth-intent";
 import { getSupabaseBrowserClient, hasSupabaseBrowserConfig } from "@/lib/supabase-client";
+import { createAuthBootCoordinator } from "@/lib/auth-boot";
 
 /** OAuth 返回后写入 `marketing_opt_in`；短时 TTL 防止未完成登录的残留意图误套用到下一次登录 */
 const OAUTH_MARKETING_INTENT_KEY = "packlog.oauth_marketing_intent";
@@ -76,35 +77,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    let cancelled = false;
-    const finishBoot = (nextSession: Session | null) => {
-      if (cancelled) return;
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
-      setReady(true);
-    };
+    const boot = createAuthBootCoordinator<Session>((next) => {
+      setSession(next.session);
+      setUser(next.session?.user ?? null);
+      setReady(next.ready);
+    });
 
     /** 弱网/墙内 Supabase 慢或挂起时，避免 AuthGate 永久 disabled。 */
-    const bootTimer = window.setTimeout(() => finishBoot(null), 8000);
+    const bootTimer = window.setTimeout(() => boot.markBootTimedOut(), 8000);
 
     client.auth
       .getSession()
       .then(({ data }) => {
         window.clearTimeout(bootTimer);
-        finishBoot(data.session);
+        boot.applyBootSession(data.session);
       })
       .catch(() => {
         window.clearTimeout(bootTimer);
-        finishBoot(null);
+        boot.applyBootFailure();
       });
 
     const { data: sub } = client.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
+      boot.applyAuthEvent(nextSession);
     });
 
     return () => {
-      cancelled = true;
+      boot.cancel();
       window.clearTimeout(bootTimer);
       sub.subscription.unsubscribe();
     };
