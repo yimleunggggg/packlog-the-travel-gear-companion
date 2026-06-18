@@ -26,6 +26,10 @@ export interface PacklogRepository {
   clear: () => Promise<void>;
 }
 
+export type PacklogRepositoryTarget =
+  | { kind: "supabase"; workspace: string }
+  | { kind: "browser"; userId: string | null };
+
 function normalizeTripForSnapshot(t: Trip): z.infer<typeof tripSchema> {
   const scenarios = t.scenarios?.length ? t.scenarios : [t.scenario];
   return { ...t, scenario: scenarios[0]!, scenarios };
@@ -157,18 +161,31 @@ export function createPacklogRepository(
   seed: SeedState,
   opts?: { userId?: string | null },
 ): PacklogRepository {
-  const backend = getEnv("VITE_DATA_BACKEND") ?? "local";
-  const projectUrl = getEnv("VITE_SUPABASE_URL");
-  const anonKey = getEnv("VITE_SUPABASE_ANON_KEY");
-  const uid = opts?.userId ?? null;
-  const workspace =
-    backend === "supabase" && uid ? `u:${uid}` : (getEnv("VITE_PACKLOG_WORKSPACE") ?? "default");
+  const target = resolvePacklogRepositoryTarget({
+    backend: getEnv("VITE_DATA_BACKEND") ?? "local",
+    projectUrl: getEnv("VITE_SUPABASE_URL"),
+    anonKey: getEnv("VITE_SUPABASE_ANON_KEY"),
+    userId: opts?.userId ?? null,
+  });
 
-  if (backend === "supabase" && projectUrl && anonKey) {
+  if (target.kind === "supabase") {
     return createSupabasePacklogRepository({
       seed,
-      workspace,
+      workspace: target.workspace,
     });
   }
-  return createBrowserPacklogRepository(seed, { userId: uid });
+  return createBrowserPacklogRepository(seed, { userId: target.userId });
+}
+
+export function resolvePacklogRepositoryTarget(args: {
+  backend: string;
+  projectUrl?: string;
+  anonKey?: string;
+  userId?: string | null;
+}): PacklogRepositoryTarget {
+  const uid = args.userId ?? null;
+  if (args.backend === "supabase" && args.projectUrl && args.anonKey && uid) {
+    return { kind: "supabase", workspace: `u:${uid}` };
+  }
+  return { kind: "browser", userId: uid };
 }
