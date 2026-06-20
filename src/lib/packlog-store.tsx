@@ -99,8 +99,7 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
   );
   const repositoryKey = authReady ? (user?.id ? `user:${user.id}` : "guest") : null;
   const repository = useMemo(
-    () =>
-      authReady ? createPacklogRepository(seedForRepo, { userId: user?.id ?? null }) : null,
+    () => (authReady ? createPacklogRepository(seedForRepo, { userId: user?.id ?? null }) : null),
     [authReady, seedForRepo, user?.id],
   );
   const [trips, setTrips] = useState<Trip[]>(seedTrips);
