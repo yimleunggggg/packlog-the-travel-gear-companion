@@ -117,7 +117,8 @@ export function createSupabasePacklogRepository(
         .limit(1)
         .maybeSingle();
 
-      if (error || !data?.snapshot) return seed;
+      if (error) throw error;
+      if (!data?.snapshot) return seed;
       const snapshot = parseSnapshotPayload(data.snapshot);
       if (!snapshot) return seed;
       return {
@@ -161,13 +162,10 @@ export function createPacklogRepository(
   const projectUrl = getEnv("VITE_SUPABASE_URL");
   const anonKey = getEnv("VITE_SUPABASE_ANON_KEY");
   const uid = opts?.userId ?? null;
-  const workspace =
-    backend === "supabase" && uid ? `u:${uid}` : (getEnv("VITE_PACKLOG_WORKSPACE") ?? "default");
-
-  if (backend === "supabase" && projectUrl && anonKey) {
+  if (backend === "supabase" && projectUrl && anonKey && uid) {
     return createSupabasePacklogRepository({
       seed,
-      workspace,
+      workspace: `u:${uid}`,
     });
   }
   return createBrowserPacklogRepository(seed, { userId: uid });
