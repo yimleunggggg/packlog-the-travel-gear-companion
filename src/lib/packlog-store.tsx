@@ -89,24 +89,35 @@ type Ctx = {
 const StoreCtx = createContext<Ctx | null>(null);
 
 export function PacklogProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, ready: authReady } = useAuth();
+  const repositoryUserId = authReady ? (user?.id ?? null) : undefined;
+  const repositoryKey =
+    repositoryUserId === undefined ? null : repositoryUserId ? `u:${repositoryUserId}` : "guest";
   const seedForRepo = useMemo(
     () =>
-      user?.id
+      repositoryUserId
         ? { trips: [], library: initialGearLibrary }
         : { trips: seedTrips, library: initialGearLibrary },
-    [user?.id],
+    [repositoryUserId],
   );
   const repository = useMemo(
-    () => createPacklogRepository(seedForRepo, { userId: user?.id ?? null }),
-    [seedForRepo, user?.id],
+    () =>
+      repositoryKey
+        ? createPacklogRepository(seedForRepo, { userId: repositoryUserId ?? null })
+        : null,
+    [repositoryKey, repositoryUserId, seedForRepo],
   );
   const [trips, setTrips] = useState<Trip[]>(seedTrips);
   const [library, setLibrary] = useState<GearSpec[]>(initialGearLibrary);
-  const [hydrated, setHydrated] = useState(false);
+  const [loadedRepositoryKey, setLoadedRepositoryKey] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!repository || !repositoryKey) {
+      setLoadedRepositoryKey(null);
+      return;
+    }
     let alive = true;
+    setLoadedRepositoryKey(null);
     repository
       .load()
       .then((restored) => {
@@ -118,22 +129,22 @@ export function PacklogProvider({ children }: { children: ReactNode }) {
         console.error("Failed to load packlog state", err);
       })
       .finally(() => {
-        if (alive) setHydrated(true);
+        if (alive) setLoadedRepositoryKey(repositoryKey);
       });
     return () => {
       alive = false;
     };
-  }, [repository]);
+  }, [repository, repositoryKey]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!repository || loadedRepositoryKey !== repositoryKey) return;
     const timer = window.setTimeout(() => {
       repository.save({ trips, library }).catch((err) => {
         console.error("Failed to persist packlog state", err);
       });
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [repository, trips, library, hydrated]);
+  }, [repository, repositoryKey, trips, library, loadedRepositoryKey]);
 
   const getTrip = useCallback((id: string) => trips.find((t) => t.id === id), [trips]);
 
