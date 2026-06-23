@@ -21,6 +21,7 @@ type SeedState = {
 };
 
 export interface PacklogRepository {
+  key: string;
   load: () => Promise<SeedState>;
   save: (state: SeedState) => Promise<void>;
   clear: () => Promise<void>;
@@ -66,6 +67,7 @@ export function createBrowserPacklogRepository(
   const key = browserStorageKey(opts?.userId ?? null);
 
   return {
+    key: `browser:${key}`,
     load: async () => {
       if (!canUseStorage()) return seed;
       const raw = window.localStorage.getItem(key);
@@ -108,6 +110,7 @@ export function createSupabasePacklogRepository(
   const table = "packlog_snapshots";
 
   return {
+    key: `supabase:${workspace}`,
     load: async () => {
       const { data, error } = await client
         .from(table)
@@ -161,13 +164,11 @@ export function createPacklogRepository(
   const projectUrl = getEnv("VITE_SUPABASE_URL");
   const anonKey = getEnv("VITE_SUPABASE_ANON_KEY");
   const uid = opts?.userId ?? null;
-  const workspace =
-    backend === "supabase" && uid ? `u:${uid}` : (getEnv("VITE_PACKLOG_WORKSPACE") ?? "default");
 
-  if (backend === "supabase" && projectUrl && anonKey) {
+  if (backend === "supabase" && projectUrl && anonKey && uid) {
     return createSupabasePacklogRepository({
       seed,
-      workspace,
+      workspace: `u:${uid}`,
     });
   }
   return createBrowserPacklogRepository(seed, { userId: uid });

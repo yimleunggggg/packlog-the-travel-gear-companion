@@ -155,31 +155,31 @@ create trigger trg_packlog_snapshots_updated_at
 before update on packlog_snapshots
 for each row execute function set_timestamp_updated_at();
 
--- RLS: open by default for anon/client access in early phase.
--- Tighten these policies once auth is enabled (attach user_id/workspace ownership).
+-- RLS: snapshots are only available to the signed-in user's own workspace (`u:<auth.uid()>`).
+-- Anonymous sessions stay in browser storage and cannot read/write shared cloud snapshots.
 alter table packlog_snapshots enable row level security;
 
 drop policy if exists "packlog_snapshots_select" on packlog_snapshots;
 create policy "packlog_snapshots_select"
 on packlog_snapshots for select
-to anon, authenticated
-using (true);
+to authenticated
+using (workspace = ('u:' || auth.uid()::text));
 
 drop policy if exists "packlog_snapshots_insert" on packlog_snapshots;
 create policy "packlog_snapshots_insert"
 on packlog_snapshots for insert
-to anon, authenticated
-with check (true);
+to authenticated
+with check (workspace = ('u:' || auth.uid()::text));
 
 drop policy if exists "packlog_snapshots_update" on packlog_snapshots;
 create policy "packlog_snapshots_update"
 on packlog_snapshots for update
-to anon, authenticated
-using (true)
-with check (true);
+to authenticated
+using (workspace = ('u:' || auth.uid()::text))
+with check (workspace = ('u:' || auth.uid()::text));
 
 drop policy if exists "packlog_snapshots_delete" on packlog_snapshots;
 create policy "packlog_snapshots_delete"
 on packlog_snapshots for delete
-to anon, authenticated
-using (true);
+to authenticated
+using (workspace = ('u:' || auth.uid()::text));
