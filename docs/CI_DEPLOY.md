@@ -27,7 +27,6 @@
 | `VITE_DATA_BACKEND` | 生产填 `supabase` |
 | `VITE_SUPABASE_URL` | Supabase **Project URL** |
 | `VITE_SUPABASE_ANON_KEY` | Supabase **anon public** key |
-| `VITE_PACKLOG_WORKSPACE` | 逻辑工作区，如 `packlog-prod` |
 
 ### Supabase CLI（迁移自动化，新增）
 

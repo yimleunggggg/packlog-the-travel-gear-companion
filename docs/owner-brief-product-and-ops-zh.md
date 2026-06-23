@@ -16,8 +16,8 @@
 ## 3. 用户数据存在哪
 
 - **默认**：浏览器 **`localStorage`** 存一整份快照（行程 + 装备库）。
-- **可选云端**：设置 **`VITE_DATA_BACKEND=supabase`** 并配置 Supabase 后，写入表 **`packlog_snapshots`**（按 `workspace` 一条 JSON 快照）。
-- **真正多用户、防串数据**需在 Supabase 里建表、配置 **RLS**，并把 `workspace` 与用户 ID 绑定规则定清楚。
+- **可选云端**：设置 **`VITE_DATA_BACKEND=supabase`** 并配置 Supabase 后，已登录用户写入表 **`packlog_snapshots`**（每个用户自己的 `u:<uid>` 快照）。
+- **访客数据**：未登录用户始终留在浏览器 **`localStorage`**，不写共享云端快照。
 
 ## 4. 登录与营销订阅（实现要点）
 
@@ -30,7 +30,7 @@
 1. 创建项目，拿到 **URL** 与 **anon key**。
 2. 在库里建 **`packlog_snapshots`**（若用云端快照）及文档中的其它表。
 3. **Authentication**：开启邮箱/Google；**Redirect URLs** 包含本地与线上的 **`/auth/callback`**。
-4. **RLS**：每张表配置「只能操作自己的行」等策略。
+4. **RLS**：每张表配置「只能操作自己的行」等策略；`packlog_snapshots` 仅允许访问自己的 `u:<uid>`。
 5. 部署环境写入 **`VITE_SUPABASE_*`** 等变量。
 
 **同步逻辑**（离线优先还是云端优先、冲突谁赢）需产品与研发共同定规则后写代码，不是控制台单独能完成的。
