@@ -42,10 +42,9 @@ describe("createPacklogRepository", () => {
     await repo.save(emptySeed);
 
     expect(from).toHaveBeenCalledWith("packlog_snapshots");
-    expect(upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ workspace: "u:user-1" }),
-      { onConflict: "workspace" },
-    );
+    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ workspace: "u:user-1" }), {
+      onConflict: "workspace",
+    });
   });
 });
 
