@@ -117,7 +117,8 @@ export function createSupabasePacklogRepository(
         .limit(1)
         .maybeSingle();
 
-      if (error || !data?.snapshot) return seed;
+      if (error) throw error;
+      if (!data?.snapshot) return seed;
       const snapshot = parseSnapshotPayload(data.snapshot);
       if (!snapshot) return seed;
       return {
@@ -153,22 +154,47 @@ function getEnv(name: string): string | undefined {
   return env[name];
 }
 
+export type PacklogRepositoryTarget =
+  | { backend: "supabase"; workspace: string; userId: string }
+  | { backend: "browser"; userId: string | null };
+
+export function resolvePacklogRepositoryTarget(opts?: {
+  userId?: string | null;
+  env?: (name: string) => string | undefined;
+}): PacklogRepositoryTarget {
+  const env = opts?.env ?? getEnv;
+  const backend = env("VITE_DATA_BACKEND") ?? "local";
+  const projectUrl = env("VITE_SUPABASE_URL");
+  const anonKey = env("VITE_SUPABASE_ANON_KEY");
+  const userId = opts?.userId ?? null;
+
+  if (backend === "supabase" && projectUrl && anonKey && userId) {
+    return {
+      backend: "supabase",
+      workspace: `u:${userId}`,
+      userId,
+    };
+  }
+
+  return { backend: "browser", userId };
+}
+
+export function packlogRepositoryTargetKey(target: PacklogRepositoryTarget): string {
+  if (target.backend === "supabase") return `supabase:${target.workspace}`;
+  return `browser:${target.userId ?? "guest"}`;
+}
+
 export function createPacklogRepository(
   seed: SeedState,
   opts?: { userId?: string | null },
 ): PacklogRepository {
-  const backend = getEnv("VITE_DATA_BACKEND") ?? "local";
-  const projectUrl = getEnv("VITE_SUPABASE_URL");
-  const anonKey = getEnv("VITE_SUPABASE_ANON_KEY");
-  const uid = opts?.userId ?? null;
-  const workspace =
-    backend === "supabase" && uid ? `u:${uid}` : (getEnv("VITE_PACKLOG_WORKSPACE") ?? "default");
+  const target = resolvePacklogRepositoryTarget(opts);
 
-  if (backend === "supabase" && projectUrl && anonKey) {
+  if (target.backend === "supabase") {
     return createSupabasePacklogRepository({
       seed,
-      workspace,
+      workspace: target.workspace,
     });
   }
-  return createBrowserPacklogRepository(seed, { userId: uid });
+  return createBrowserPacklogRepository(seed, { userId: target.userId });
 }
