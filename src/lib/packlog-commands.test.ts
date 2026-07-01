@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { Trip } from "@/lib/packlog-data";
-import { removeTripItem } from "@/lib/packlog-commands";
+import { moveTripItem, removeTripItem } from "@/lib/packlog-commands";
 import { filterSeedsNotInTrip, mergedScenarioSeedsForTrip } from "@/lib/packing-pool";
+import { isUnassignedContainer, unassignedContainerId } from "@/lib/unassigned-container";
 
 function diveTripWithItem(): Trip {
   return {
@@ -94,5 +95,29 @@ describe("removeTripItem", () => {
     const next = removeTripItem(trip2, "c1", "i-cert");
     expect(next.containers[0]!.items).toHaveLength(1);
     expect(next.dismissedScenarioSeeds).toBeUndefined();
+  });
+});
+
+describe("moveTripItem", () => {
+  it("does not remove the item when the target container is missing", () => {
+    const trip = diveTripWithItem();
+
+    const next = moveTripItem(trip, "c1", "i-cert", "missing-container");
+
+    expect(next).toBe(trip);
+    expect(next.containers[0]!.items.map((item) => item.id)).toEqual(["i-cert"]);
+  });
+
+  it("creates the unassigned container before moving into it", () => {
+    const trip = diveTripWithItem();
+    const targetId = unassignedContainerId(trip.id);
+
+    const next = moveTripItem(trip, "c1", "i-cert", targetId);
+    const unassigned = next.containers.find((container) =>
+      isUnassignedContainer(container, trip.id),
+    );
+
+    expect(unassigned?.items.map((item) => item.id)).toEqual(["i-cert"]);
+    expect(next.containers.find((container) => container.id === "c1")?.items).toHaveLength(0);
   });
 });
