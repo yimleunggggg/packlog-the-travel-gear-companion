@@ -117,7 +117,8 @@ export function createSupabasePacklogRepository(
         .limit(1)
         .maybeSingle();
 
-      if (error || !data?.snapshot) return seed;
+      if (error) throw error;
+      if (!data?.snapshot) return seed;
       const snapshot = parseSnapshotPayload(data.snapshot);
       if (!snapshot) return seed;
       return {
@@ -157,18 +158,51 @@ export function createPacklogRepository(
   seed: SeedState,
   opts?: { userId?: string | null },
 ): PacklogRepository {
+  const target = resolvePacklogRepositoryTarget(opts);
+
+  if (target.kind === "supabase") {
+    return createSupabasePacklogRepository({
+      seed,
+      workspace: target.workspace,
+    });
+  }
+  return createBrowserPacklogRepository(seed, { userId: target.userId });
+}
+
+export type PacklogRepositoryTarget =
+  | {
+      kind: "browser";
+      key: string;
+      userId: string | null;
+    }
+  | {
+      kind: "supabase";
+      key: string;
+      userId: string;
+      workspace: string;
+    };
+
+export function resolvePacklogRepositoryTarget(opts?: {
+  userId?: string | null;
+}): PacklogRepositoryTarget {
   const backend = getEnv("VITE_DATA_BACKEND") ?? "local";
   const projectUrl = getEnv("VITE_SUPABASE_URL");
   const anonKey = getEnv("VITE_SUPABASE_ANON_KEY");
   const uid = opts?.userId ?? null;
-  const workspace =
-    backend === "supabase" && uid ? `u:${uid}` : (getEnv("VITE_PACKLOG_WORKSPACE") ?? "default");
 
-  if (backend === "supabase" && projectUrl && anonKey) {
-    return createSupabasePacklogRepository({
-      seed,
+  if (backend === "supabase" && projectUrl && anonKey && uid) {
+    const workspace = `u:${uid}`;
+    return {
+      kind: "supabase",
+      key: `supabase:${workspace}`,
+      userId: uid,
       workspace,
-    });
+    };
   }
-  return createBrowserPacklogRepository(seed, { userId: uid });
+
+  return {
+    kind: "browser",
+    key: `browser:${uid ?? "guest"}`,
+    userId: uid,
+  };
 }
