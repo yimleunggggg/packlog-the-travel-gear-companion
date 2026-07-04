@@ -147,16 +147,19 @@ export function moveTripItem(
   itemId: string,
   toContainerId: string,
 ): Trip {
-  const fromContainer = trip.containers.find((container) => container.id === fromContainerId);
+  const nextTrip =
+    toContainerId === unassignedContainerId(trip.id) ? ensureUnassignedContainer(trip) : trip;
+  const fromContainer = nextTrip.containers.find((container) => container.id === fromContainerId);
+  const toContainer = nextTrip.containers.find((container) => container.id === toContainerId);
   const item = fromContainer?.items.find((candidate) => candidate.id === itemId);
-  if (!fromContainer || !item) return trip;
+  if (!fromContainer || !toContainer || !item) return trip;
   if (fromContainerId === toContainerId) return trip;
 
   const fromIndex = fromContainer.items.findIndex((candidate) => candidate.id === itemId);
 
   return {
-    ...trip,
-    containers: trip.containers.map((container) => {
+    ...nextTrip,
+    containers: nextTrip.containers.map((container) => {
       if (container.id === fromContainerId) {
         return {
           ...container,
