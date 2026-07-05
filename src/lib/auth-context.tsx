@@ -77,30 +77,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
-    const finishBoot = (nextSession: Session | null) => {
+    let authEventSeen = false;
+    let bootReady = false;
+    const markReady = () => {
+      if (cancelled || bootReady) return;
+      bootReady = true;
+      setReady(true);
+    };
+    const applySession = (nextSession: Session | null) => {
       if (cancelled) return;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
-      setReady(true);
     };
 
-    /** 弱网/墙内 Supabase 慢或挂起时，避免 AuthGate 永久 disabled。 */
-    const bootTimer = window.setTimeout(() => finishBoot(null), 8000);
+    /** 弱网/墙内 Supabase 慢或挂起时，避免 AuthGate 永久 disabled；不覆盖已经收到的真实会话。 */
+    const bootTimer = window.setTimeout(markReady, 8000);
 
     client.auth
       .getSession()
       .then(({ data }) => {
         window.clearTimeout(bootTimer);
-        finishBoot(data.session);
+        if (!authEventSeen) applySession(data.session);
+        markReady();
       })
       .catch(() => {
         window.clearTimeout(bootTimer);
-        finishBoot(null);
+        if (!authEventSeen) applySession(null);
+        markReady();
       });
 
     const { data: sub } = client.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
+      authEventSeen = true;
+      window.clearTimeout(bootTimer);
+      applySession(nextSession);
+      markReady();
     });
 
     return () => {

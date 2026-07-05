@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Trip } from "@/lib/packlog-data";
-import { removeTripItem } from "@/lib/packlog-commands";
+import { moveTripItem, removeTripItem } from "@/lib/packlog-commands";
 import { filterSeedsNotInTrip, mergedScenarioSeedsForTrip } from "@/lib/packing-pool";
 
 function diveTripWithItem(): Trip {
@@ -94,5 +94,39 @@ describe("removeTripItem", () => {
     const next = removeTripItem(trip2, "c1", "i-cert");
     expect(next.containers[0]!.items).toHaveLength(1);
     expect(next.dismissedScenarioSeeds).toBeUndefined();
+  });
+});
+
+describe("moveTripItem", () => {
+  it("keeps the item in place when the target container does not exist", () => {
+    const trip = diveTripWithItem();
+
+    const next = moveTripItem(trip, "c1", "i-cert", "missing-container");
+
+    expect(next.containers[0]!.items).toHaveLength(1);
+    expect(next.containers[0]!.items[0]!.id).toBe("i-cert");
+  });
+
+  it("moves the item when both containers exist", () => {
+    const trip: Trip = {
+      ...diveTripWithItem(),
+      containers: [
+        ...diveTripWithItem().containers,
+        {
+          id: "c2",
+          code: "C-02",
+          name: "Carry",
+          type: "carry",
+          capacityL: 30,
+          maxKg: 10,
+          items: [],
+        },
+      ],
+    };
+
+    const next = moveTripItem(trip, "c1", "i-cert", "c2");
+
+    expect(next.containers.find((c) => c.id === "c1")!.items).toHaveLength(0);
+    expect(next.containers.find((c) => c.id === "c2")!.items[0]!.id).toBe("i-cert");
   });
 });
