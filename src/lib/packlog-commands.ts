@@ -151,6 +151,7 @@ export function moveTripItem(
   const item = fromContainer?.items.find((candidate) => candidate.id === itemId);
   if (!fromContainer || !item) return trip;
   if (fromContainerId === toContainerId) return trip;
+  if (!trip.containers.some((container) => container.id === toContainerId)) return trip;
 
   const fromIndex = fromContainer.items.findIndex((candidate) => candidate.id === itemId);
 

@@ -26,6 +26,10 @@ export interface PacklogRepository {
   clear: () => Promise<void>;
 }
 
+export type PacklogRepositoryTarget =
+  | { kind: "browser"; userId: string | null }
+  | { kind: "supabase"; workspace: string };
+
 function normalizeTripForSnapshot(t: Trip): z.infer<typeof tripSchema> {
   const scenarios = t.scenarios?.length ? t.scenarios : [t.scenario];
   return { ...t, scenario: scenarios[0]!, scenarios };
@@ -117,9 +121,10 @@ export function createSupabasePacklogRepository(
         .limit(1)
         .maybeSingle();
 
-      if (error || !data?.snapshot) return seed;
+      if (error) throw error;
+      if (!data?.snapshot) return seed;
       const snapshot = parseSnapshotPayload(data.snapshot);
-      if (!snapshot) return seed;
+      if (!snapshot) throw new Error("Invalid Packlog snapshot payload");
       return {
         trips: snapshot.trips,
         library: snapshot.library,
@@ -157,18 +162,26 @@ export function createPacklogRepository(
   seed: SeedState,
   opts?: { userId?: string | null },
 ): PacklogRepository {
+  const target = resolvePacklogRepositoryTarget(opts);
+  if (target.kind === "supabase") {
+    return createSupabasePacklogRepository({
+      seed,
+      workspace: target.workspace,
+    });
+  }
+  return createBrowserPacklogRepository(seed, { userId: target.userId });
+}
+
+export function resolvePacklogRepositoryTarget(opts?: {
+  userId?: string | null;
+}): PacklogRepositoryTarget {
   const backend = getEnv("VITE_DATA_BACKEND") ?? "local";
   const projectUrl = getEnv("VITE_SUPABASE_URL");
   const anonKey = getEnv("VITE_SUPABASE_ANON_KEY");
   const uid = opts?.userId ?? null;
-  const workspace =
-    backend === "supabase" && uid ? `u:${uid}` : (getEnv("VITE_PACKLOG_WORKSPACE") ?? "default");
 
-  if (backend === "supabase" && projectUrl && anonKey) {
-    return createSupabasePacklogRepository({
-      seed,
-      workspace,
-    });
+  if (backend === "supabase" && projectUrl && anonKey && uid) {
+    return { kind: "supabase", workspace: `u:${uid}` };
   }
-  return createBrowserPacklogRepository(seed, { userId: uid });
+  return { kind: "browser", userId: uid };
 }

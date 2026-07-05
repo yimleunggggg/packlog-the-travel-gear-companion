@@ -24,8 +24,11 @@ function TripDetail() {
   const { t } = useI18n();
   const store = usePacklog();
   const trip = store.getTrip(tripId);
+  /** Child route `/trip/$tripId/pack` renders the full packing surface (checklist + bags). */
+  const isPackSubRoute = /\/pack\/?$/.test(pathname);
 
   useEffect(() => {
+    if (isPackSubRoute) return;
     const onResume = (e: Event) => {
       const d = (e as CustomEvent<PostAuthIntent>).detail;
       if (d.kind === "communityClone" && d.tripId === tripId) {
@@ -46,7 +49,7 @@ function TripDetail() {
     };
     window.addEventListener(POST_AUTH_EVENT, onResume as EventListener);
     return () => window.removeEventListener(POST_AUTH_EVENT, onResume as EventListener);
-  }, [tripId, store]);
+  }, [isPackSubRoute, tripId, store]);
 
   useEffect(() => {
     const pending = sessionStorage.getItem(SCROLL_TO_PACK_AFTER_CREATE_KEY);
@@ -82,8 +85,6 @@ function TripDetail() {
   }
 
   const phase = trip.phase;
-  /** Child route `/trip/$tripId/pack` renders the full packing surface (checklist + bags). */
-  const isPackSubRoute = /\/pack\/?$/.test(pathname);
 
   if (isPackSubRoute) {
     return <Outlet />;
